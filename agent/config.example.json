@@ -1,0 +1,24 @@
+{
+  "purpose": "Example configuration only. Never put real secrets here.",
+  "registration_source": {
+    "provider": "google_forms_or_private_database",
+    "endpoint": "SET_IN_PRIVATE_BACKEND",
+    "credentials": "SET_IN_SECRET_STORE"
+  },
+  "launch": {
+    "founding_member_target": 100,
+    "age_minimum": 18,
+    "countries": ["Uganda", "Botswana"]
+  },
+  "agent_permissions": {
+    "read_registration_metrics": true,
+    "read_authorized_profile_fields": true,
+    "suggest_matches": true,
+    "draft_support_replies": true,
+    "draft_marketing": true,
+    "send_external_messages": false,
+    "spend_ad_budget": false,
+    "delete_member_data": false,
+    "publish_live_changes": false
+  }
+}
