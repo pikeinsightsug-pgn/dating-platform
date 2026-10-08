@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "member": {
+    "member_id": "unique internal identifier",
+    "status": "registered|incomplete|approved|suspended|deleted",
+    "country": "Uganda|Botswana|other",
+    "age": "number, 18+ only",
+    "gender": "member-provided value if collected",
+    "relationship_goal": "member-provided value",
+    "preferred_age_min": "number|null",
+    "preferred_age_max": "number|null",
+    "preferred_country": "Uganda|Botswana|either|null",
+    "interests": ["member-provided interests"],
+    "profile_text": "member-provided non-sensitive profile text",
+    "contact_private": {
+      "phone": "private",
+      "whatsapp": "private",
+      "email": "private"
+    },
+    "created_at": "ISO timestamp"
+  },
+  "metrics": {
+    "total_members": "number",
+    "new_today": "number",
+    "uganda": "number",
+    "botswana": "number",
+    "incomplete": "number"
+  }
+}
