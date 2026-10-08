@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dating Platform Manager</title>
+<style>
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f8f4f7;color:#241b23}
+.wrap{max-width:1000px;margin:auto;padding:24px}
+header{background:#2b1723;color:white;padding:28px;border-radius:20px;margin-bottom:20px}
+h1{margin:0 0 8px}.muted{color:#766772}.light{color:#eadde3}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin:18px 0}
+.card{background:white;border:1px solid #eadde5;border-radius:18px;padding:20px}
+.num{font-size:34px;font-weight:900;color:#b32663}
+button{border:0;border-radius:999px;padding:12px 16px;font-weight:800;cursor:pointer;background:#b32663;color:#fff;margin:4px}
+button.secondary{background:white;color:#b32663;border:1px solid #e5cbd7}
+#output{white-space:pre-wrap;line-height:1.55;background:#fff;border:1px solid #eadde5;border-radius:18px;padding:20px;min-height:160px}
+.notice{background:#fff1f6;border-left:4px solid #b32663;padding:14px;border-radius:10px;margin:15px 0}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="light">OWNER CONSOLE • 18+ DATING COMMUNITY</div>
+<h1>❤️ Dating Platform Manager</h1>
+<div class="light">Uganda 🇺🇬 • Botswana 🇧🇼</div>
+</header>
+<div class="notice"><strong>Private-data protection:</strong> This public console does not store member phone numbers, WhatsApp numbers, emails or private profiles. Live member analytics require a secure private data connection.</div>
+<div class="grid">
+<div class="card"><div class="muted">Founding target</div><div class="num">100</div><div class="muted">members</div></div>
+<div class="card"><div class="muted">Public platform</div><div class="num">LIVE</div><div class="muted">presentation layer</div></div>
+<div class="card"><div class="muted">Agent</div><div class="num">READY</div><div class="muted">operating layer</div></div>
+</div>
+<div class="card">
+<h2>Owner actions</h2>
+<button onclick="report()">Today's report</button>
+<button onclick="growth()">Growth strategy</button>
+<button onclick="support()">Support replies</button>
+<button onclick="matching()">Matching workflow</button>
+<button class="secondary" onclick="security()">Privacy check</button>
+</div>
+<br>
+<div id="output">Choose an owner action above.</div>
+</div>
+<script>
+const out=document.getElementById('output');
+function report(){out.textContent='TODAY\'S OWNER REPORT\n\nMembers: live data connection required\nProgress: / 100\nUganda: live data required\nBotswana: live data required\nIncomplete profiles: live data required\n\nNEXT ACTION\nConnect the private registration dataset so the agent can calculate genuine figures. Never guess numbers.'}
+function growth(){out.textContent='GROWTH STRATEGY\n\n1. Focus ads on profile registration, not vague awareness.\n2. Emphasize: first 100 members join free.\n3. Test Uganda and Botswana creatives separately.\n4. Measure completed registrations, not just views.\n5. Stop weak campaigns and scale only campaigns producing genuine registrations.\n\nNo advertising spend should be changed automatically.'}
+function support(){out.textContent='SUPPORT REPLY ENGINE\n\nCommon topics:\n• How do I register?\n• How do I log in?\n• Is joining free?\n• How does matching work?\n• When will I be contacted?\n\nThe agent should draft replies for owner approval before external sending.'}
+function matching(){out.textContent='MATCHING WORKFLOW\n\n1. Confirm both profiles are adults and active.\n2. Compare stated relationship goals.\n3. Compare mutually compatible age preferences.\n4. Compare stated country/location preferences.\n5. Compare non-sensitive interests.\n6. Present compatibility reasons without exposing private contact details.\n\nA suggested match is never a guarantee of mutual interest.'}
+function security(){out.textContent='PRIVACY CHECK\n\n✓ No member contact data is embedded in this public console.\n✓ No passwords or API keys are stored here.\n✓ No automatic member messaging.\n✓ No automatic advertising spend.\n✓ No invented member statistics.\n\nNext security step: connect the registration data through a private backend/authorized data connector.'}
+</script>
+</body>
+</html>
