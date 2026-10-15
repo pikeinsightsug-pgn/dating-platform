@@ -75,6 +75,12 @@
       <label>Age<input name="age" type="number" min="18" max="120" required style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"></label>
       <label>Gender<select name="gender" required style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"><option value="">Choose one</option><option>Woman</option><option>Man</option><option>Prefer not to say</option></select></label>
       <label>Location<select name="location" required style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"><option value="">Choose your country</option><option>Uganda</option><option>Botswana</option></select></label>
+      <label>What are you looking for?<select name="relationship_goal" required style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"><option value="">Choose your relationship goal</option><option>Long-term relationship</option><option>Marriage</option><option>Friendship first</option><option>Open to seeing where it goes</option></select></label>
+      <label>Tell us a little about yourself<textarea name="bio" required maxlength="500" rows="4" placeholder="Your interests, personality and what you enjoy…" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit;resize:vertical"></textarea></label>
+      <label>Interests (comma-separated)<input name="interests" maxlength="300" placeholder="e.g. music, travel, cooking" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"></label>
+      <label>What would you value in a partner?<textarea name="partner_preference" required maxlength="500" rows="3" placeholder="Describe the qualities that matter to you…" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit;resize:vertical"></textarea></label>
+      <label>Profile photo (JPG, PNG or WebP; max 5 MB)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"></label>
+      <p style="font-size:13px;color:#82737b;margin:0">Choose a photo of yourself that you are comfortable sharing. Your photo will be stored privately and will not be shown publicly by this form.</p>
       <button class="btn primary" id="member-submit" type="submit">Join Free</button>
       <p id="member-result" role="status" aria-live="polite" style="margin:0;line-height:1.5"></p>
     </form>
@@ -108,20 +114,44 @@
     submit.disabled = true;
     submit.textContent = "Submitting…";
     result.textContent = "Submitting your registration securely…";
+    const photo = data.get("photo");
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!(photo instanceof File) || !photo.size) {
+      result.textContent = "Please choose a profile photo.";
+      submit.disabled = false; submit.textContent = "Join Free"; return;
+    }
+    if (!allowedTypes.includes(photo.type) || photo.size > 5 * 1024 * 1024) {
+      result.textContent = "Please choose a JPG, PNG or WebP image no larger than 5 MB.";
+      submit.disabled = false; submit.textContent = "Join Free"; return;
+    }
     const member = {
       first_name: String(data.get("first_name")).trim(),
       age,
       gender: String(data.get("gender")),
-      location: String(data.get("location"))
+      location: String(data.get("location")),
+      relationship_goal: String(data.get("relationship_goal")),
+      bio: String(data.get("bio")).trim(),
+      interests: String(data.get("interests")).trim(),
+      partner_preference: String(data.get("partner_preference")).trim()
     };
     try {
+      const safeName = photo.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100);
+      const photoPath = Date.now() + "-" + crypto.randomUUID() + "-" + safeName;
+      const { error: uploadError } = await db.storage.from("member-photos").upload(photoPath, photo, {
+        cacheControl: "3600", upsert: false, contentType: photo.type
+      });
+      if (uploadError) throw uploadError;
+      member.photo_path = photoPath;
       const { error } = await db.from("members").insert([member]);
-      if (error) throw error;
+      if (error) {
+        await db.storage.from("member-photos").remove([photoPath]);
+        throw error;
+      }
       form.reset();
-      result.textContent = "❤️ You're in! Your registration was received. Member browsing and matching are not live yet.";
+      result.textContent = "❤️ You're in! Your registration, answers and photo were received. Member browsing and matching are not live yet.";
     } catch (error) {
       console.error("Member registration failed:", error);
-      result.textContent = "We couldn't save your registration just now. Please try again later. If this continues, the database may need an INSERT permission policy.";
+      result.textContent = "We couldn't save everything just now. Please try again later. If this continues, the database fields, photo storage bucket or permissions may need setup.";
     } finally {
       submit.disabled = false;
       submit.textContent = "Join Free";
