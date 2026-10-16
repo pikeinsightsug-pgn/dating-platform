@@ -164,7 +164,8 @@
       result.textContent = "❤️ You're in! Your registration, answers and photo were received. Member browsing and matching are not live yet.";
     } catch (error) {
       console.error("Member registration failed:", error);
-      result.textContent = "We couldn't save everything just now. Please try again later. If this continues, the database fields, photo storage bucket or permissions may need setup.";
+      const detail = error && error.message ? String(error.message).slice(0, 220) : "Unknown database or photo-storage error";
+      result.textContent = "Registration could not be saved. Technical detail: " + detail + ". Please contact the site administrator.";
     } finally {
       submit.disabled = false;
       submit.textContent = "Join Free";
