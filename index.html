@@ -120,13 +120,21 @@
     submit.textContent = "Submitting…";
     result.textContent = "Submitting your registration securely…";
     const photo = data.get("photo");
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!(photo instanceof File) || !photo.size) {
       result.textContent = "Please choose a profile photo.";
       submit.disabled = false; submit.textContent = "Join Free"; return;
     }
-    if (!allowedTypes.includes(photo.type) || photo.size > 5 * 1024 * 1024) {
-      result.textContent = "Please choose a JPG, PNG or WebP image no larger than 5 MB.";
+    // Some browsers/devices report an empty MIME type for valid .JPG files.
+    // Fall back to the filename extension rather than rejecting those uploads.
+    const extension = (photo.name.split(".").pop() || "").toLowerCase();
+    const inferredTypes = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+    const photoType = ["image/jpeg", "image/png", "image/webp"].includes(photo.type)
+      ? photo.type
+      : inferredTypes[extension];
+    if (!photoType || photo.size > 5 * 1024 * 1024) {
+      result.textContent = photo.size > 5 * 1024 * 1024
+        ? "Your photo is larger than 5 MB. Please choose a smaller image."
+        : "Please choose a JPG, PNG or WebP image file.";
       submit.disabled = false; submit.textContent = "Join Free"; return;
     }
     const member = {
@@ -143,7 +151,7 @@
       const safeName = photo.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100);
       const photoPath = Date.now() + "-" + crypto.randomUUID() + "-" + safeName;
       const { error: uploadError } = await db.storage.from("member-photos").upload(photoPath, photo, {
-        cacheControl: "3600", upsert: false, contentType: photo.type
+        cacheControl: "3600", upsert: false, contentType: photoType
       });
       if (uploadError) throw uploadError;
       member.photo_path = photoPath;
