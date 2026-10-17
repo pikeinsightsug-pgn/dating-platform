@@ -25,7 +25,7 @@ h1{font-size:clamp(32px,6vw,48px);letter-spacing:-1.5px;margin:24px 0 8px}p{line
   <header class="top">
     <div class="brand">Find<span>Your</span>Person ❤️</div>
     <nav class="actions" aria-label="Member navigation">
-      <a class="btn secondary" href="dashboard.html">My profile</a>
+      <a class="btn" href="discover.html" aria-current="page">Discover Members</a><a class="btn secondary" href="dashboard.html#profile-panel">My Profile</a><a class="btn secondary" href="dashboard.html#preferences">Preferences</a>
       <button class="secondary" id="signout" type="button">Log out</button>
     </nav>
   </header>
@@ -74,7 +74,7 @@ h1{font-size:clamp(32px,6vw,48px);letter-spacing:-1.5px;margin:24px 0 8px}p{line
     if (error) {
       const message = String(error.message || "");
       if (/Only approved adult members/i.test(message)) {
-        say("Your account is waiting for administrator approval. You can browse members after your profile is approved.");
+        say("Your profile is awaiting manual review by the platform owner. It remains private until approved. Open My Profile for details. Only approved, signed-in adult members can discover profiles.");
       } else {
         say("Member discovery is not ready yet. The administrator may need to apply the member discovery and photo setup in the repository.");
       }
