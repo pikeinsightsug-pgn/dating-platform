@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Owner Approval Console | Find Your Person</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fff8fb;color:#241b23;font:16px system-ui,sans-serif}.wrap{max-width:1050px;margin:auto;padding:24px}
+header,.panel,.member{background:#fff;border:1px solid #efdce5;border-radius:18px;padding:22px;margin-bottom:16px}header{background:#2b1723;color:white}
+h1{margin:0 0 8px}p{line-height:1.5}.muted{color:#766772}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{background:#fff;border:1px solid #efdce5;border-radius:15px;padding:18px}.num{font-size:30px;font-weight:900;color:#b32663}
+input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;width:100%;margin:5px 0 12px}button{border:0;border-radius:999px;padding:11px 16px;font:inherit;font-weight:750;cursor:pointer;background:#b32663;color:white;margin:4px}button.secondary{background:white;color:#b32663;border:1px solid #e5cbd7}button.danger{background:#6e293c}#status{white-space:pre-wrap;color:#8f1e51}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.actions{display:flex;gap:5px;flex-wrap:wrap}.member h3{margin:0 0 6px}.badge{display:inline-block;border-radius:999px;background:#fff0f6;padding:5px 10px;font-size:13px}.bio{white-space:pre-wrap;overflow-wrap:anywhere}
+.hidden{display:none!important}@media(max-width:650px){.grid{grid-template-columns:1fr}.wrap{padding:14px}}
+</style>
+</head>
+<body><main class="wrap">
+<header><div>OWNER ONLY • 18+ COMMUNITY</div><h1>❤️ Find Your Person — Member Approval</h1><p>Review real registrations. Approve only genuine profiles after review. Payments remain disabled; founding members join free during testing.</p></header>
+<section class="panel" id="config"><h2>Connect owner access</h2>
+<p class="muted">This page requires the public Supabase project URL/key and a deployed admin-members Edge Function. The owner account email must match the ADMIN_EMAIL secret configured for that function. Never enter a service-role key here.</p>
+<label>Supabase project URL<input id="project" placeholder="https://your-project.supabase.co" autocomplete="url"></label>
+<label>Supabase publishable/anon key<input id="anon" placeholder="Public publishable key only" autocomplete="off"></label>
+<label>Owner email<input id="email" type="email" autocomplete="username"></label>
+<label>Password<input id="password" type="password" autocomplete="current-password"></label>
+<button id="signin">Sign in</button><button class="secondary" id="signout">Sign out</button><p id="status" role="status"></p>
+</section>
+<section id="app" class="hidden">
+<div class="grid"><div class="metric">Registrations<div class="num" id="total">—</div></div><div class="metric">Approved<div class="num" id="approved">—</div></div><div class="metric">Pending<div class="num" id="pending">—</div><div class="muted">Founding target: 100</div></div></div>
+<div class="row"><h2>Member registrations</h2><button id="refresh" class="secondary">Refresh records</button></div><div id="members"></div>
+</section></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+ const $=id=>document.getElementById(id); let client=null,session=null;
+ const say=t=>$('status').textContent=t;
+ const savedProject=localStorage.getItem('fy_admin_project')||'';
+ const savedAnon=localStorage.getItem('fy_admin_anon')||'';
+ $('project').value=savedProject; $('anon').value=savedAnon;
+ function setup(){const url=$('project').value.trim().replace(/\/$/,'');const key=$('anon').value.trim();if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)||!key)throw Error('Enter the correct Supabase project URL and public publishable/anon key.');localStorage.setItem('fy_admin_project',url);localStorage.setItem('fy_admin_anon',key);client=window.supabase.createClient(url,key);return url}
+ async function invoke(action,member_id){if(!session)throw Error('Please sign in again.');const url=$('project').value.trim().replace(/\/$/,'');const res=await fetch(url+'/functions/v1/admin-members',{method:'POST',headers:{'Content-Type':'application/json','apikey':$('anon').value.trim(),'Authorization':'Bearer '+session.access_token},body:JSON.stringify({action,member_id})});const data=await res.json().catch(()=>({error:'Unexpected server response.'}));if(!res.ok)throw Error(data.error||'Request failed');return data}
+ $('signin').onclick=async()=>{try{setup();say('Signing in…');const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)throw error;session=data.session;if(!session)throw Error('No session returned.');$('app').classList.remove('hidden');$('password').value='';say('Signed in. Loading registrations…');await load()}catch(e){say(e.message||'Sign-in failed.')}};
+ $('signout').onclick=async()=>{try{if(client)await client.auth.signOut();session=null;$('app').classList.add('hidden');$('members').innerHTML='';say('Signed out.')}catch(e){say(e.message)}};
+ $('refresh').onclick=()=>load().catch(e=>say(e.message));
+ async function load(){say('Loading registrations…');const data=await invoke('list');$('total').textContent=data.metrics.total;$('approved').textContent=data.metrics.approved;$('pending').textContent=data.metrics.pending;const root=$('members');root.innerHTML='';if(!data.members.length){root.textContent='No registrations found.';say('Loaded.');return}
+ data.members.forEach(m=>{const card=document.createElement('article');card.className='member';const title=document.createElement('h3');title.textContent=(m.first_name||'Unnamed member')+' · '+(m.age??'Age unknown');const badge=document.createElement('span');badge.className='badge';badge.textContent=m.approved?'Approved':'Pending review';const details=document.createElement('p');details.className='muted';details.textContent=[m.gender,m.location,m.relationship_goal,m.created_at?new Date(m.created_at).toLocaleString():null].filter(Boolean).join(' · ');const bio=document.createElement('p');bio.className='bio';bio.textContent=m.bio||'No bio provided.';const interests=document.createElement('p');interests.textContent='Interests: '+(m.interests||'Not provided');const pref=document.createElement('p');pref.className='bio';pref.textContent='Partner preferences: '+(m.partner_preference||'Not provided');const actions=document.createElement('div');actions.className='actions';const approve=document.createElement('button');approve.textContent='Approve';approve.disabled=!!m.approved;approve.onclick=()=>change(m.id,'approve');const reject=document.createElement('button');reject.textContent='Return to pending';reject.className='danger';reject.disabled=!m.approved;reject.onclick=()=>change(m.id,'reject');actions.append(approve,reject);card.append(title,badge,details,bio,interests,pref,actions);root.append(card)});say('Loaded '+data.members.length+' registrations. Review each person before approving.')}
+ async function change(id,action){try{if(!confirm(action==='approve'?'Approve this member after reviewing their registration?':'Return this member to pending status?'))return;say('Updating approval…');await invoke(action,id);await load()}catch(e){say(e.message||'Could not update member.')}}
+})();
+</script></body></html>
