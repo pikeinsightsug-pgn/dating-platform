@@ -13,6 +13,10 @@ alter table public.members
   add column if not exists partner_preference text,
   add column if not exists profile_photo_url text,
   add column if not exists approved boolean not null default false;
+-- Existing NULL approval states mean pending; normalize them without changing approved member records.
+update public.members set approved = false where approved is null;
+alter table public.members alter column approved set default false;
+alter table public.members alter column approved set not null;
 
 create unique index if not exists members_user_id_unique
   on public.members(user_id) where user_id is not null;
@@ -279,7 +283,7 @@ using (
   sender_member_id = public.current_approved_member_id()
   or recipient_member_id = public.current_approved_member_id()
 );
-grant select, insert on public.member_messages to authenticated;
+grant select on public.member_messages to authenticated;
 
 -- Existing records remain unapproved and unlinked until manually reviewed.
 -- Payments remain disabled; no member is automatically approved.
