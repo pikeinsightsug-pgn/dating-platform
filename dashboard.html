@@ -76,17 +76,26 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     if (!isPhotoStorageRequest && !isMemberPhotoUpdate) return fetch(input, init);
 
     const controller = new AbortController();
+    const upstreamSignal = init.signal;
+    const abortFromCaller = () => controller.abort();
+    if (upstreamSignal) {
+      if (upstreamSignal.aborted) controller.abort();
+      else upstreamSignal.addEventListener("abort", abortFromCaller, { once: true });
+    }
     const timeout = setTimeout(() => controller.abort(), PHOTO_REQUEST_TIMEOUT_MS);
     return fetch(input, { ...init, signal: controller.signal })
       .catch(error => {
-        if (controller.signal.aborted) {
+        if (controller.signal.aborted && !(upstreamSignal && upstreamSignal.aborted)) {
           const timeoutError = new Error("The photo request timed out.");
           timeoutError.code = "PHOTO_REQUEST_TIMEOUT";
           throw timeoutError;
         }
         throw error;
       })
-      .finally(() => clearTimeout(timeout));
+      .finally(() => {
+        clearTimeout(timeout);
+        if (upstreamSignal) upstreamSignal.removeEventListener("abort", abortFromCaller);
+      });
   }
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: { fetch: photoRequestFetch }
