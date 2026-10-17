@@ -7,8 +7,10 @@ begin;
 
 alter table public.members
   add column if not exists user_id uuid references auth.users(id) on delete set null,
+  add column if not exists bio text,
   add column if not exists interests text,
   add column if not exists partner_preference text,
+  add column if not exists profile_photo_url text,
   add column if not exists approved boolean not null default false;
 
 create unique index if not exists members_user_id_unique
