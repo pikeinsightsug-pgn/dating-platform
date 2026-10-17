@@ -3,6 +3,7 @@
 alter table public.members
   add column if not exists user_id uuid references auth.users(id) on delete set null,
   add column if not exists location text,
+  add column if not exists city text,
   add column if not exists relationship_goal text,
   add column if not exists bio text,
   add column if not exists interests text,
