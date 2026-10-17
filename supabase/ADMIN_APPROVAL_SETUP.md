@@ -30,16 +30,19 @@ Keep the project's email confirmation setting as intended. The page explains whe
 ## Owner approval console
 
 1. Create an owner account in Supabase Authentication using an email you control and confirm that email.
-2. Deploy `supabase/functions/admin-members/index.ts` as the `admin-members` Edge Function with JWT verification enabled.
-3. Add only this custom Edge Function secret:
+2. From the repository root, deploy the existing function with:
+   `supabase login`
+   `supabase functions deploy admin-members --project-ref cyvkpcwjkeifpvegwhpt`
+   The function name is `admin-members`; its entry point is `supabase/functions/admin-members/index.ts`. Do not pass `--no-verify-jwt`.
+3. Set only this custom Edge Function secret in the Supabase Dashboard under **Edge Functions → Secrets**:
    - `ADMIN_EMAIL`: the exact confirmed owner email address, in lowercase.
    Supabase provides `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to the function runtime. Do not try to add or override these reserved `SUPABASE_` variables as custom secrets. Never put the service-role key in HTML, GitHub Pages, or browser code.
-4. The function independently validates the bearer token and exact confirmed owner email before using the server-side service-role key.
+4. This repository has no `supabase/config.toml`; Supabase's default `verify_jwt` setting is `true`. Keep JWT verification enabled. The function also validates the bearer token with Auth and checks that its confirmed email exactly matches `ADMIN_EMAIL` before using the server-side service-role key.
 5. Publish the repository's `admin/` directory with GitHub Pages and open `/admin/`. The console stores only the project URL and public key in that browser's local storage.
 
 ## Verify the approval service
 
-Open `https://<project-ref>.supabase.co/functions/v1/admin-members` only through the owner console. The owner console must be able to sign in and load the registration list. A successful list confirms that the function is deployed, the configured owner email is accepted, and the function can read member rows and Auth account identifiers. A 404 means the function is not deployed at that endpoint; a configuration error means the runtime or `ADMIN_EMAIL` setup needs attention. Do not share secret values when troubleshooting.
+The endpoint is `https://cyvkpcwjkeifpvegwhpt.supabase.co/functions/v1/admin-members`. An unauthenticated request should be rejected with 401 because JWT verification is enabled; this checks that the route exists but does not verify secrets. A 404 means the function is not deployed at that endpoint. For a full check, sign in through `/admin/` with the confirmed owner account and load the registration list. A successful list confirms that the deployed code accepts the configured owner email and can read member rows and Auth account identifiers. A configuration error means the runtime or `ADMIN_EMAIL` setup needs attention. Do not share secret values when troubleshooting.
 
 The owner endpoint returns up to 200 registrations and allows only explicit approve/reject actions. It displays the registered Auth email and Auth ID to the verified owner. Approval is never automatic. Confirm the email/ID match your test account before approving; skip any record without a linked Auth identity.
 
