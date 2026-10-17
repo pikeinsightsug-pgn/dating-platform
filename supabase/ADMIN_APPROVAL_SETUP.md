@@ -1,8 +1,8 @@
 # Member registration and owner approval setup
 
-The website is static on GitHub Pages and uses the existing Supabase Auth project. Registration creates an Auth user first. If email confirmation is enabled, the member must confirm and sign in before the private `members` row is written. The profile is linked to that Auth user and remains unapproved until an owner reviews it.
+The website is static on GitHub Pages and uses the existing Supabase Auth project. Registration creates an Auth user first. The database trigger writes the private `members` row with the trusted Auth user ID when the email is confirmed (or immediately if confirmation is disabled). The profile remains unapproved until an owner reviews it. After confirmation, the member signs in to the private dashboard.
 
-The setup is additive. It does not remove, truncate, relink, approve, or overwrite existing member records. Payments, automatic charging, referral commissions, member discovery, and unrestricted messaging remain disabled.
+The setup is additive. It does not remove, truncate, relink, approve, or overwrite existing member records. The Auth trigger runs only for signups marked by the website as member registrations; it does not create profiles for owner accounts. Payments, automatic charging, referral commissions, member discovery, and unrestricted messaging remain disabled.
 
 ## Before enabling registration
 
@@ -43,6 +43,6 @@ The owner endpoint returns up to 200 registrations and allows only explicit appr
 
 ## Verification after setup
 
-Use a new test email address you control. Create an account, confirm it if email confirmation is enabled, sign in, and confirm that exactly one row appears in `public.members` with the matching Auth user ID and `approved = false`. Check that the dashboard can read and update that profile, cannot change the approval flag, and redirects to login after logout. Use the password reset link and confirm it returns to the recovery form.
+Use a new test email address you control. Create an account, confirm it if email confirmation is enabled, sign in, and confirm that exactly one row appears in `public.members` with the matching Auth user ID and `approved = false`. The database trigger creates the row at confirmation; the website checks for an existing row before using its safe fallback. Check that the dashboard can read and update that profile, cannot change the approval flag, and redirects to login after logout. Use the password reset link and confirm it returns to the recovery form.
 
 Do not use a real member's email or alter an existing member record for testing.
