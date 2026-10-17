@@ -137,6 +137,8 @@
         : "Please choose a JPG, PNG or WebP image file.";
       submit.disabled = false; submit.textContent = "Join Free"; return;
     }
+    // Match the actual public.members schema. The table has profile_photo_url,
+    // not photo_path, and does not have interests or partner_preference columns.
     const member = {
       first_name: String(data.get("first_name")).trim(),
       age,
@@ -144,24 +146,37 @@
       location: String(data.get("location")),
       relationship_goal: String(data.get("relationship_goal")),
       bio: String(data.get("bio")).trim(),
-      interests: String(data.get("interests")).trim(),
-      partner_preference: String(data.get("partner_preference")).trim()
+      profile_photo_url: null
     };
+    let photoPath = null;
+    let photoUploadWarning = "";
     try {
       const safeName = photo.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100);
-      const photoPath = Date.now() + "-" + crypto.randomUUID() + "-" + safeName;
+      photoPath = Date.now() + "-" + crypto.randomUUID() + "-" + safeName;
       const { error: uploadError } = await db.storage.from("profile-photos").upload(photoPath, photo, {
         cacheControl: "3600", upsert: false, contentType: photoType
       });
-      if (uploadError) throw uploadError;
-      member.photo_path = photoPath;
-      const { error } = await db.from("members").insert([member]);
-      if (error) {
-        await db.storage.from("profile-photos").remove([photoPath]);
-        throw error;
+      if (uploadError) {
+        photoUploadWarning = uploadError.message || "Photo storage is not configured";
+        photoPath = null;
+      } else {
+        // Keep the storage object path private; do not create a public photo URL.
+        member.profile_photo_url = photoPath;
       }
-      form.reset();
-      result.textContent = "❤️ You're in! Your registration, answers and photo were received. Member browsing and matching are not live yet.";
+    } catch (photoError) {
+      photoUploadWarning = photoError && photoError.message ? photoError.message : "Photo storage is not configured";
+      photoPath = null;
+      member.profile_photo_url = null;
+    }
+    const { error: insertError } = await db.from("members").insert([member]);
+    if (insertError) {
+      if (photoPath) await db.storage.from("profile-photos").remove([photoPath]);
+      throw insertError;
+    }
+    form.reset();
+    result.textContent = photoUploadWarning
+      ? "❤️ Your registration details were saved successfully, but the photo could not be uploaded because photo storage needs configuration (" + String(photoUploadWarning).slice(0, 120) + "). Your registration is received; the administrator can help add your photo."
+      : "❤️ You're in! Your registration, answers and photo were received. Member browsing and matching are not live yet.";
     } catch (error) {
       console.error("Member registration failed:", error);
       const detail = error && error.message ? String(error.message).slice(0, 220) : "Unknown database or photo-storage error";
