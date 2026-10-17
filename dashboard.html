@@ -31,7 +31,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     <nav style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn secondary" href="discover.html">Discover members</a><button id="signout" class="secondary" type="button">Log out</button></nav>
   </header>
   <section id="profile-panel" class="panel hidden">
-    <div class="notice">Your profile is private. It is not discoverable unless an administrator approves it. Member discovery and messaging are not currently enabled.</div>
+    <div class="notice">Your profile is private until an administrator approves it. Approved members can discover other approved profiles. Messaging is not currently enabled.</div>
     <h1>My member profile</h1>
     <p id="approval-status"></p>
     <section class="photo-actions" aria-labelledby="photo-title"><h2 id="photo-title">Profile photo</h2><p class="photo-note">Choose a JPEG, PNG or WebP photo up to 5 MB. Photos are private and shown only to approved members.</p><img id="photo-preview" class="photo-preview hidden" alt="Preview of your profile photo"><p id="photo-empty" class="photo-note">No profile photo uploaded yet.</p><label for="photo-file">Upload or replace photo<input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp"></label><button id="upload-photo" type="button" disabled>Upload photo</button><p id="photo-status" class="photo-note" role="status" aria-live="polite"></p></section>
@@ -142,7 +142,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       loadPhotoPreview(profile.profile_photo_url);
       document.getElementById("approval-status").textContent = profile.approved
         ? "Your profile is approved. You can discover other approved members."
-        : "Your profile is waiting for administrator review. Discovery opens after approval. Discovery opens after approval.";
+        : "Your profile is waiting for administrator review. Discovery opens after approval.";
       save.textContent = "Save profile";
     } else {
       valuesFor(profileFromMetadata(user.user_metadata));
