@@ -64,7 +64,42 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   const save = document.getElementById("save-profile");
   const signout = document.getElementById("signout");
   if (!window.supabase) { loading.textContent = "Account service could not load. Refresh and try again."; return; }
-  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  const PHOTO_REQUEST_TIMEOUT_MS = 60000;
+  function photoRequestFetch(input, init = {}) {
+    const requestUrl = typeof input === "string" ? input : input.url;
+    const url = new URL(requestUrl, SUPABASE_URL);
+    const isPhotoStorageRequest = url.origin === SUPABASE_URL &&
+      url.pathname.includes("/storage/v1/object/") &&
+      url.pathname.includes("/profile-photos/");
+    const isMemberPhotoUpdate = url.origin === SUPABASE_URL &&
+      url.pathname === "/rest/v1/members" && init.method === "PATCH";
+    if (!isPhotoStorageRequest && !isMemberPhotoUpdate) return fetch(input, init);
+
+    const controller = new AbortController();
+    const upstreamSignal = init.signal;
+    const abortFromCaller = () => controller.abort();
+    if (upstreamSignal) {
+      if (upstreamSignal.aborted) controller.abort();
+      else upstreamSignal.addEventListener("abort", abortFromCaller, { once: true });
+    }
+    const timeout = setTimeout(() => controller.abort(), PHOTO_REQUEST_TIMEOUT_MS);
+    return fetch(input, { ...init, signal: controller.signal })
+      .catch(error => {
+        if (controller.signal.aborted && !(upstreamSignal && upstreamSignal.aborted)) {
+          const timeoutError = new Error("The photo request timed out.");
+          timeoutError.code = "PHOTO_REQUEST_TIMEOUT";
+          throw timeoutError;
+        }
+        throw error;
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        if (upstreamSignal) upstreamSignal.removeEventListener("abort", abortFromCaller);
+      });
+  }
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    global: { fetch: photoRequestFetch }
+  });
   let user = null;
   let memberProfile = null;
   function setStatus(message) { status.textContent = message; }
@@ -216,13 +251,16 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     const file = photoInput.files && photoInput.files[0];
     if (!file || !memberProfile || photoButton.disabled) return;
     photoButton.disabled = true; photoButton.textContent = "Uploading…";
+    photoButton.setAttribute("aria-busy", "true");
     photoMessage("Uploading your private photo…");
     const extension = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
     const path = user.id + "/" + crypto.randomUUID() + "." + extension;
+    let stage = "upload";
     try {
       const { error: uploadError } = await db.storage.from("profile-photos")
         .upload(path, file, { upsert: false, contentType: file.type });
       if (uploadError) throw uploadError;
+      stage = "profile";
       const { data, error: saveError } = await db.from("members")
         .update({ profile_photo_url: path }).eq("user_id", user.id).select("id").maybeSingle();
       if (saveError || !data) {
@@ -232,13 +270,38 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       const oldPath = memberProfile.profile_photo_url;
       memberProfile.profile_photo_url = path;
       photoInput.value = "";
+      stage = "preview";
       await loadPhotoPreview(path);
       if (oldPath && oldPath !== path && oldPath.startsWith(user.id + "/"))
         await db.storage.from("profile-photos").remove([oldPath]);
       photoMessage("Your profile photo has been saved.");
     } catch (error) {
-      photoMessage("Photo upload failed. The administrator may need to apply the member discovery and photo setup.");
+      console.error("Profile photo request failed during " + stage + ":", error);
+      if (error && error.code === "PHOTO_REQUEST_TIMEOUT") {
+        photoMessage("The photo request took longer than 60 seconds. Check your connection and try again.");
+      } else if (stage === "profile") {
+        photoMessage("The photo uploaded, but we could not link it to your profile. Please try again or contact support.");
+      } else if (stage === "preview") {
+        photoMessage("Your photo was saved, but its preview could not be refreshed. Reload the page to check it.");
+      } else {
+        const detail = String((error && error.message) || "").toLowerCase();
+        const statusCode = Number(error && (error.status || error.statusCode));
+        if (statusCode === 401 || detail.includes("jwt") || detail.includes("unauthorized")) {
+          photoMessage("Your sign-in may have expired. Log in again, then retry the photo upload.");
+        } else if (statusCode === 403 || detail.includes("row-level security") || detail.includes("permission denied")) {
+          photoMessage("Supabase denied this photo upload. Please contact support so the Storage permissions can be checked.");
+        } else if (statusCode === 413 || detail.includes("too large") || detail.includes("exceeded the maximum")) {
+          photoMessage("This photo is too large. Choose an image no larger than 5 MB.");
+        } else if (detail.includes("bucket not found") || detail.includes("not found")) {
+          photoMessage("The profile photo storage is unavailable. Please contact support.");
+        } else if (detail.includes("failed to fetch") || detail.includes("network")) {
+          photoMessage("Could not reach photo storage. Check your connection and try again.");
+        } else {
+          photoMessage("Photo upload failed. Please try again. If it continues, contact support.");
+        }
+      }
     } finally {
+      photoButton.removeAttribute("aria-busy");
       photoButton.textContent = "Upload photo";
       photoButton.disabled = !(photoInput.files && photoInput.files[0] && memberProfile);
     }
