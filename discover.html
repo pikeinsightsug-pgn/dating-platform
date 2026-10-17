@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Discover members | Find Your Person</title>
+<meta name="description" content="Browse approved adult member profiles in Uganda and Botswana.">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fff8fb;color:#241b23;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 18px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-weight:900;font-size:22px}.brand span{color:#b32663}.actions{display:flex;gap:9px;flex-wrap:wrap}
+.btn,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer;background:#b32663;color:#fff;text-decoration:none}
+.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}
+h1{font-size:clamp(32px,6vw,48px);letter-spacing:-1.5px;margin:24px 0 8px}p{line-height:1.55;color:#6a5b64}
+#status{padding:14px 16px;border-radius:13px;background:#fde8f0;color:#8f1e51;white-space:pre-wrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;margin-top:22px}
+.card{overflow:hidden;background:#fff;border:1px solid #f0dfe7;border-radius:22px;box-shadow:0 8px 30px #5c18300b}
+.photo{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#f7e8ee}.no-photo{display:grid;place-items:center;width:100%;aspect-ratio:4/3;background:#fde8f0;color:#a21f59;font-size:44px}
+.body{padding:20px}.body h2{margin:0 0 7px;font-size:22px}.details{font-size:14px;color:#75666e}.bio{white-space:pre-wrap;overflow-wrap:anywhere}
+.hidden{display:none!important}@media(max-width:480px){.wrap{padding:16px 14px 40px}.top .btn{flex:1}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <div class="brand">Find<span>Your</span>Person ❤️</div>
+    <nav class="actions" aria-label="Member navigation">
+      <a class="btn secondary" href="dashboard.html">My profile</a>
+      <button class="secondary" id="signout" type="button">Log out</button>
+    </nav>
+  </header>
+  <h1>Discover members</h1>
+  <p>Browse genuine profiles reviewed and approved by our team. Only profile details members chose to share are shown.</p>
+  <p id="status" role="status" aria-live="polite">Checking your account…</p>
+  <section id="profiles" class="grid" aria-label="Approved member profiles"></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+  const SUPABASE_URL = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_vzGFbhe7X3CpobiHZAk9Lw_2V3O-F3V";
+  const status = document.getElementById("status");
+  const root = document.getElementById("profiles");
+  if (!window.supabase) { status.textContent = "Account service could not load. Refresh and try again."; return; }
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  const say = message => { status.textContent = message; };
+  function addText(parent, tag, value, className) {
+    const node = document.createElement(tag); node.textContent = value || "";
+    if (className) node.className = className; parent.append(node); return node;
+  }
+  function showProfile(profile, signedPhoto) {
+    const card = document.createElement("article"); card.className = "card";
+    if (signedPhoto) {
+      const image = document.createElement("img"); image.className = "photo";
+      image.src = signedPhoto; image.alt = "Profile photo of " + profile.first_name;
+      image.loading = "lazy"; card.append(image);
+    } else {
+      const placeholder = document.createElement("div"); placeholder.className = "no-photo";
+      placeholder.setAttribute("aria-label", "No profile photo"); placeholder.textContent = "❤️"; card.append(placeholder);
+    }
+    const body = document.createElement("div"); body.className = "body";
+    addText(body, "h2", profile.first_name + ", " + profile.age);
+    addText(body, "p", [profile.gender, profile.city, profile.location].filter(Boolean).join(" · "), "details");
+    if (profile.relationship_goal) addText(body, "p", "Looking for: " + profile.relationship_goal);
+    if (profile.bio) addText(body, "p", profile.bio, "bio");
+    if (profile.interests) addText(body, "p", "Interests: " + profile.interests);
+    card.append(body); root.append(card);
+  }
+  async function load() {
+    const { data: sessionData, error: sessionError } = await db.auth.getSession();
+    if (sessionError) throw new Error("Your session could not be restored. Please sign in again.");
+    if (!sessionData.session) { window.location.replace("account.html?mode=login"); return; }
+    const { data, error } = await db.rpc("browse_approved_profiles");
+    if (error) {
+      const message = String(error.message || "");
+      if (/Only approved adult members/i.test(message)) {
+        say("Your account is waiting for administrator approval. You can browse members after your profile is approved.");
+      } else {
+        say("Member discovery is not ready yet. The administrator may need to apply the member discovery and photo setup in the repository.");
+      }
+      return;
+    }
+    const profiles = Array.isArray(data) ? data : [];
+    if (!profiles.length) {
+      say("There are no other approved member profiles yet. Check back later as our community grows.");
+      return;
+    }
+    const rendered = await Promise.all(profiles.map(async profile => {
+      if (!profile.profile_photo_path) return [profile, null];
+      const { data: signed, error: photoError } = await db.storage.from("profile-photos")
+        .createSignedUrl(profile.profile_photo_path, 300);
+      return [profile, photoError ? null : signed && signed.signedUrl];
+    }));
+    rendered.forEach(([profile, photo]) => showProfile(profile, photo));
+    say("Showing " + profiles.length + " approved member " + (profiles.length === 1 ? "profile." : "profiles."));
+  }
+  document.getElementById("signout").addEventListener("click", async () => {
+    const { error } = await db.auth.signOut();
+    if (error) say("Could not log out right now. Please try again.");
+    else window.location.replace("account.html?mode=login");
+  });
+  load().catch(() => say("Could not load member profiles. Refresh and try again."));
+})();
+</script>
+</body>
+</html>
