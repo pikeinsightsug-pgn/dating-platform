@@ -1,0 +1,5 @@
+project_id = "cyvkpcwjkeifpvegwhpt"
+
+[functions.admin-members]
+enabled = true
+verify_jwt = true
