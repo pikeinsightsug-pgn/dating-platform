@@ -92,7 +92,25 @@ revoke all on function public.browse_approved_profiles() from public, anon;
 grant execute on function public.browse_approved_profiles() to authenticated;
 
 revoke all on public.members from public, anon, authenticated;
-revoke update (id, user_id, approved, created_at) on public.members from public, anon, authenticated;
+
+-- Clear any legacy per-column client grants before restoring only the intended profile access.
+do $
+declare
+  member_columns text;
+begin
+  select string_agg(format('%I', column_name), ', ')
+    into member_columns
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'members';
+
+  if member_columns is not null then
+    execute format('revoke select (%s) on table public.members from public, anon, authenticated', member_columns);
+    execute format('revoke insert (%s) on table public.members from public, anon, authenticated', member_columns);
+    execute format('revoke update (%s) on table public.members from public, anon, authenticated', member_columns);
+  end if;
+end;
+$;
+
 grant insert on public.members to anon, authenticated;
 grant select on public.members to authenticated;
 grant update (first_name, age, gender, location, city, relationship_goal, bio, interests, partner_preference)
@@ -116,14 +134,50 @@ with check (
   and ((auth.uid() is null and user_id is null) or user_id = auth.uid())
 );
 
+drop policy if exists "member registration constraints" on public.members;
+create policy "member registration constraints"
+on public.members as restrictive for insert to anon, authenticated
+with check (
+  age >= 18 and age <= 120
+  and first_name is not null and length(trim(first_name)) between 1 and 80
+  and gender in ('Woman', 'Man', 'Non-binary', 'Prefer not to say')
+  and location in ('Uganda', 'Botswana')
+  and city is not null and length(trim(city)) between 1 and 100
+  and relationship_goal in ('Serious relationship', 'Marriage', 'Friendship', 'Exploring connections')
+  and bio is not null and length(trim(bio)) between 1 and 500
+  and (interests is null or length(interests) <= 300)
+  and (partner_preference is null or length(partner_preference) <= 500)
+  and approved = false
+  and ((auth.uid() is null and user_id is null) or user_id = auth.uid())
+);
+
 drop policy if exists "members can read own profile" on public.members;
 create policy "members can read own profile"
 on public.members for select to authenticated
 using (user_id = auth.uid());
 
+-- Restrictive boundaries also constrain any older permissive policies left on the table.
+drop policy if exists "private member profile read boundary" on public.members;
+create policy "private member profile read boundary"
+on public.members as restrictive for select to authenticated
+using (user_id = auth.uid());
+
 drop policy if exists "members can update own profile" on public.members;
 create policy "members can update own profile"
 on public.members for update to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid() and age >= 18 and age <= 120
+  and gender in ('Woman', 'Man', 'Non-binary', 'Prefer not to say')
+  and location in ('Uganda', 'Botswana')
+  and city is not null and length(trim(city)) between 1 and 100
+  and relationship_goal in ('Serious relationship', 'Marriage', 'Friendship', 'Exploring connections')
+  and bio is not null and length(trim(bio)) between 1 and 500
+  and (interests is null or length(interests) <= 300)
+  and (partner_preference is null or length(partner_preference) <= 500));
+
+drop policy if exists "private member profile update boundary" on public.members;
+create policy "private member profile update boundary"
+on public.members as restrictive for update to authenticated
 using (user_id = auth.uid())
 with check (user_id = auth.uid() and age >= 18 and age <= 120
   and gender in ('Woman', 'Man', 'Non-binary', 'Prefer not to say')
