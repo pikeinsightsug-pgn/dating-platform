@@ -173,6 +173,7 @@ button:disabled{opacity:.6;cursor:wait}
     if (!Number.isInteger(age) || age < 18 || age > 120) { say("You must be at least 18 years old to register."); return; }
     const email = String(values.get("email")).trim();
     const userMetadata = {
+      profile_type: "member_registration",
       first_name: String(values.get("first_name")).trim(),
       age,
       gender: String(values.get("gender")),
