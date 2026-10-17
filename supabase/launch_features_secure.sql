@@ -17,14 +17,13 @@ alter table public.members
 create unique index if not exists members_user_id_unique
   on public.members(user_id) where user_id is not null;
 
--- Save a registration profile when its Auth account is confirmed.
--- The Auth user ID comes from the trusted auth.users row, not from browser input.
+-- Save a profile at email confirmation without trusting an ID supplied by the browser.
 create or replace function public.create_member_profile_from_auth_user()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $member_profile_trigger$
 declare
   profile jsonb := new.raw_user_meta_data;
   profile_age integer;
@@ -122,7 +121,7 @@ grant execute on function public.browse_approved_profiles() to authenticated;
 revoke all on public.members from public, anon, authenticated;
 
 -- Clear any legacy per-column client grants before restoring only the intended profile access.
-do $
+do $member_grants$
 declare
   member_columns text;
 begin
@@ -137,7 +136,7 @@ begin
     execute format('revoke update (%s) on table public.members from public, anon, authenticated', member_columns);
   end if;
 end;
-$;
+$member_grants$;
 
 grant insert on public.members to anon, authenticated;
 grant select on public.members to authenticated;
@@ -277,8 +276,7 @@ commit;
 
   return new;
 end;
-$;
-
+$member_profile_trigger$;
 revoke all on function public.create_member_profile_from_auth_user() from public, anon, authenticated;
 drop trigger if exists create_member_profile_after_auth_confirmation on auth.users;
 create trigger create_member_profile_after_auth_confirmation
@@ -364,7 +362,7 @@ grant execute on function public.browse_approved_profiles() to authenticated;
 revoke all on public.members from public, anon, authenticated;
 
 -- Clear any legacy per-column client grants before restoring only the intended profile access.
-do $
+do $member_grants$
 declare
   member_columns text;
 begin
@@ -379,7 +377,7 @@ begin
     execute format('revoke update (%s) on table public.members from public, anon, authenticated', member_columns);
   end if;
 end;
-$;
+$member_grants$;
 
 grant insert on public.members to anon, authenticated;
 grant select on public.members to authenticated;
