@@ -29,7 +29,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
 <main class="wrap">
   <header class="top">
     <div class="brand">Find<span>Your</span>Person ❤️</div>
-    <nav class="member-nav" aria-label="Member dashboard"><a class="btn" href="discover.html">Discover Members</a><a class="btn secondary" href="#profile-panel">My Profile</a><a class="btn secondary" href="#preferences">Preferences</a><button id="signout" class="secondary" type="button">Log out</button></nav>
+    <nav class="member-nav" aria-label="Member dashboard"><a id="discover-nav" class="btn" href="discover.html">Discover Members</a><a id="profile-nav" class="btn secondary" href="#profile-panel">My Profile</a><a id="preferences-nav" class="btn secondary" href="#preferences">Preferences</a><button id="signout" class="secondary" type="button">Log out</button></nav>
   </header>
   <section id="profile-panel" class="panel hidden">
     <div class="notice" id="approval-guidance"><strong>How approval works:</strong> The platform owner reviews member profiles and linked accounts manually. Until your profile is approved, it stays private and you cannot browse other members. Approval is never automatic. Messaging is not currently enabled.</div>
@@ -51,6 +51,11 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       <label>What qualities do you value in a partner?<textarea name="partner_preference" rows="3" maxlength="500"></textarea></label>
       <button id="save-profile" type="submit">Save profile</button>
     </form>
+  </section>
+  <section id="recovery-panel" class="panel hidden" role="status" aria-live="polite">
+    <h1>Account recovery needed</h1>
+    <p id="recovery-message">You are signed in, but this account does not have a linked member profile. We have not created a profile or linked an existing registration automatically.</p>
+    <p>If you already registered, contact the platform owner to verify your original registration and account ownership. Do not register again while this is being checked.</p>
   </section>
   <p id="loading" role="status" aria-live="polite">Checking your private account…</p>
   <p><a class="btn secondary" href="index.html">Back to homepage</a></p>
@@ -169,10 +174,13 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
         : "Your profile is awaiting manual review by the platform owner. It stays private until approved; Discover Members opens after approval.";
       save.textContent = "Save profile";
     } else {
-      valuesFor(profileFromMetadata(user.user_metadata));
-      document.getElementById("approval-status").textContent = "No member profile is linked to this account. To prevent a duplicate, the profile has not been created here. Contact the platform owner to verify your existing registration.";
-      save.textContent = "Profile requires owner review";
-      form.querySelectorAll("input, select, textarea, button").forEach(field => { field.disabled = true; });
+      loading.classList.add("hidden");
+      panel.classList.add("hidden");
+      document.getElementById("recovery-panel").classList.remove("hidden");
+      document.getElementById("discover-nav").classList.add("hidden");
+      document.getElementById("profile-nav").classList.add("hidden");
+      document.getElementById("preferences-nav").classList.add("hidden");
+      return;
     }
     loading.classList.add("hidden");
     panel.classList.remove("hidden");
