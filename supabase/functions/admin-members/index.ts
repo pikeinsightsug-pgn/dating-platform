@@ -94,13 +94,13 @@ Deno.serve(async (req: Request) => {
       .not("user_id", "is", null);
     if (linkedError) return json({ error: "Could not verify existing account links." }, 500);
     const linkedIds = new Set((linkedRows || []).map((row) => row.user_id));
-    const accounts: Array<{ user_id: string; email: string; email_confirmed_at: string }> = [];
+    const accounts: Array<{ user_id: string; email: string }> = [];
     for (let page = 1; ; page++) {
       const { data: authPage, error: authListError } = await db.auth.admin.listUsers({ page, perPage: 1000 });
       if (authListError) return json({ error: "Could not load confirmed account choices." }, 500);
       for (const account of authPage.users) {
         if (account.email && account.email_confirmed_at && !linkedIds.has(account.id)) {
-          accounts.push({ user_id: account.id, email: account.email, email_confirmed_at: account.email_confirmed_at });
+          accounts.push({ user_id: account.id, email: account.email });
         }
       }
       if (authPage.users.length < 1000) break;
