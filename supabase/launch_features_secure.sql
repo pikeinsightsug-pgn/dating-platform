@@ -154,6 +154,9 @@ begin
   if public.current_approved_member_id() is null then
     raise exception 'Only approved adult members can browse profiles';
   end if;
+  if (select count(*) from public.members where approved = true and age >= 18) < 100 then
+    raise exception 'Member discovery opens after 100 approved adult members';
+  end if;
   return query
   select m.id, m.first_name, m.age, m.gender, m.location,
          m.relationship_goal, m.bio, m.interests, m.partner_preference, m.created_at
