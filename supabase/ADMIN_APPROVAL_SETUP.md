@@ -46,3 +46,21 @@ The owner endpoint returns up to 200 registrations and allows only explicit appr
 Use a new test email address you control. Create an account, confirm it if email confirmation is enabled, sign in, and confirm that exactly one row appears in `public.members` with the matching Auth user ID and `approved = false`. The database trigger creates the row at confirmation; the website checks for an existing row before using its safe fallback. Check that the dashboard can read and update that profile, cannot change the approval flag, and redirects to login after logout. Use the password reset link and confirm it returns to the recovery form.
 
 Do not use a real member's email or alter an existing member record for testing.
+
+
+## Member discovery and profile photos
+
+After the existing registration and secure setup scripts are in place, review and apply
+`supabase/member_discovery_photos.sql` in the Supabase SQL Editor. It reuses the private
+`profile-photos` bucket, allows authenticated members to upload only to their own folder,
+and permits approved members to view photos tied to approved profiles. The migration is
+additive and does not change member records or approval states.
+
+After applying it, test with two owner-controlled test accounts that have been manually
+approved. Discovery requires an approved signed-in member. Uploads accept JPEG, PNG, and
+WebP files up to 5 MiB. Do not use actual member accounts for tests.
+
+The Google Form remains separate and unchanged. Its responses and uploaded files are not
+imported or linked by this migration. Do not create duplicate profiles by importing its
+responses automatically; first reconcile the form's response data with the live member
+table and Auth accounts.
