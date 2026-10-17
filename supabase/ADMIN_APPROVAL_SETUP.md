@@ -6,7 +6,7 @@ The setup is additive. It does not remove, truncate, relink, approve, or overwri
 
 ## Before enabling registration
 
-The repository does not include the original `public.members` table creation or access to the live project schema. Confirm in the Supabase Table Editor that `public.members` contains the core columns referenced by the website and admin function: `id`, `user_id`, `first_name`, `age`, `gender`, `location`, `city`, `relationship_goal`, `bio`, `interests`, `partner_preference`, `approved`, and `created_at`. The setup SQL adds the newer profile/auth fields where needed; it deliberately does not guess or recreate the existing table.
+The repository does not include the original `public.members` table creation or access to the live project schema. Confirm in the Supabase Table Editor that the existing `public.members` table has its core identity/profile columns, especially `id`, `first_name`, `age`, `gender`, and `created_at`. The setup files add `user_id`, `location`, `city`, `relationship_goal`, `bio`, `interests`, `partner_preference`, `profile_photo_url`, and `approved` when missing; they deliberately do not guess or recreate the existing table.
 
 In the Supabase SQL Editor, review and apply these checked-in files in order:
 
