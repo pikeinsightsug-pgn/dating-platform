@@ -6,7 +6,9 @@ alter table public.members
   add column if not exists bio text,
   add column if not exists interests text,
   add column if not exists partner_preference text,
-  add column if not exists photo_path text;
+  add column if not exists interests text,
+  add column if not exists partner_preference text,
+  add column if not exists profile_photo_url text;
 
 -- Keep uploaded photos private. The website uploads to the existing
 -- profile-photos bucket, so the bucket name must match index.html exactly.
