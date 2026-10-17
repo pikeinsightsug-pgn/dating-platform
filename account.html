@@ -35,7 +35,7 @@ button:disabled{opacity:.6;cursor:wait}
   <div class="notice"><strong>Founding members:</strong> free during testing. Payments and automatic charges are disabled. Member profiles stay private until reviewed and approved.</div>
   <div id="register-view">
     <h1>Create your free account</h1>
-    <p>Adults 18+ in Uganda and Botswana. If email confirmation is enabled, confirm your address first, then sign in to finish saving your profile.</p>
+    <p>Adults 18+ in Uganda and Botswana. If email confirmation is enabled, confirm your address and sign in. If your profile is not linked, contact the owner to verify it; we will not create a duplicate profile automatically.</p>
     <form id="register-form" class="grid">
       <label>First name<input name="first_name" required maxlength="80" autocomplete="given-name"></label>
       <label>Email address<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
@@ -209,7 +209,7 @@ button:disabled{opacity:.6;cursor:wait}
       } else {
         document.querySelector('#login-form [name="email"]').value = email;
         show("login");
-        say("Account created. Check your email and confirm your address, then log in here to save your private profile.");
+        say("Account created. Check your email and confirm your address, then sign in. If no profile is linked, contact the owner to verify your registration safely.");
       }
     } catch (error) {
       say("Could not create the account. Check the email and password, then try again. If the problem continues, contact support.");
