@@ -25,7 +25,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const authHeader = req.headers.get("Authorization") || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const token = authHeader.replace(/^Bearer\\s+/i, "");
   if (!token || token === authHeader) return json({ error: "Sign in required." }, 401);
 
   const authClient = createClient(url, anonKey, {
@@ -77,6 +77,21 @@ Deno.serve(async (req: Request) => {
       return json({ error: "A valid member ID is required." }, 400);
     }
     const approved = body.action === "approve";
+    if (approved) {
+      const { data: member, error: memberError } = await db.from("members")
+        .select("user_id")
+        .eq("id", body.member_id)
+        .maybeSingle();
+      if (memberError) return json({ error: "Could not verify the member account." }, 500);
+      if (!member) return json({ error: "Member not found." }, 404);
+      if (!member.user_id) {
+        return json({ error: "This profile has no linked account and cannot be approved for discovery." }, 409);
+      }
+      const { data: linkedAccount, error: linkedAccountError } = await db.auth.admin.getUserById(member.user_id);
+      if (linkedAccountError || !linkedAccount.user || !linkedAccount.user.email_confirmed_at) {
+        return json({ error: "This profile has no confirmed linked account and cannot be approved for discovery." }, 409);
+      }
+    }
     const { data, error } = await db.from("members")
       .update({ approved })
       .eq("id", body.member_id)
