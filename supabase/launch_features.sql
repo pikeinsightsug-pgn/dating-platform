@@ -103,4 +103,4 @@ grant select, insert on public.member_messages to authenticated;
 -- No client-side policy can approve members or change user_id.
 -- Existing records remain unapproved until reviewed and linked through a trusted owner-only process.
 
-commit();
+COMMIT;
