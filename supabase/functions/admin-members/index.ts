@@ -45,13 +45,24 @@ Deno.serve(async (req: Request) => {
 
   if (body.action === "list") {
     const { data, error } = await db.from("members")
-      .select("id, first_name, age, gender, location, city, relationship_goal, bio, interests, partner_preference, profile_photo_url, approved, created_at")
+      .select("id, user_id, first_name, age, gender, location, city, relationship_goal, bio, interests, partner_preference, profile_photo_url, approved, created_at")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) return json({ error: "Could not load registrations.", detail: error.message }, 500);
     const rows = data || [];
+    const authUsers = new Map<string, { email: string | null }>();
+    for (let page = 1; ; page++) {
+      const { data: authPage, error: authListError } = await db.auth.admin.listUsers({ page, perPage: 1000 });
+      if (authListError) return json({ error: "Could not load registered account identifiers.", detail: authListError.message }, 500);
+      for (const authUser of authPage.users) authUsers.set(authUser.id, { email: authUser.email ?? null });
+      if (authPage.users.length < 1000) break;
+    }
+    const identifiedRows = rows.map((member) => ({
+      ...member,
+      account_email: member.user_id ? authUsers.get(member.user_id)?.email ?? null : null,
+    }));
     return json({
-      members: rows,
+      members: identifiedRows,
       metrics: {
         total: rows.length,
         approved: rows.filter((m) => m.approved === true).length,
