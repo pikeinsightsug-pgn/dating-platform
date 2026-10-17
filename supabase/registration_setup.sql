@@ -31,10 +31,13 @@ create policy "public can register members"
 on public.members for insert
 to anon, authenticated
 with check (
-  age >= 18
-  and age <= 120
-  and first_name is not null
-  and length(trim(first_name)) > 0
+  age >= 18 and age <= 120
+  and first_name is not null and length(trim(first_name)) > 0
+  and gender in ('Woman', 'Man', 'Non-binary', 'Prefer not to say')
+  and location in ('Uganda', 'Botswana')
+  and city is not null and length(trim(city)) > 0
+  and relationship_goal in ('Serious relationship', 'Marriage', 'Friendship', 'Exploring connections')
+  and bio is not null and length(trim(bio)) > 0
   and approved = false
   and ((auth.uid() is null and user_id is null) or user_id = auth.uid())
 );
