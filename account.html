@@ -47,6 +47,8 @@ button:disabled{opacity:.6;cursor:wait}
       <label>City or town<input name="city" required maxlength="100" autocomplete="address-level2"></label>
       <label>Relationship goal<select name="relationship_goal" required><option value="">Choose one</option><option>Serious relationship</option><option>Marriage</option><option>Friendship</option><option>Exploring connections</option></select></label>
       <label>Short biography<textarea name="bio" rows="4" required maxlength="500"></textarea></label>
+      <label>Interests <span>(optional)</span><input name="interests" maxlength="300" placeholder="Music, travel, cooking…"></label>
+      <label>What qualities do you value in a partner? <span>(optional)</span><textarea name="partner_preference" rows="3" maxlength="500"></textarea></label>
       <button type="submit">Create account</button>
     </form>
     <p class="links"><span>Already have an account?</span><button type="button" data-view="login">Log in</button></p>
@@ -123,6 +125,8 @@ button:disabled{opacity:.6;cursor:wait}
       city: String(meta.city).trim(),
       relationship_goal: String(meta.relationship_goal),
       bio: String(meta.bio).trim(),
+      interests: String(meta.interests || "").trim(),
+      partner_preference: String(meta.partner_preference || "").trim(),
       approved: false
     };
   }
@@ -175,7 +179,9 @@ button:disabled{opacity:.6;cursor:wait}
       location: String(values.get("location")),
       city: String(values.get("city")).trim(),
       relationship_goal: String(values.get("relationship_goal")),
-      bio: String(values.get("bio")).trim()
+      bio: String(values.get("bio")).trim(),
+      interests: String(values.get("interests") || "").trim(),
+      partner_preference: String(values.get("partner_preference") || "").trim()
     };
     setBusy(true); say("Creating your account…");
     try {
