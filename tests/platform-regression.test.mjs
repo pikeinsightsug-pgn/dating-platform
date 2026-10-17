@@ -108,6 +108,7 @@ test("discovery contract restricts results to approved adults and omits private 
   assert.match(fn, /current_approved_member_id\(\) is null/);
   assert.match(fn, /m\.approved = true and m\.age >= 18/);
   assert.match(fn, /m\.id <> public\.current_approved_member_id\(\)/);
-  const returnedColumns = fn.match(/returns table\\s*\\(([\\s\\S]*?)\\)/i)?.[1] || "";\n  assert.doesNotMatch(returnedColumns, /account_email|partner_preference|user_id/i);
+  const returnedColumns = fn.match(/returns table\s*\(([\s\S]*?)\)/i)?.[1] || "";
+  assert.doesNotMatch(returnedColumns, /account_email|partner_preference|user_id/i);
   assert.match(await read("discover.html"), /rpc\(["']browse_approved_profiles["']\)/);
 });
