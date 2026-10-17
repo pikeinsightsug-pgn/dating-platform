@@ -35,7 +35,7 @@ button:disabled{opacity:.6;cursor:wait}
   <div class="notice"><strong>Founding members:</strong> free during testing. Payments and automatic charges are disabled. Member profiles stay private until reviewed and approved.</div>
   <div id="register-view">
     <h1>Create your free account</h1>
-    <p>Adults 18+ in Uganda and Botswana. If email confirmation is enabled, confirm your address first, then sign in to finish saving your profile.</p>
+    <p>Adults 18+ in Uganda and Botswana. If email confirmation is enabled, confirm your address and sign in. If your profile is not linked, contact the owner to verify it; we will not create a duplicate profile automatically.</p>
     <form id="register-form" class="grid">
       <label>First name<input name="first_name" required maxlength="80" autocomplete="given-name"></label>
       <label>Email address<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
@@ -96,6 +96,7 @@ button:disabled{opacity:.6;cursor:wait}
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const views = ["register", "login", "forgot", "recovery"];
   let busy = false;
+  let registrationCompletionPending = false;
   let finishing = null;
   function say(message) { status.textContent = message; }
   function show(view) {
@@ -130,10 +131,13 @@ button:disabled{opacity:.6;cursor:wait}
       approved: false
     };
   }
-  async function ensureProfile(user) {
+  async function ensureProfile(user, allowCreate = false) {
     const { data: existing, error: readError } = await db.from("members").select("id,approved").eq("user_id", user.id).limit(1);
     if (readError) throw new Error("Profile database setup is unavailable.");
     if (existing && existing.length) return existing[0];
+
+    // A normal sign-in must never guess which unlinked legacy profile belongs to this person.
+    if (!allowCreate) return null;
     const profile = profileFromMetadata(user);
     if (!profile) return null;
     const { data, error } = await db.from("members").insert(profile).select("id,approved").single();
@@ -144,11 +148,17 @@ button:disabled{opacity:.6;cursor:wait}
     }
     return data;
   }
-  async function finishSignIn(user) {
+  async function finishSignIn(user, allowCreateProfile = false) {
     if (finishing) return finishing;
     finishing = (async () => {
       try {
-        await ensureProfile(user);
+        const profile = await ensureProfile(user, allowCreateProfile);
+        if (!profile) {
+          try { await db.auth.signOut(); } catch {}
+          show("login");
+          say("No member profile is linked to this account. We did not create a new profile to avoid duplicating an existing registration. Contact the platform owner to verify your account.");
+          return;
+        }
         window.location.replace("dashboard.html");
       } catch (error) {
         say((error && error.message) || "Your account is signed in, but the private profile could not be loaded.");
@@ -184,7 +194,7 @@ button:disabled{opacity:.6;cursor:wait}
       interests: String(values.get("interests") || "").trim(),
       partner_preference: String(values.get("partner_preference") || "").trim()
     };
-    setBusy(true); say("Creating your account…");
+    setBusy(true); say("Creating your account…"); registrationCompletionPending = true;
     try {
       const { data, error } = await db.auth.signUp({
         email,
@@ -195,15 +205,15 @@ button:disabled{opacity:.6;cursor:wait}
       form.reset();
       if (data.session && data.user) {
         say("Account created. Saving your private profile…");
-        await finishSignIn(data.user);
+        await finishSignIn(data.user, true);
       } else {
         document.querySelector('#login-form [name="email"]').value = email;
         show("login");
-        say("Account created. Check your email and confirm your address, then log in here to save your private profile.");
+        say("Account created. Check your email and confirm your address, then sign in. If no profile is linked, contact the owner to verify your registration safely.");
       }
     } catch (error) {
       say("Could not create the account. Check the email and password, then try again. If the problem continues, contact support.");
-    } finally { setBusy(false); }
+    } finally { registrationCompletionPending = false; setBusy(false); }
   });
 
   document.getElementById("login-form").addEventListener("submit", async event => {
@@ -265,7 +275,7 @@ button:disabled{opacity:.6;cursor:wait}
   db.auth.onAuthStateChange((event, session) => {
     if (event === "PASSWORD_RECOVERY") { show("recovery"); say("Choose a new password for your account."); }
     else if (event === "SIGNED_IN" && session && !new URLSearchParams(location.search).has("mode")) {
-      setTimeout(() => finishSignIn(session.user), 0);
+      setTimeout(() => finishSignIn(session.user, registrationCompletionPending), 0);
     }
   });
 

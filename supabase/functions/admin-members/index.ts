@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isMemberPhotoPathOwnedByUser } from "../_shared/member-photo-path.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,9 +58,24 @@ Deno.serve(async (req: Request) => {
       for (const authUser of authPage.users) authUsers.set(authUser.id, { email: authUser.email ?? null });
       if (authPage.users.length < 1000) break;
     }
-    const identifiedRows = rows.map((member) => ({
-      ...member,
-      account_email: member.user_id ? authUsers.get(member.user_id)?.email ?? null : null,
+    const identifiedRows = await Promise.all(rows.map(async (member) => {
+      let admin_photo_signed_url: string | null = null;
+      const photoPath = member.profile_photo_url;
+      const safeOwnedPath = isMemberPhotoPathOwnedByUser(member.user_id, photoPath);
+      if (safeOwnedPath) {
+        try {
+          const { data: signedPhoto, error: signedPhotoError } = await db.storage.from("profile-photos")
+            .createSignedUrl(photoPath, 300);
+          if (!signedPhotoError) admin_photo_signed_url = signedPhoto?.signedUrl ?? null;
+        } catch {
+          // A photo preview failure must not prevent the owner from reviewing member records.
+        }
+      }
+      return {
+        ...member,
+        account_email: member.user_id ? authUsers.get(member.user_id)?.email ?? null : null,
+        admin_photo_signed_url,
+      };
     }));
     return json({
       members: identifiedRows,
