@@ -70,7 +70,7 @@ grant execute on function public.is_approved_member_profile(uuid) to authenticat
 create or replace function public.browse_approved_profiles()
 returns table (
   id uuid, first_name text, age integer, gender text, location text,
-  relationship_goal text, city text, bio text, interests text, partner_preference text,
+  relationship_goal text, bio text, interests text, partner_preference text,
   created_at timestamptz
 )
 language plpgsql stable security definer set search_path = ''
@@ -81,7 +81,7 @@ begin
   end if;
   return query
   select m.id, m.first_name, m.age, m.gender, m.location,
-         m.relationship_goal, m.city, m.bio, m.interests, m.partner_preference, m.created_at
+         m.relationship_goal, m.bio, m.interests, m.partner_preference, m.created_at
   from public.members m
   where m.approved = true and m.age >= 18
     and m.id <> public.current_approved_member_id()
