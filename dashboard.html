@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My private profile | Find Your Person</title>
+<meta name="description" content="View and update your private Find Your Person member profile.">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fff8fb;color:#241b23;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:820px;margin:0 auto;padding:24px 18px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-weight:900;font-size:22px}.brand span{color:#b32663}
+.panel{background:#fff;border:1px solid #f0dfe7;border-radius:22px;padding:24px;margin:16px 0;box-shadow:0 8px 30px #5c18300b}
+h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:12px 0}h2{margin-top:0}p{line-height:1.55;color:#6a5b64}
+.grid{display:grid;gap:13px}label{font-weight:650;font-size:14px}
+input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #e7ccd8;border-radius:11px;margin-top:6px;font:inherit;font-size:16px;background:#fff}
+button,.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:13px 19px;font:inherit;font-weight:800;cursor:pointer;background:#b32663;color:#fff;text-decoration:none}
+button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}
+.notice{padding:13px 15px;background:#fde8f0;border-radius:12px;color:#8f1e51;line-height:1.5}
+#status{white-space:pre-wrap;overflow-wrap:anywhere;min-height:1.4em}.hidden{display:none!important}
+@media(max-width:480px){.panel{padding:18px}.top button{width:100%}.wrap{padding:16px 14px 40px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <div class="brand">Find<span>Your</span>Person ❤️</div>
+    <button id="signout" class="secondary" type="button">Log out</button>
+  </header>
+  <section id="profile-panel" class="panel hidden">
+    <div class="notice">Your profile is private. It is not discoverable unless an administrator approves it. Member discovery and messaging are not currently enabled.</div>
+    <h1>My member profile</h1>
+    <p id="approval-status"></p>
+    <p id="status" role="status" aria-live="polite"></p>
+    <form id="profile-form" class="grid">
+      <label>First name<input name="first_name" required maxlength="80" autocomplete="given-name"></label>
+      <label>Age<input name="age" type="number" required min="18" max="120" inputmode="numeric"></label>
+      <label>Gender<select name="gender" required><option value="">Choose one</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option></select></label>
+      <label>Country<select name="location" required><option value="">Choose country</option><option>Uganda</option><option>Botswana</option></select></label>
+      <label>City or town<input name="city" required maxlength="100" autocomplete="address-level2"></label>
+      <label>Relationship goal<select name="relationship_goal" required><option value="">Choose one</option><option>Serious relationship</option><option>Marriage</option><option>Friendship</option><option>Exploring connections</option></select></label>
+      <label>Short biography<textarea name="bio" rows="4" required maxlength="500"></textarea></label>
+      <label>Interests<input name="interests" maxlength="300" placeholder="Music, travel, cooking…"></label>
+      <label>What qualities do you value in a partner?<textarea name="partner_preference" rows="3" maxlength="500"></textarea></label>
+      <button id="save-profile" type="submit">Save profile</button>
+    </form>
+  </section>
+  <p id="loading" role="status" aria-live="polite">Checking your private account…</p>
+  <p><a class="btn secondary" href="index.html">Back to homepage</a></p>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+  const SUPABASE_URL = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_vzGFbhe7X3CpobiHZAk9Lw_2V3O-F3V";
+  const panel = document.getElementById("profile-panel");
+  const loading = document.getElementById("loading");
+  const status = document.getElementById("status");
+  const form = document.getElementById("profile-form");
+  const save = document.getElementById("save-profile");
+  const signout = document.getElementById("signout");
+  if (!window.supabase) { loading.textContent = "Account service could not load. Refresh and try again."; return; }
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  let user = null;
+  function setStatus(message) { status.textContent = message; }
+  function valuesFor(row) {
+    ["first_name","age","gender","location","city","relationship_goal","bio","interests","partner_preference"].forEach(name => {
+      const field = form.elements.namedItem(name);
+      if (field) field.value = row && row[name] != null ? String(row[name]) : "";
+    });
+  }
+  function profilePayload() {
+    const values = new FormData(form);
+    const age = Number(values.get("age"));
+    return {
+      first_name: String(values.get("first_name")).trim(),
+      age,
+      gender: String(values.get("gender")),
+      location: String(values.get("location")),
+      city: String(values.get("city")).trim(),
+      relationship_goal: String(values.get("relationship_goal")),
+      bio: String(values.get("bio")).trim(),
+      interests: String(values.get("interests") || "").trim(),
+      partner_preference: String(values.get("partner_preference") || "").trim()
+    };
+  }
+  function validPayload(p) {
+    return p.first_name && Number.isInteger(p.age) && p.age >= 18 && p.age <= 120 &&
+      ["Woman","Man","Non-binary","Prefer not to say"].includes(p.gender) &&
+      ["Uganda","Botswana"].includes(p.location) && p.city &&
+      ["Serious relationship","Marriage","Friendship","Exploring connections"].includes(p.relationship_goal) &&
+      p.bio && p.bio.length <= 500 && p.interests.length <= 300 && p.partner_preference.length <= 500;
+  }
+  function profileFromMetadata(meta) {
+    if (!meta) return null;
+    return {
+      first_name: meta.first_name || "",
+      age: meta.age || "",
+      gender: meta.gender || "",
+      location: meta.location || "",
+      city: meta.city || "",
+      relationship_goal: meta.relationship_goal || "",
+      bio: meta.bio || "",
+      interests: meta.interests || "",
+      partner_preference: meta.partner_preference || ""
+    };
+  }
+  async function loadProfile() {
+    const { data, error } = await db.from("members")
+      .select("id,user_id,first_name,age,gender,location,city,relationship_goal,bio,interests,partner_preference,approved")
+      .eq("user_id", user.id).limit(1);
+    if (error) throw new Error("Your private profile could not be loaded. The administrator may need to finish the Supabase setup.");
+    if (data && data.length) return data[0];
+    return null;
+  }
+  async function initialize() {
+    const { data, error } = await db.auth.getSession();
+    if (error) throw new Error("Your session could not be restored. Please sign in again.");
+    user = data.session && data.session.user;
+    if (!user) { window.location.replace("account.html?mode=login"); return; }
+    let profile = await loadProfile();
+    if (!profile) {
+      const metaProfile = profileFromMetadata(user.user_metadata);
+      if (metaProfile && validPayload(metaProfile)) {
+        const { error: insertError } = await db.from("members").insert({ ...metaProfile, user_id: user.id, approved: false });
+        if (insertError) {
+          profile = await loadProfile();
+          if (!profile) throw new Error("Your account is active, but your profile could not be saved. Please try again or contact support.");
+        } else {
+          profile = { ...metaProfile, approved: false };
+        }
+      }
+    }
+    if (profile) {
+      valuesFor(profile);
+      document.getElementById("approval-status").textContent = profile.approved
+        ? "Your profile is approved. Member discovery will open when the service is ready."
+        : "Your profile is waiting for administrator review.";
+      save.textContent = "Save profile";
+    } else {
+      valuesFor(profileFromMetadata(user.user_metadata));
+      document.getElementById("approval-status").textContent = "Complete your private profile below. It will be reviewed before it can be approved.";
+      save.textContent = "Submit private profile";
+    }
+    loading.classList.add("hidden");
+    panel.classList.remove("hidden");
+  }
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!user || save.disabled || !form.reportValidity()) return;
+    const payload = profilePayload();
+    if (!validPayload(payload)) { setStatus("Check the required fields and confirm that you are at least 18."); return; }
+    save.disabled = true; save.textContent = "Saving…"; setStatus("Saving your private profile…");
+    try {
+      const { data: existing, error: lookupError } = await db.from("members").select("id").eq("user_id", user.id).limit(1);
+      if (lookupError) throw lookupError;
+      let result;
+      if (existing && existing.length) {
+        result = await db.from("members").update(payload).eq("user_id", user.id).select("id").maybeSingle();
+      } else {
+        result = await db.from("members").insert({ ...payload, user_id: user.id, approved: false }).select("id").maybeSingle();
+      }
+      if (result.error) throw result.error;
+      if (!result.data) throw new Error("No profile was changed.");
+      setStatus("Your private profile has been saved. Approval status can only be changed by an administrator.");
+      const refreshed = await loadProfile();
+      if (refreshed) {
+        document.getElementById("approval-status").textContent = refreshed.approved
+          ? "Your profile is approved. Member discovery will open when the service is ready."
+          : "Your profile is waiting for administrator review.";
+      }
+    } catch (error) {
+      setStatus("Could not save your profile. Check your connection and try again. If the problem continues, contact support.");
+    } finally { save.disabled = false; save.textContent = "Save profile"; }
+  });
+  signout.addEventListener("click", async () => {
+    signout.disabled = true;
+    try {
+      const { error } = await db.auth.signOut();
+      if (error) throw error;
+      window.location.replace("account.html?mode=login");
+    } catch (error) {
+      signout.disabled = false;
+      setStatus("Could not log out right now. Please try again.");
+    }
+  });
+  db.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_OUT" || !session) window.location.replace("account.html?mode=login");
+  });
+  initialize().catch(error => { loading.textContent = (error && error.message) || "Could not load your account. Please sign in again."; });
+})();
+</script>
+</body>
+</html>
