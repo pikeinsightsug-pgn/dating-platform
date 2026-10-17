@@ -65,9 +65,13 @@ Deno.serve(async (req: Request) => {
         pathSegments[0] === member.user_id && !pathSegments.some((part) => !part || part === "." || part === "..") &&
         !photoPath.includes("\\") && !photoPath.startsWith("http");
       if (safeOwnedPath) {
-        const { data: signedPhoto } = await db.storage.from("profile-photos")
-          .createSignedUrl(photoPath, 300);
-        admin_photo_signed_url = signedPhoto?.signedUrl ?? null;
+        try {
+          const { data: signedPhoto, error: signedPhotoError } = await db.storage.from("profile-photos")
+            .createSignedUrl(photoPath, 300);
+          if (!signedPhotoError) admin_photo_signed_url = signedPhoto?.signedUrl ?? null;
+        } catch {
+          // A photo preview failure must not prevent the owner from reviewing member records.
+        }
       }
       return {
         ...member,
