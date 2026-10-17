@@ -32,12 +32,14 @@ on public.members for insert
 to anon, authenticated
 with check (
   age >= 18 and age <= 120
-  and first_name is not null and length(trim(first_name)) > 0
+  and first_name is not null and length(trim(first_name)) between 1 and 80
   and gender in ('Woman', 'Man', 'Non-binary', 'Prefer not to say')
   and location in ('Uganda', 'Botswana')
-  and city is not null and length(trim(city)) > 0
+  and city is not null and length(trim(city)) between 1 and 100
   and relationship_goal in ('Serious relationship', 'Marriage', 'Friendship', 'Exploring connections')
-  and bio is not null and length(trim(bio)) > 0
+  and bio is not null and length(trim(bio)) between 1 and 500
+  and (interests is null or length(interests) <= 300)
+  and (partner_preference is null or length(partner_preference) <= 500)
   and approved = false
   and ((auth.uid() is null and user_id is null) or user_id = auth.uid())
 );
