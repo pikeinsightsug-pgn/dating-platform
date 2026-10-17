@@ -150,14 +150,14 @@
     try {
       const safeName = photo.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100);
       const photoPath = Date.now() + "-" + crypto.randomUUID() + "-" + safeName;
-      const { error: uploadError } = await db.storage.from("member-photos").upload(photoPath, photo, {
+      const { error: uploadError } = await db.storage.from("profile-photos").upload(photoPath, photo, {
         cacheControl: "3600", upsert: false, contentType: photoType
       });
       if (uploadError) throw uploadError;
       member.photo_path = photoPath;
       const { error } = await db.from("members").insert([member]);
       if (error) {
-        await db.storage.from("member-photos").remove([photoPath]);
+        await db.storage.from("profile-photos").remove([photoPath]);
         throw error;
       }
       form.reset();
