@@ -4,7 +4,6 @@
 
 begin;
 
--- Link a member profile to a Supabase Auth account when the member creates one.
 alter table public.members
   add column if not exists user_id uuid references auth.users(id) on delete set null,
   add column if not exists interests text,
@@ -12,13 +11,10 @@ alter table public.members
   add column if not exists approved boolean not null default false;
 
 create unique index if not exists members_user_id_unique
-  on public.members(user_id)
-  where user_id is not null;
-
+  on public.members(user_id) where user_id is not null;
 create index if not exists members_approved_location_idx
   on public.members(approved, location);
 
--- Private member-to-member messages. A message can only be read by its two participants.
 create table if not exists public.member_messages (
   id uuid primary key default gen_random_uuid(),
   sender_member_id uuid not null references public.members(id) on delete cascade,
@@ -26,10 +22,8 @@ create table if not exists public.member_messages (
   body text not null check (length(trim(body)) between 1 and 2000),
   created_at timestamptz not null default now(),
   read_at timestamptz,
-  constraint member_messages_no_self_message
-    check (sender_member_id <> recipient_member_id)
+  constraint member_messages_no_self_message check (sender_member_id <> recipient_member_id)
 );
-
 create index if not exists member_messages_sender_created_idx
   on public.member_messages(sender_member_id, created_at desc);
 create index if not exists member_messages_recipient_created_idx
@@ -38,83 +32,75 @@ create index if not exists member_messages_recipient_created_idx
 alter table public.members enable row level security;
 alter table public.member_messages enable row level security;
 
--- Only approved profiles are discoverable to signed-in users.
--- Contact information must never be added to the public profile projection.
+-- SECURITY DEFINER helpers avoid recursive RLS checks and prevent client-side
+-- queries from needing broad SELECT access to the underlying members table.
+create or replace function public.current_approved_member_id()
+returns uuid
+language sql stable security definer
+set search_path = ''
+as $$
+  select m.id
+  from public.members m
+  where m.user_id = auth.uid() and m.approved = true and m.age >= 18
+  limit 1
+$$;
+
+create or replace function public.is_approved_member_profile(profile_id uuid)
+returns boolean
+language sql stable security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.members m
+    where m.id = profile_id and m.approved = true and m.age >= 18
+  )
+$$;
+
+revoke all on function public.current_approved_member_id() from public, anon;
+revoke all on function public.is_approved_member_profile(uuid) from public, anon;
+grant execute on function public.current_approved_member_id() to authenticated;
+grant execute on function public.is_approved_member_profile(uuid) to authenticated;
+
+-- This safe projection deliberately excludes user_id and any contact details.
+-- The view owner reads the underlying table; clients receive only these columns.
+create or replace view public.approved_member_profiles
+with (security_barrier = true)
+as
+select id, first_name, age, gender, location, relationship_goal, bio,
+       interests, partner_preference, profile_photo_url, created_at
+from public.members
+where approved = true and age >= 18;
+
+revoke all on public.approved_member_profiles from public, anon, authenticated;
+grant select on public.approved_member_profiles to authenticated;
+revoke all on public.members from anon, authenticated;
+
+-- Keep public registration inserts possible under the existing validation policy.
+grant insert on public.members to anon, authenticated;
+
 drop policy if exists "approved members can view approved profiles" on public.members;
-create policy "approved members can view approved profiles"
-on public.members for select
-to authenticated
-using (
-  approved = true
-  and exists (
-    select 1 from public.members me
-    where me.user_id = auth.uid()
-      and me.approved = true
-  )
-);
-
--- Signed-in approved members may send a message only as their own linked profile,
--- and only to another approved member. There is deliberately no public/anon policy.
 drop policy if exists "approved members can send messages" on public.member_messages;
-create policy "approved members can send messages"
-on public.member_messages for insert
-to authenticated
-with check (
-  exists (
-    select 1 from public.members sender
-    where sender.id = sender_member_id
-      and sender.user_id = auth.uid()
-      and sender.approved = true
-      and sender.age >= 18
-  )
-  and exists (
-    select 1 from public.members recipient
-    where recipient.id = recipient_member_id
-      and recipient.approved = true
-      and recipient.age >= 18
-  )
-);
-
 drop policy if exists "participants can read their messages" on public.member_messages;
-create policy "participants can read their messages"
-on public.member_messages for select
-to authenticated
-using (
-  exists (
-    select 1 from public.members me
-    where me.user_id = auth.uid()
-      and me.approved = true
-      and me.id in (sender_member_id, recipient_member_id)
-  )
-);
-
--- Recipients may mark their own incoming messages as read, without changing message content.
 drop policy if exists "recipients can mark messages read" on public.member_messages;
-create policy "recipients can mark messages read"
-on public.member_messages for update
-to authenticated
-using (
-  exists (
-    select 1 from public.members recipient
-    where recipient.id = recipient_member_id
-      and recipient.user_id = auth.uid()
-      and recipient.approved = true
-  )
-)
+
+create policy "approved members can send messages"
+on public.member_messages for insert to authenticated
 with check (
-  exists (
-    select 1 from public.members recipient
-    where recipient.id = recipient_member_id
-      and recipient.user_id = auth.uid()
-      and recipient.approved = true
-  )
+  sender_member_id = public.current_approved_member_id()
+  and public.is_approved_member_profile(recipient_member_id)
 );
 
-grant select on public.members to authenticated;
-grant select, insert, update on public.member_messages to authenticated;
+create policy "participants can read their messages"
+on public.member_messages for select to authenticated
+using (
+  sender_member_id = public.current_approved_member_id()
+  or recipient_member_id = public.current_approved_member_id()
+);
 
--- Intentionally no client-side policy can approve a member or change user_id.
--- Perform approvals and account/profile linking through a trusted owner-only process.
--- Existing records remain unapproved until explicitly reviewed by the owner.
+grant select, insert on public.member_messages to authenticated;
+
+-- No client-side update/delete policy: message contents cannot be edited after sending.
+-- No client-side policy can approve members or change user_id.
+-- Existing records remain unapproved until reviewed and linked through a trusted owner-only process.
 
 commit();
