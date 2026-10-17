@@ -10,6 +10,9 @@ alter table public.members
   add column if not exists partner_preference text,
   add column if not exists profile_photo_url text,
   add column if not exists approved boolean not null default false;
+update public.members set approved = false where approved is null;
+alter table public.members alter column approved set default false;
+alter table public.members alter column approved set not null;
 
 -- Keep one account linked to at most one member profile.
 create unique index if not exists members_user_id_unique
