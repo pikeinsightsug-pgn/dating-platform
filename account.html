@@ -5,7 +5,7 @@
 <title>Member account | Find Your Person</title>
 <meta name="description" content="Create or access your Find Your Person account. Adults 18+ in Uganda and Botswana.">
 <style>
-*{box-sizing:border-box}body{margin:0;background:#fff8fb;color:#241b23;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}.wrap{max-width:760px;margin:0 auto;padding:24px 18px 60px}.brand{font-weight:900;font-size:22px;margin:8px 0 24px}.brand span{color:#b32663}.panel{background:white;border:1px solid #f0dfe7;border-radius:22px;padding:24px;margin:16px 0;box-shadow:0 8px 30px #5c18300b}h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:12px 0}p{line-height:1.55;color:#6a5b64}.grid{display:grid;gap:13px}label{font-weight:650;font-size:14px}input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #e7ccd8;border-radius:11px;margin-top:6px;font:inherit;background:white}button,.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:13px 19px;font:inherit;font-weight:800;cursor:pointer;background:#b32663;color:white}button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}.row{display:flex;gap:10px;flex-wrap:wrap}.notice{padding:13px 15px;background:#fde8f0;border-radius:12px;color:#8f1e51;line-height:1.5}.hidden{display:none!important}#status{white-space:pre-wrap;overflow-wrap:anywhere}small{color:#82737b}
+*{box-sizing:border-box}body{margin:0;background:#fff8fb;color:#241b23;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}.wrap{max-width:760px;margin:0 auto;padding:24px 18px 60px}.brand{font-weight:900;font-size:22px;margin:8px 0 24px}.brand span{color:#b32663}.panel{background:white;border:1px solid #f0dfe7;border-radius:22px;padding:24px;margin:16px 0;box-shadow:0 8px 30px #5c18300b}h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:12px 0}p{line-height:1.55;color:#6a5b64}.grid{display:grid;gap:13px}label{font-weight:650;font-size:14px}input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #e7ccd8;border-radius:11px;margin-top:6px;font:inherit;background:white}button,.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:13px 19px;font:inherit;font-weight:800;cursor:pointer;background:#b32663;color:white}.row>button{flex:1 1 160px}input,select,textarea{font-size:16px}button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}.row{display:flex;gap:10px;flex-wrap:wrap}.notice{padding:13px 15px;background:#fde8f0;border-radius:12px;color:#8f1e51;line-height:1.5}.hidden{display:none!important}#status{white-space:pre-wrap;overflow-wrap:anywhere}small{color:#82737b}
 </style>
 </head>
 <body><main class="wrap">
@@ -17,7 +17,7 @@
   <form id="auth-form" class="grid">
     <label>Email address<input id="email" type="email" autocomplete="email" required maxlength="254"></label>
     <label>Password<input id="password" type="password" autocomplete="current-password" minlength="8" required></label>
-    <div class="row"><button id="signup" type="button">Create account</button><button id="signin" class="secondary" type="submit">Sign in</button></div>
+    <div class="row"><button id="signup" type="button">Create free account</button><button id="signin" class="secondary" type="submit">Sign in</button></div>
   </form>
   <p id="status" role="status" aria-live="polite"></p>
   <button id="signout" class="secondary hidden" type="button">Sign out</button>
@@ -77,9 +77,12 @@
     status.textContent = "Signed in as " + user.email + ". Complete your profile below. It will remain unapproved until reviewed.";
   }
   signup.addEventListener("click", async () => {
+    if (!emailEl.reportValidity() || !passwordEl.reportValidity()) {
+      status.textContent = "Enter a valid email and a password of at least 8 characters.";
+      return;
+    }
     const email = emailEl.value.trim();
     const password = passwordEl.value;
-    if (!email || password.length < 8) { status.textContent = "Enter a valid email and a password of at least 8 characters."; return; }
     setBusy(true); status.textContent = "Creating account…";
     try {
       const { data, error } = await db.auth.signUp({ email, password });
@@ -111,7 +114,11 @@
   document.getElementById("profile-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = document.getElementById("save-profile");
-    const { data: sessionData } = await db.auth.getSession();
+    if (!event.currentTarget.reportValidity()) return;
+    button.disabled = true; button.textContent = "Saving…";
+    try {
+    const { data: sessionData, error: sessionError } = await db.auth.getSession();
+    if (sessionError) throw sessionError;
     const user = sessionData.session && sessionData.session.user;
     if (!user) { status.textContent = "Please sign in again before saving your profile."; return; }
     const formData = new FormData(event.currentTarget);
@@ -129,15 +136,13 @@
       partner_preference: String(formData.get("partner_preference")).trim(),
       approved: false
     };
-    button.disabled = true; button.textContent = "Saving…";
-    try {
       const { error } = await db.from("members").insert([member]);
       if (error) throw error;
       event.currentTarget.reset();
       status.textContent = "Your profile has been saved privately and is awaiting administrator review. It is not publicly discoverable yet.";
       await refreshSession();
     } catch (e) {
-      status.textContent = "Could not save profile. If the database migration has not been applied, ask the administrator to apply launch_features_secure.sql. Details: " + (e.message || "Please try again.");
+      status.textContent = "Could not save profile. Check your connection and try again. If the database setup is missing, ask the administrator to apply the reviewed Supabase setup. Details: " + (e.message || "Please try again.");
     } finally { button.disabled = false; button.textContent = "Save private profile"; }
   });
   db.auth.onAuthStateChange(() => { setTimeout(refreshSession, 0); });
