@@ -18,6 +18,8 @@ test("inline application scripts parse", async () => {
 
 test("login reuses linked profiles and never creates profiles; fresh registration creates one pending profile", async () => {
   const html = await read("account.html");
+  assert.match(html, /await finishSignIn\\(data\\.user, true\\)/);
+  assert.match(html, /If no profile is linked, contact the owner/);
   const match = html.match(/async function ensureProfile\(user, allowCreate = false\) \{[\s\S]*?\n  \}\n  async function finishSignIn/);
   assert.ok(match, "ensureProfile function exists");
   const source = match[0].replace(/\n  async function finishSignIn[\s\S]*$/, "");
