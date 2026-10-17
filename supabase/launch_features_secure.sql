@@ -37,7 +37,9 @@ declare
   profile_interests text;
   profile_preference text;
 begin
-  if new.email_confirmed_at is null or not (profile ? 'first_name') then
+  if new.email_confirmed_at is null
+     or coalesce(profile->>'profile_type', '') <> 'member_registration'
+     or not (profile ? 'first_name') then
     return new;
   end if;
 
