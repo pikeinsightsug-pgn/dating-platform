@@ -117,4 +117,4 @@ grant select, insert on public.member_messages to authenticated;
 
 -- Existing records remain unapproved and unlinked until manually reviewed.
 -- This migration does not activate payments or automatically approve anyone.
-commit();
+COMMIT;
