@@ -142,7 +142,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       loadPhotoPreview(profile.profile_photo_url);
       document.getElementById("approval-status").textContent = profile.approved
         ? "Your profile is approved. You can discover other approved members."
-        : "Your profile is waiting for administrator review. Discovery opens after approval.";
+        : "Your profile is waiting for administrator review. Discovery opens after approval. Discovery opens after approval.";
       save.textContent = "Save profile";
     } else {
       valuesFor(profileFromMetadata(user.user_metadata));
@@ -173,8 +173,8 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       const refreshed = await loadProfile();
       if (refreshed) { memberProfile = refreshed;
         document.getElementById("approval-status").textContent = refreshed.approved
-          ? "Your profile is approved. Member discovery will open when the service is ready."
-          : "Your profile is waiting for administrator review.";
+          ? "Your profile is approved. You can discover other approved members."
+          : "Your profile is waiting for administrator review. Discovery opens after approval.";
       }
     } catch (error) {
       setStatus("Could not save your profile. Check your connection and try again. If the problem continues, contact support.");
