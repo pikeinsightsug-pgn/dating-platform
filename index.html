@@ -137,6 +137,7 @@
         : "Please choose a JPG, PNG or WebP image file.";
       submit.disabled = false; submit.textContent = "Join Free"; return;
     }
+    try {
     // Match the actual public.members schema. The table has profile_photo_url,
     // not photo_path, and does not have interests or partner_preference columns.
     const member = {
