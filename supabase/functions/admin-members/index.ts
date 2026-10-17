@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
 
   if (body.action === "list") {
     const { data, error } = await db.from("members")
-      .select("id, first_name, age, gender, location, relationship_goal, bio, interests, partner_preference, profile_photo_url, approved, created_at")
+      .select("id, first_name, age, gender, location, city, relationship_goal, bio, interests, partner_preference, profile_photo_url, approved, created_at")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) return json({ error: "Could not load registrations.", detail: error.message }, 500);

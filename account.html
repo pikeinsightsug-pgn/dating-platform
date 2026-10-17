@@ -1,43 +1,90 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Member account | Find Your Person</title>
-<meta name="description" content="Create or access your Find Your Person account. Adults 18+ in Uganda and Botswana.">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Join or sign in | Find Your Person</title>
+<meta name="description" content="Create a private Find Your Person account. Adults 18+ in Uganda and Botswana.">
 <style>
-*{box-sizing:border-box}body{margin:0;background:#fff8fb;color:#241b23;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}.wrap{max-width:760px;margin:0 auto;padding:24px 18px 60px}.brand{font-weight:900;font-size:22px;margin:8px 0 24px}.brand span{color:#b32663}.panel{background:white;border:1px solid #f0dfe7;border-radius:22px;padding:24px;margin:16px 0;box-shadow:0 8px 30px #5c18300b}h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:12px 0}p{line-height:1.55;color:#6a5b64}.grid{display:grid;gap:13px}label{font-weight:650;font-size:14px}input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #e7ccd8;border-radius:11px;margin-top:6px;font:inherit;background:white}button,.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:13px 19px;font:inherit;font-weight:800;cursor:pointer;background:#b32663;color:white}button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}.row{display:flex;gap:10px;flex-wrap:wrap}.notice{padding:13px 15px;background:#fde8f0;border-radius:12px;color:#8f1e51;line-height:1.5}.hidden{display:none!important}#status{white-space:pre-wrap;overflow-wrap:anywhere}small{color:#82737b}
+*{box-sizing:border-box}
+body{margin:0;background:#fff8fb;color:#241b23;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:24px 18px 60px}
+.brand{font-weight:900;font-size:22px;margin:8px 0 24px}.brand span{color:#b32663}
+.panel{background:#fff;border:1px solid #f0dfe7;border-radius:22px;padding:24px;margin:16px 0;box-shadow:0 8px 30px #5c18300b}
+h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:12px 0}
+p{line-height:1.55;color:#6a5b64}
+.grid{display:grid;gap:13px}
+label{font-weight:650;font-size:14px}
+input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #e7ccd8;border-radius:11px;margin-top:6px;font:inherit;font-size:16px;background:#fff}
+button,.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:13px 19px;font:inherit;font-weight:800;cursor:pointer;background:#b32663;color:#fff;text-decoration:none}
+button:disabled{opacity:.6;cursor:wait}
+.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 160px}
+.notice{padding:13px 15px;background:#fde8f0;border-radius:12px;color:#8f1e51;line-height:1.5}
+.hidden{display:none!important}
+#status{white-space:pre-wrap;overflow-wrap:anywhere;min-height:1.4em}
+.links{display:flex;gap:15px;flex-wrap:wrap;font-weight:700;color:#a21f59}
+.links button{padding:0;background:none;color:#a21f59;text-decoration:underline}
+@media(max-width:480px){.panel{padding:18px}.row>*{flex-basis:100%}.wrap{padding:16px 14px 40px}}
 </style>
 </head>
-<body><main class="wrap">
+<body>
+<main class="wrap">
 <div class="brand">Find<span>Your</span>Person ❤️</div>
-<div class="panel">
-  <div class="notice"><strong>Founding members:</strong> free during testing. Payments are disabled. Accounts do not become discoverable until an administrator approves the profile.</div>
-  <h1>Member account</h1>
-  <p>Create an account or sign in. Use an email address you can access. If email confirmation is enabled, confirm your email before signing in.</p>
-  <form id="auth-form" class="grid">
-    <label>Email address<input id="email" type="email" autocomplete="email" required maxlength="254"></label>
-    <label>Password<input id="password" type="password" autocomplete="current-password" minlength="8" required></label>
-    <div class="row"><button id="signup" type="button">Create account</button><button id="signin" class="secondary" type="submit">Sign in</button></div>
-  </form>
-  <p id="status" role="status" aria-live="polite"></p>
-  <button id="signout" class="secondary hidden" type="button">Sign out</button>
-</div>
+<section class="panel">
+  <div class="notice"><strong>Founding members:</strong> free during testing. Payments and automatic charges are disabled. Member profiles stay private until reviewed and approved.</div>
+  <div id="register-view">
+    <h1>Create your free account</h1>
+    <p>Adults 18+ in Uganda and Botswana. If email confirmation is enabled, confirm your address first, then sign in to finish saving your profile.</p>
+    <form id="register-form" class="grid">
+      <label>First name<input name="first_name" required maxlength="80" autocomplete="given-name"></label>
+      <label>Email address<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
+      <label>Password<input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
+      <label>Confirm password<input name="password_confirm" type="password" required minlength="8" autocomplete="new-password"></label>
+      <label>Age<input name="age" type="number" required min="18" max="120" inputmode="numeric"></label>
+      <label>Gender<select name="gender" required><option value="">Choose one</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option></select></label>
+      <label>Country<select name="location" required><option value="">Choose country</option><option>Uganda</option><option>Botswana</option></select></label>
+      <label>City or town<input name="city" required maxlength="100" autocomplete="address-level2"></label>
+      <label>Relationship goal<select name="relationship_goal" required><option value="">Choose one</option><option>Serious relationship</option><option>Marriage</option><option>Friendship</option><option>Exploring connections</option></select></label>
+      <label>Short biography<textarea name="bio" rows="4" required maxlength="500"></textarea></label>
+      <label>Interests <span>(optional)</span><input name="interests" maxlength="300" placeholder="Music, travel, cooking…"></label>
+      <label>What qualities do you value in a partner? <span>(optional)</span><textarea name="partner_preference" rows="3" maxlength="500"></textarea></label>
+      <button type="submit">Create account</button>
+    </form>
+    <p class="links"><span>Already have an account?</span><button type="button" data-view="login">Log in</button></p>
+  </div>
 
-<section id="profile-panel" class="panel hidden">
-  <h2>Complete your member profile</h2>
-  <p>Your profile will remain private until it is reviewed and approved. Existing registration records are not automatically linked to this account.</p>
-  <form id="profile-form" class="grid">
-    <label>First name<input name="first_name" required maxlength="80" autocomplete="given-name"></label>
-    <label>Age<input name="age" type="number" min="18" max="120" required></label>
-    <label>Gender<select name="gender" required><option value="">Choose one</option><option>Woman</option><option>Man</option><option>Prefer not to say</option></select></label>
-    <label>Country<select name="location" required><option value="">Choose country</option><option>Uganda</option><option>Botswana</option></select></label>
-    <label>Relationship goal<select name="relationship_goal" required><option value="">Choose one</option><option>Long-term relationship</option><option>Marriage</option><option>Friendship first</option><option>Open to seeing where it goes</option></select></label>
-    <label>Short bio<textarea name="bio" rows="4" maxlength="500" required></textarea></label>
-    <label>Interests<input name="interests" maxlength="300" placeholder="Music, travel, cooking…"></label>
-    <label>What qualities do you value in a partner?<textarea name="partner_preference" rows="3" maxlength="500" required></textarea></label>
-    <button id="save-profile" type="submit">Save private profile</button>
-  </form>
+  <div id="login-view" class="hidden">
+    <h1>Member login</h1>
+    <form id="login-form" class="grid">
+      <label>Email address<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
+      <label>Password<input name="password" type="password" required autocomplete="current-password"></label>
+      <button type="submit">Log in</button>
+    </form>
+    <p class="links"><button type="button" data-view="forgot">Forgot password?</button><button type="button" data-view="register">Create an account</button></p>
+  </div>
+
+  <div id="forgot-view" class="hidden">
+    <h1>Reset your password</h1>
+    <p>Enter your email address. If an account matches it, we’ll send a password reset link.</p>
+    <form id="forgot-form" class="grid">
+      <label>Email address<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
+      <button type="submit">Send reset link</button>
+    </form>
+    <p class="links"><button type="button" data-view="login">Back to login</button></p>
+  </div>
+
+  <div id="recovery-view" class="hidden">
+    <h1>Choose a new password</h1>
+    <form id="recovery-form" class="grid">
+      <label>New password<input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
+      <label>Confirm new password<input name="password_confirm" type="password" required minlength="8" autocomplete="new-password"></label>
+      <button type="submit">Update password</button>
+    </form>
+  </div>
+  <p id="status" role="status" aria-live="polite"></p>
 </section>
+<p><a class="links" href="index.html">← Back to Find Your Person</a></p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -45,103 +92,198 @@
   const SUPABASE_URL = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_vzGFbhe7X3CpobiHZAk9Lw_2V3O-F3V";
   const status = document.getElementById("status");
-  const signup = document.getElementById("signup");
-  const signin = document.getElementById("signin");
-  const signout = document.getElementById("signout");
-  const profilePanel = document.getElementById("profile-panel");
-  if (!window.supabase) { status.textContent = "Account service could not load. Refresh and try again."; return; }
+  if (!window.supabase) { status.textContent = "Account service could not load. Check your connection and refresh the page."; return; }
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-  const emailEl = document.getElementById("email");
-  const passwordEl = document.getElementById("password");
-  const setBusy = (busy) => { signup.disabled = busy; signin.disabled = busy; };
-  async function refreshSession() {
-    const { data, error } = await db.auth.getSession();
-    if (error) { status.textContent = error.message; return; }
-    const user = data.session && data.session.user;
-    if (!user) { profilePanel.classList.add("hidden"); signout.classList.add("hidden"); return; }
-    signout.classList.remove("hidden");
-    const { data: profiles, error: profileError } = await db.from("members").select("id,approved").eq("user_id", user.id).limit(1);
-    if (profileError) {
-      status.textContent = "Signed in, but the database account setup is not installed yet. An administrator must apply launch_features_secure.sql before you can save a profile. Details: " + profileError.message;
-      profilePanel.classList.add("hidden");
-      return;
-    }
-    if (profiles && profiles.length) {
-      profilePanel.classList.add("hidden");
-      status.textContent = profiles[0].approved
-        ? "Your member profile is approved. Member discovery will be enabled when the launch features are ready."
-        : "You are signed in. Your profile is already submitted and is waiting for administrator review.";
-      return;
-    }
-    profilePanel.classList.remove("hidden");
-    status.textContent = "Signed in as " + user.email + ". Complete your profile below. It will remain unapproved until reviewed.";
+  const views = ["register", "login", "forgot", "recovery"];
+  let busy = false;
+  let finishing = null;
+  function say(message) { status.textContent = message; }
+  function show(view) {
+    views.forEach(name => document.getElementById(name + "-view").classList.toggle("hidden", name !== view));
   }
-  signup.addEventListener("click", async () => {
-    const email = emailEl.value.trim();
-    const password = passwordEl.value;
-    if (!email || password.length < 8) { status.textContent = "Enter a valid email and a password of at least 8 characters."; return; }
-    setBusy(true); status.textContent = "Creating account…";
-    try {
-      const { data, error } = await db.auth.signUp({ email, password });
-      if (error) throw error;
-      if (data.session) {
-        status.textContent = "Account created and signed in.";
-        await refreshSession();
-      } else {
-        status.textContent = "Account request received. Check your email for a confirmation link, then return here and sign in.";
-      }
-    } catch (e) { status.textContent = "Could not create account: " + (e.message || "Please try again."); }
-    finally { setBusy(false); }
-  });
-  document.getElementById("auth-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    setBusy(true); status.textContent = "Signing in…";
-    try {
-      const { error } = await db.auth.signInWithPassword({ email: emailEl.value.trim(), password: passwordEl.value });
-      if (error) throw error;
-      await refreshSession();
-    } catch (e) { status.textContent = "Could not sign in: " + (e.message || "Please check your email and password."); }
-    finally { setBusy(false); }
-  });
-  signout.addEventListener("click", async () => {
-    const { error } = await db.auth.signOut();
-    status.textContent = error ? "Sign out failed: " + error.message : "You are signed out.";
-    await refreshSession();
-  });
-  document.getElementById("profile-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const button = document.getElementById("save-profile");
-    const { data: sessionData } = await db.auth.getSession();
-    const user = sessionData.session && sessionData.session.user;
-    if (!user) { status.textContent = "Please sign in again before saving your profile."; return; }
-    const formData = new FormData(event.currentTarget);
-    const age = Number(formData.get("age"));
-    if (!Number.isInteger(age) || age < 18 || age > 120) { status.textContent = "Members must be 18 or older."; return; }
-    const member = {
+  function setBusy(value) {
+    busy = value;
+    document.querySelectorAll("form button[type=submit]").forEach(button => { button.disabled = value; });
+  }
+  function callbackUrl(mode) {
+    const url = new URL(window.location.href);
+    url.search = mode ? "?mode=" + encodeURIComponent(mode) : "";
+    url.hash = "";
+    return url.toString();
+  }
+  function profileFromMetadata(user) {
+    const meta = user.user_metadata || {};
+    const age = Number(meta.age);
+    if (!meta.first_name || !Number.isInteger(age) || age < 18 || age > 120 ||
+        !meta.gender || !meta.location || !meta.city || !meta.relationship_goal || !meta.bio) return null;
+    return {
       user_id: user.id,
-      first_name: String(formData.get("first_name")).trim(),
+      first_name: String(meta.first_name).trim(),
       age,
-      gender: String(formData.get("gender")),
-      location: String(formData.get("location")),
-      relationship_goal: String(formData.get("relationship_goal")),
-      bio: String(formData.get("bio")).trim(),
-      interests: String(formData.get("interests") || "").trim(),
-      partner_preference: String(formData.get("partner_preference")).trim(),
+      gender: String(meta.gender),
+      location: String(meta.location),
+      city: String(meta.city).trim(),
+      relationship_goal: String(meta.relationship_goal),
+      bio: String(meta.bio).trim(),
+      interests: String(meta.interests || "").trim(),
+      partner_preference: String(meta.partner_preference || "").trim(),
       approved: false
     };
-    button.disabled = true; button.textContent = "Saving…";
+  }
+  async function ensureProfile(user) {
+    const { data: existing, error: readError } = await db.from("members").select("id,approved").eq("user_id", user.id).limit(1);
+    if (readError) throw new Error("Profile database setup is unavailable.");
+    if (existing && existing.length) return existing[0];
+    const profile = profileFromMetadata(user);
+    if (!profile) return null;
+    const { data, error } = await db.from("members").insert(profile).select("id,approved").single();
+    if (error) {
+      const { data: raced, error: retryError } = await db.from("members").select("id,approved").eq("user_id", user.id).limit(1);
+      if (!retryError && raced && raced.length) return raced[0];
+      throw new Error("Profile could not be saved. Ask the administrator to verify the Supabase setup.");
+    }
+    return data;
+  }
+  async function finishSignIn(user) {
+    if (finishing) return finishing;
+    finishing = (async () => {
+      try {
+        await ensureProfile(user);
+        window.location.replace("dashboard.html");
+      } catch (error) {
+        say((error && error.message) || "Your account is signed in, but the private profile could not be loaded.");
+      } finally { finishing = null; }
+    })();
+    return finishing;
+  }
+
+  document.querySelectorAll("[data-view]").forEach(button => button.addEventListener("click", () => {
+    show(button.dataset.view);
+    say("");
+  }));
+
+  document.getElementById("register-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (busy || !form.reportValidity()) return;
+    const values = new FormData(form);
+    const password = String(values.get("password"));
+    if (password !== String(values.get("password_confirm"))) { say("The passwords do not match."); return; }
+    const age = Number(values.get("age"));
+    if (!Number.isInteger(age) || age < 18 || age > 120) { say("You must be at least 18 years old to register."); return; }
+    const email = String(values.get("email")).trim();
+    const userMetadata = {
+      profile_type: "member_registration",
+      first_name: String(values.get("first_name")).trim(),
+      age,
+      gender: String(values.get("gender")),
+      location: String(values.get("location")),
+      city: String(values.get("city")).trim(),
+      relationship_goal: String(values.get("relationship_goal")),
+      bio: String(values.get("bio")).trim(),
+      interests: String(values.get("interests") || "").trim(),
+      partner_preference: String(values.get("partner_preference") || "").trim()
+    };
+    setBusy(true); say("Creating your account…");
     try {
-      const { error } = await db.from("members").insert([member]);
+      const { data, error } = await db.auth.signUp({
+        email,
+        password,
+        options: { data: userMetadata, emailRedirectTo: callbackUrl("") }
+      });
       if (error) throw error;
-      event.currentTarget.reset();
-      status.textContent = "Your profile has been saved privately and is awaiting administrator review. It is not publicly discoverable yet.";
-      await refreshSession();
-    } catch (e) {
-      status.textContent = "Could not save profile. If the database migration has not been applied, ask the administrator to apply launch_features_secure.sql. Details: " + (e.message || "Please try again.");
-    } finally { button.disabled = false; button.textContent = "Save private profile"; }
+      form.reset();
+      if (data.session && data.user) {
+        say("Account created. Saving your private profile…");
+        await finishSignIn(data.user);
+      } else {
+        document.querySelector('#login-form [name="email"]').value = email;
+        show("login");
+        say("Account created. Check your email and confirm your address, then log in here to save your private profile.");
+      }
+    } catch (error) {
+      say("Could not create the account. Check the email and password, then try again. If the problem continues, contact support.");
+    } finally { setBusy(false); }
   });
-  db.auth.onAuthStateChange(() => { setTimeout(refreshSession, 0); });
-  refreshSession();
+
+  document.getElementById("login-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (busy || !event.currentTarget.reportValidity()) return;
+    const values = new FormData(event.currentTarget);
+    setBusy(true); say("Signing in…");
+    try {
+      const { data, error } = await db.auth.signInWithPassword({
+        email: String(values.get("email")).trim(),
+        password: String(values.get("password"))
+      });
+      if (error) throw error;
+      if (!data.user) throw new Error("No account session returned.");
+      await finishSignIn(data.user);
+    } catch (error) {
+      say("Could not sign in. Check your email and password, and confirm your email address if requested.");
+    } finally { setBusy(false); }
+  });
+
+  document.getElementById("forgot-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (busy || !form.reportValidity()) return;
+    const email = String(new FormData(form).get("email")).trim();
+    setBusy(true); say("Sending reset instructions…");
+    try {
+      const { error } = await db.auth.resetPasswordForEmail(email, {
+        redirectTo: callbackUrl("recovery")
+      });
+      if (error) throw error;
+      say("If an account matches that email, password reset instructions have been sent.");
+      form.reset();
+    } catch (error) {
+      say("We could not send reset instructions right now. Please try again later.");
+    } finally { setBusy(false); }
+  });
+
+  document.getElementById("recovery-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (busy || !form.reportValidity()) return;
+    const values = new FormData(form);
+    const password = String(values.get("password"));
+    if (password !== String(values.get("password_confirm"))) { say("The passwords do not match."); return; }
+    setBusy(true); say("Updating your password…");
+    try {
+      const { error } = await db.auth.updateUser({ password });
+      if (error) throw error;
+      await db.auth.signOut();
+      form.reset();
+      show("login");
+      say("Your password has been updated. Sign in with your new password.");
+    } catch (error) {
+      say("Could not update the password. Reopen the latest reset email and try again.");
+    } finally { setBusy(false); }
+  });
+
+  db.auth.onAuthStateChange((event, session) => {
+    if (event === "PASSWORD_RECOVERY") { show("recovery"); say("Choose a new password for your account."); }
+    else if (event === "SIGNED_IN" && session && !new URLSearchParams(location.search).has("mode")) {
+      setTimeout(() => finishSignIn(session.user), 0);
+    }
+  });
+
+  (async () => {
+    const mode = new URLSearchParams(location.search).get("mode");
+    if (mode === "recovery") {
+      show("recovery");
+      const { data, error } = await db.auth.getSession();
+      if (error || !data.session) say("Open the password reset link from your email again to continue.");
+      else say("Choose a new password for your account.");
+      return;
+    }
+    show(mode === "login" ? "login" : "register");
+    const { data, error } = await db.auth.getSession();
+    if (error) { say("Could not restore your session. Refresh the page or sign in again."); return; }
+    if (data.session && data.session.user) await finishSignIn(data.session.user);
+  })().catch(() => say("Account service is temporarily unavailable. Refresh and try again."));
 })();
 </script>
-</body></html>
+</body>
+</html>
