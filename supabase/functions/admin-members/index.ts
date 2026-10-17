@@ -37,7 +37,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Not authorized for owner actions." }, 403);
   }
 
-  let body: { action?: string; member_id?: string };
+  let body: { action?: string; member_id?: string; user_id?: string; identity_verified?: boolean };
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON." }, 400); }
 
   const db = createClient(url, serviceKey, {
@@ -88,6 +88,65 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  if (body.action === "list_unlinked_accounts") {
+    const { data: linkedRows, error: linkedError } = await db.from("members")
+      .select("user_id")
+      .not("user_id", "is", null);
+    if (linkedError) return json({ error: "Could not verify existing account links." }, 500);
+    const linkedIds = new Set((linkedRows || []).map((row) => row.user_id));
+    const accounts: Array<{ user_id: string; email: string }> = [];
+    for (let page = 1; ; page++) {
+      const { data: authPage, error: authListError } = await db.auth.admin.listUsers({ page, perPage: 1000 });
+      if (authListError) return json({ error: "Could not load confirmed account choices." }, 500);
+      for (const account of authPage.users) {
+        if (account.email && account.email_confirmed_at && !linkedIds.has(account.id)) {
+          accounts.push({ user_id: account.id, email: account.email });
+        }
+      }
+      if (authPage.users.length < 1000) break;
+    }
+    return json({ accounts });
+  }
+
+  if (body.action === "link_verified_profile") {
+    if (typeof body.member_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.member_id) ||
+        typeof body.user_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.user_id)) {
+      return json({ error: "A valid profile and confirmed account are required." }, 400);
+    }
+    if (body.identity_verified !== true) {
+      return json({ error: "The owner must verify this person's identity using original registration information before linking." }, 400);
+    }
+
+    const { data: member, error: memberError } = await db.from("members")
+      .select("id, user_id, age, approved")
+      .eq("id", body.member_id)
+      .maybeSingle();
+    if (memberError) return json({ error: "Could not verify the selected profile." }, 500);
+    if (!member) return json({ error: "Profile not found." }, 404);
+    if (member.user_id) return json({ error: "This profile is already linked. No change was made." }, 409);
+
+    const { data: accountResult, error: accountError } = await db.auth.admin.getUserById(body.user_id);
+    if (accountError || !accountResult.user?.email || !accountResult.user.email_confirmed_at) {
+      return json({ error: "Choose an existing email-confirmed account. No profile was changed." }, 409);
+    }
+    const { data: existingLink, error: existingLinkError } = await db.from("members")
+      .select("id")
+      .eq("user_id", body.user_id)
+      .maybeSingle();
+    if (existingLinkError) return json({ error: "Could not verify whether the account is already linked." }, 500);
+    if (existingLink) return json({ error: "This account already has a member profile. No change was made." }, 409);
+
+    const { data: linkedProfile, error: linkError } = await db.from("members")
+      .update({ user_id: body.user_id })
+      .eq("id", body.member_id)
+      .is("user_id", null)
+      .select("id, user_id, approved")
+      .maybeSingle();
+    if (linkError) return json({ error: "Could not link the verified profile. No other profile fields were changed.", detail: linkError.message }, 409);
+    if (!linkedProfile) return json({ error: "The profile changed while you were reviewing it. Refresh and verify again." }, 409);
+    return json({ member: linkedProfile, linked_email: accountResult.user.email });
+  }
+
   if (body.action === "approve" || body.action === "reject") {
     if (typeof body.member_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.member_id)) {
       return json({ error: "A valid member ID is required." }, 400);
@@ -95,13 +154,16 @@ Deno.serve(async (req: Request) => {
     const approved = body.action === "approve";
     if (approved) {
       const { data: member, error: memberError } = await db.from("members")
-        .select("user_id")
+        .select("user_id, age")
         .eq("id", body.member_id)
         .maybeSingle();
       if (memberError) return json({ error: "Could not verify the member account." }, 500);
       if (!member) return json({ error: "Member not found." }, 404);
       if (!member.user_id) {
         return json({ error: "This profile has no linked account and cannot be approved for discovery." }, 409);
+      }
+      if (typeof member.age !== "number" || member.age < 18) {
+        return json({ error: "Only a profile verified as age 18 or older can be approved." }, 409);
       }
       const { data: linkedAccount, error: linkedAccountError } = await db.auth.admin.getUserById(member.user_id);
       if (linkedAccountError || !linkedAccount.user || !linkedAccount.user.email_confirmed_at) {
