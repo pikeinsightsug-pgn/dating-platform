@@ -50,6 +50,8 @@ revoke all on function public.can_read_member_photo(text) from public, anon;
 grant execute on function public.can_read_member_photo(text) to authenticated;
 
 -- Revoke the older anonymous bucket-wide upload policy from the setup scripts.
+drop policy if exists "Allow public profile photo uploads yndkpx_0" on storage.objects;
+drop policy if exists "Allow public registration photo uploads" on storage.objects;
 drop policy if exists "public can upload registration photos" on storage.objects;
 drop policy if exists "members can upload own profile photos" on storage.objects;
 drop policy if exists "members can view approved profile photos" on storage.objects;
