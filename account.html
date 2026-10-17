@@ -62,7 +62,7 @@
     signout.classList.remove("hidden");
     const { data: profiles, error: profileError } = await db.from("members").select("id,approved").eq("user_id", user.id).limit(1);
     if (profileError) {
-      status.textContent = "Signed in, but the database account setup is not installed yet. An administrator must apply launch_features_secure.sql before you can save a profile. Details: " + profileError.message;
+      status.textContent = "Signed in, but the database account setup is not installed yet. An administrator must review and apply registration_setup.sql and launch_features_secure.sql before profile setup is complete. Details: " + profileError.message;
       profilePanel.classList.add("hidden");
       return;
     }
@@ -142,7 +142,7 @@
       status.textContent = "Your profile has been saved privately and is awaiting administrator review. It is not publicly discoverable yet.";
       await refreshSession();
     } catch (e) {
-      status.textContent = "Could not save profile. Check your connection and try again. If the database setup is missing, ask the administrator to apply the reviewed Supabase setup. Details: " + (e.message || "Please try again.");
+      status.textContent = "Could not save profile. Check your connection and try again. If the database setup is missing, ask the administrator to review and apply registration_setup.sql and launch_features_secure.sql. Details: " + (e.message || "Please try again.");
     } finally { button.disabled = false; button.textContent = "Save private profile"; }
   });
   db.auth.onAuthStateChange(() => { setTimeout(refreshSession, 0); });
