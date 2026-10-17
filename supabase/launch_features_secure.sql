@@ -7,6 +7,7 @@ begin;
 
 alter table public.members
   add column if not exists user_id uuid references auth.users(id) on delete set null,
+  add column if not exists city text,
   add column if not exists bio text,
   add column if not exists interests text,
   add column if not exists partner_preference text,
@@ -69,7 +70,7 @@ grant execute on function public.is_approved_member_profile(uuid) to authenticat
 create or replace function public.browse_approved_profiles()
 returns table (
   id uuid, first_name text, age integer, gender text, location text,
-  relationship_goal text, bio text, interests text, partner_preference text,
+  relationship_goal text, city text, bio text, interests text, partner_preference text,
   created_at timestamptz
 )
 language plpgsql stable security definer set search_path = ''
@@ -80,7 +81,7 @@ begin
   end if;
   return query
   select m.id, m.first_name, m.age, m.gender, m.location,
-         m.relationship_goal, m.bio, m.interests, m.partner_preference, m.created_at
+         m.relationship_goal, m.city, m.bio, m.interests, m.partner_preference, m.created_at
   from public.members m
   where m.approved = true and m.age >= 18
     and m.id <> public.current_approved_member_id()
@@ -90,9 +91,12 @@ $$;
 revoke all on function public.browse_approved_profiles() from public, anon;
 grant execute on function public.browse_approved_profiles() to authenticated;
 
-revoke all on public.members from anon, authenticated;
+revoke all on public.members from public, anon, authenticated;
+revoke update (id, user_id, approved, created_at) on public.members from public, anon, authenticated;
 grant insert on public.members to anon, authenticated;
 grant select on public.members to authenticated;
+grant update (first_name, age, gender, location, city, relationship_goal, bio, interests, partner_preference)
+  on public.members to authenticated;
 
 -- Public registration inserts only unapproved, unlinked registrations.
 drop policy if exists "public can register members" on public.members;
@@ -109,6 +113,12 @@ drop policy if exists "members can read own profile" on public.members;
 create policy "members can read own profile"
 on public.members for select to authenticated
 using (user_id = auth.uid());
+
+drop policy if exists "members can update own profile" on public.members;
+create policy "members can update own profile"
+on public.members for update to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
 
 -- Anonymous registration uploads are restricted to this private bucket.
 drop policy if exists "public can upload registration photos" on storage.objects;
