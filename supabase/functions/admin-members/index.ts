@@ -25,7 +25,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const authHeader = req.headers.get("Authorization") || "";
-  const token = authHeader.replace(/^Bearer\\s+/i, "");
+  const token = authHeader.replace(/^Bearer\s+/i, "");
   if (!token || token === authHeader) return json({ error: "Sign in required." }, 401);
 
   const authClient = createClient(url, anonKey, {
