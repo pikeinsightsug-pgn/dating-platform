@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isMemberPhotoPathOwnedByUser } from "../_shared/member-photo-path.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,10 +61,7 @@ Deno.serve(async (req: Request) => {
     const identifiedRows = await Promise.all(rows.map(async (member) => {
       let admin_photo_signed_url: string | null = null;
       const photoPath = member.profile_photo_url;
-      const pathSegments = typeof photoPath === "string" ? photoPath.split("/") : [];
-      const safeOwnedPath = !!member.user_id && pathSegments.length >= 2 &&
-        pathSegments[0] === member.user_id && !pathSegments.some((part) => !part || part === "." || part === "..") &&
-        !photoPath.includes("\\") && !photoPath.startsWith("http");
+      const safeOwnedPath = isMemberPhotoPathOwnedByUser(member.user_id, photoPath);
       if (safeOwnedPath) {
         try {
           const { data: signedPhoto, error: signedPhotoError } = await db.storage.from("profile-photos")
