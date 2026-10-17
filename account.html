@@ -271,7 +271,7 @@ button:disabled{opacity:.6;cursor:wait}
       else say("Choose a new password for your account.");
       return;
     }
-    show("register");
+    show(mode === "login" ? "login" : "register");
     const { data, error } = await db.auth.getSession();
     if (error) { say("Could not restore your session. Refresh the page or sign in again."); return; }
     if (data.session && data.session.user) await finishSignIn(data.session.user);
