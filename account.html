@@ -154,9 +154,9 @@ button:disabled{opacity:.6;cursor:wait}
       try {
         const profile = await ensureProfile(user, allowCreateProfile);
         if (!profile) {
-          try { await db.auth.signOut(); } catch {}
-          show("login");
-          say("No member profile is linked to this account. We did not create a new profile to avoid duplicating an existing registration. Contact the platform owner to verify your account.");
+          // Keep the verified Auth session and show dashboard recovery guidance.
+          // Never create or guess-link a legacy profile during ordinary login.
+          window.location.replace("dashboard.html?profile=recovery");
           return;
         }
         window.location.replace("dashboard.html");
