@@ -57,9 +57,23 @@ Deno.serve(async (req: Request) => {
       for (const authUser of authPage.users) authUsers.set(authUser.id, { email: authUser.email ?? null });
       if (authPage.users.length < 1000) break;
     }
-    const identifiedRows = rows.map((member) => ({
-      ...member,
-      account_email: member.user_id ? authUsers.get(member.user_id)?.email ?? null : null,
+    const identifiedRows = await Promise.all(rows.map(async (member) => {
+      let admin_photo_signed_url: string | null = null;
+      const photoPath = member.profile_photo_url;
+      const pathSegments = typeof photoPath === "string" ? photoPath.split("/") : [];
+      const safeOwnedPath = !!member.user_id && pathSegments.length >= 2 &&
+        pathSegments[0] === member.user_id && !pathSegments.some((part) => !part || part === "." || part === "..") &&
+        !photoPath.includes("\\") && !photoPath.startsWith("http");
+      if (safeOwnedPath) {
+        const { data: signedPhoto } = await db.storage.from("profile-photos")
+          .createSignedUrl(photoPath, 300);
+        admin_photo_signed_url = signedPhoto?.signedUrl ?? null;
+      }
+      return {
+        ...member,
+        account_email: member.user_id ? authUsers.get(member.user_id)?.email ?? null : null,
+        admin_photo_signed_url,
+      };
     }));
     return json({
       members: identifiedRows,
