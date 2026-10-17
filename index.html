@@ -84,7 +84,7 @@
       <label>Tell us a little about yourself<textarea name="bio" required maxlength="500" rows="4" placeholder="Your interests, personality and what you enjoy…" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit;resize:vertical"></textarea></label>
       <label>Interests (comma-separated)<input name="interests" maxlength="300" placeholder="e.g. music, travel, cooking" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"></label>
       <label>What would you value in a partner?<textarea name="partner_preference" required maxlength="500" rows="3" placeholder="Describe the qualities that matter to you…" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit;resize:vertical"></textarea></label>
-      <label>Profile photo (JPG, PNG or WebP; max 5 MB)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"></label>
+      <label>Profile photo (JPG, PNG or WebP; max 5 MB)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"></label>
       <p style="font-size:13px;color:#82737b;margin:0">Choose a photo of yourself that you are comfortable sharing. Your photo will be stored privately and will not be shown publicly by this form.</p>
       <button class="btn primary" id="member-submit" type="submit">Join Free</button>
       <p id="member-result" role="status" aria-live="polite" style="margin:0;line-height:1.5"></p>
@@ -119,19 +119,14 @@
     submit.disabled = true;
     submit.textContent = "Submitting…";
     result.textContent = "Submitting your registration securely…";
-    const photo = data.get("photo");
-    if (!(photo instanceof File) || !photo.size) {
-      result.textContent = "Please choose a profile photo.";
-      submit.disabled = false; submit.textContent = "Join Free"; return;
-    }
+    const chosenPhoto = data.get("photo");
+    const photo = chosenPhoto instanceof File && chosenPhoto.size ? chosenPhoto : null;
     // Some browsers/devices report an empty MIME type for valid .JPG files.
     // Fall back to the filename extension rather than rejecting those uploads.
-    const extension = (photo.name.split(".").pop() || "").toLowerCase();
+    const extension = photo ? (photo.name.split(".").pop() || "").toLowerCase() : "";
     const inferredTypes = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
-    const photoType = ["image/jpeg", "image/png", "image/webp"].includes(photo.type)
-      ? photo.type
-      : inferredTypes[extension];
-    if (!photoType || photo.size > 5 * 1024 * 1024) {
+    const photoType = photo ? (["image/jpeg", "image/png", "image/webp"].includes(photo.type) ? photo.type : inferredTypes[extension]) : null;
+    if (photo && (!photoType || photo.size > 5 * 1024 * 1024)) {
       result.textContent = photo.size > 5 * 1024 * 1024
         ? "Your photo is larger than 5 MB. Please choose a smaller image."
         : "Please choose a JPG, PNG or WebP image file.";
@@ -147,27 +142,31 @@
       location: String(data.get("location")),
       relationship_goal: String(data.get("relationship_goal")),
       bio: String(data.get("bio")).trim(),
+      interests: String(data.get("interests") || "").trim(),
+      partner_preference: String(data.get("partner_preference") || "").trim(),
       profile_photo_url: null
     };
     let photoPath = null;
     let photoUploadWarning = "";
-    try {
-      const safeName = photo.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100);
-      photoPath = Date.now() + "-" + crypto.randomUUID() + "-" + safeName;
-      const { error: uploadError } = await db.storage.from("profile-photos").upload(photoPath, photo, {
-        cacheControl: "3600", upsert: false, contentType: photoType
-      });
-      if (uploadError) {
-        photoUploadWarning = uploadError.message || "Photo storage is not configured";
+    if (photo) {
+      try {
+        const safeName = photo.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100);
+        photoPath = Date.now() + "-" + crypto.randomUUID() + "-" + safeName;
+        const { error: uploadError } = await db.storage.from("profile-photos").upload(photoPath, photo, {
+          cacheControl: "3600", upsert: false, contentType: photoType
+        });
+        if (uploadError) {
+          photoUploadWarning = uploadError.message || "Photo storage is not configured";
+          photoPath = null;
+        } else {
+          // Keep the storage object path private; do not create a public photo URL.
+          member.profile_photo_url = photoPath;
+        }
+      } catch (photoError) {
+        photoUploadWarning = photoError && photoError.message ? photoError.message : "Photo storage is not configured";
         photoPath = null;
-      } else {
-        // Keep the storage object path private; do not create a public photo URL.
-        member.profile_photo_url = photoPath;
+        member.profile_photo_url = null;
       }
-    } catch (photoError) {
-      photoUploadWarning = photoError && photoError.message ? photoError.message : "Photo storage is not configured";
-      photoPath = null;
-      member.profile_photo_url = null;
     }
     const { error: insertError } = await db.from("members").insert([member]);
     if (insertError) {
