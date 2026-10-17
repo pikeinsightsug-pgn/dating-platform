@@ -1,5 +1,6 @@
 -- Add authenticated member discovery and secure private profile photos.
--- Apply only after reviewing the live members schema. This migration preserves all existing rows.
+-- Apply after reviewing the live schema and running registration_setup.sql plus launch_features_secure.sql.
+-- This migration preserves all existing member rows and changes no member approval state.
 begin;
 
 do $preflight$
@@ -86,8 +87,8 @@ begin
      and new.profile_photo_url is not null
      and (
        auth.uid() is null
-       or new.user_id <> auth.uid()
-       or (storage.foldername(new.profile_photo_url))[1] <> auth.uid()::text
+       or new.user_id is distinct from auth.uid()
+       or (storage.foldername(new.profile_photo_url))[1] is distinct from auth.uid()::text
      ) then
     raise exception 'Profile photos must reference a file in your private folder';
   end if;
