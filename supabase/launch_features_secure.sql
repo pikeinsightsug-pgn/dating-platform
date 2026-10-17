@@ -1,6 +1,7 @@
 -- Secure launch foundation for Find Your Person.
 -- Additive only: preserves existing member records and does not enable payments.
--- Run only after reviewing this file. Existing public registration remains available.
+-- Run this file in the Supabase SQL Editor after reviewing it.
+-- Existing public registrations remain possible; existing rows stay unapproved and unlinked.
 
 begin;
 
@@ -28,6 +29,15 @@ create index if not exists member_messages_sender_created_idx
   on public.member_messages(sender_member_id, created_at desc);
 create index if not exists member_messages_recipient_created_idx
   on public.member_messages(recipient_member_id, created_at desc);
+
+-- Private profile-photo storage, matching the website's bucket name.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('profile-photos', 'profile-photos', false, 5242880,
+        array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update
+set public = false,
+    file_size_limit = 5242880,
+    allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
 
 alter table public.members enable row level security;
 alter table public.member_messages enable row level security;
@@ -82,8 +92,7 @@ revoke all on public.members from anon, authenticated;
 grant insert on public.members to anon, authenticated;
 grant select on public.members to authenticated;
 
--- Registration form may create only unapproved rows. Anonymous users cannot set user_id;
--- signed-in users may create a profile only for their own auth account.
+-- Public registration inserts only unapproved, unlinked registrations.
 drop policy if exists "public can register members" on public.members;
 create policy "public can register members"
 on public.members for insert to anon, authenticated
@@ -98,6 +107,12 @@ drop policy if exists "members can read own profile" on public.members;
 create policy "members can read own profile"
 on public.members for select to authenticated
 using (user_id = auth.uid());
+
+-- Anonymous registration uploads are restricted to this private bucket.
+drop policy if exists "public can upload registration photos" on storage.objects;
+create policy "public can upload registration photos"
+on storage.objects for insert to anon, authenticated
+with check (bucket_id = 'profile-photos');
 
 drop policy if exists "approved members can send messages" on public.member_messages;
 drop policy if exists "participants can read their messages" on public.member_messages;
@@ -116,5 +131,5 @@ using (
 grant select, insert on public.member_messages to authenticated;
 
 -- Existing records remain unapproved and unlinked until manually reviewed.
--- This migration does not activate payments or automatically approve anyone.
-COMMIT;
+-- Payments remain disabled; no member is automatically approved.
+commit;
