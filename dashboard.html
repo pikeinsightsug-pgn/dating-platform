@@ -161,19 +161,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     if (error) throw new Error("Your session could not be restored. Please sign in again.");
     user = data.session && data.session.user;
     if (!user) { window.location.replace("account.html?mode=login"); return; }
-    let profile = await loadProfile();
-    if (!profile) {
-      const metaProfile = profileFromMetadata(user.user_metadata);
-      if (metaProfile && validPayload(metaProfile)) {
-        const { error: insertError } = await db.from("members").insert({ ...metaProfile, user_id: user.id, approved: false });
-        if (insertError) {
-          profile = await loadProfile();
-          if (!profile) throw new Error("Your account is active, but your profile could not be saved. Please try again or contact support.");
-        } else {
-          profile = { ...metaProfile, approved: false };
-        }
-      }
-    }
+    const profile = await loadProfile();
     if (profile) {
       memberProfile = profile;
       valuesFor(profile);
@@ -184,27 +172,22 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       save.textContent = "Save profile";
     } else {
       valuesFor(profileFromMetadata(user.user_metadata));
-      document.getElementById("approval-status").textContent = "Complete your private profile below. It will be reviewed before it can be approved.";
-      save.textContent = "Submit private profile";
+      document.getElementById("approval-status").textContent = "No member profile is linked to this account. To prevent a duplicate, the profile has not been created here. Contact the platform owner to verify your existing registration.";
+      save.textContent = "Profile requires owner review";
+      form.querySelectorAll("input, select, textarea, button").forEach(field => { field.disabled = true; });
     }
     loading.classList.add("hidden");
     panel.classList.remove("hidden");
   }
   form.addEventListener("submit", async event => {
     event.preventDefault();
-    if (!user || save.disabled || !form.reportValidity()) return;
+    if (!user || !memberProfile || save.disabled || !form.reportValidity()) return;
     const payload = profilePayload();
     if (!validPayload(payload)) { setStatus("Check the required fields and confirm that you are at least 18."); return; }
     save.disabled = true; save.textContent = "Saving…"; setStatus("Saving your private profile…");
     try {
-      const { data: existing, error: lookupError } = await db.from("members").select("id").eq("user_id", user.id).limit(1);
-      if (lookupError) throw lookupError;
-      let result;
-      if (existing && existing.length) {
-        result = await db.from("members").update(payload).eq("user_id", user.id).select("id").maybeSingle();
-      } else {
-        result = await db.from("members").insert({ ...payload, user_id: user.id, approved: false }).select("id").maybeSingle();
-      }
+      const result = await db.from("members")
+        .update(payload).eq("user_id", user.id).select("id").maybeSingle();
       if (result.error) throw result.error;
       if (!result.data) throw new Error("No profile was changed.");
       setStatus("Your private profile has been saved. Approval status can only be changed by an administrator.");
