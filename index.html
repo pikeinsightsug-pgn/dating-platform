@@ -71,25 +71,15 @@
 </section>
 
 <section class="section wrap" id="register">
-  <div class="panel" style="max-width:720px;margin:auto">
+  <div class="panel" style="max-width:720px;margin:auto;text-align:center">
     <h2 style="text-align:left">Join the founding community ❤️</h2>
-    <p style="color:#75666e;line-height:1.6">Adults aged 18+ in Uganda and Botswana. The first 100 founding members join free during testing. Payments are not active.</p>
-    <p id="registration-features-status" style="background:#fde8f0;color:#8f1e51;padding:12px 14px;border-radius:12px;line-height:1.5"><strong>Complete registration:</strong> answer the questionnaire, add your partner preferences and upload a profile photo.</p>
-    <form id="member-form" style="display:grid;gap:14px">
-      <label>First name<input name="first_name" required maxlength="80" autocomplete="given-name" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"></label>
-      <label>Age<input name="age" type="number" min="18" max="120" required style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"></label>
-      <label>Gender<select name="gender" required style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"><option value="">Choose one</option><option>Woman</option><option>Man</option><option>Prefer not to say</option></select></label>
-      <label>Location<select name="location" required style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"><option value="">Choose your country</option><option>Uganda</option><option>Botswana</option></select></label>
-      <label>What are you looking for?<select name="relationship_goal" required style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"><option value="">Choose your relationship goal</option><option>Long-term relationship</option><option>Marriage</option><option>Friendship first</option><option>Open to seeing where it goes</option></select></label>
-      <label>Tell us a little about yourself<textarea name="bio" required maxlength="500" rows="4" placeholder="Your interests, personality and what you enjoy…" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit;resize:vertical"></textarea></label>
-      <label>Interests (comma-separated)<input name="interests" maxlength="300" placeholder="e.g. music, travel, cooking" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"></label>
-      <label>What would you value in a partner?<textarea name="partner_preference" required maxlength="500" rows="3" placeholder="Describe the qualities that matter to you…" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit;resize:vertical"></textarea></label>
-      <label>Profile photo (JPG, PNG or WebP; max 5 MB)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" style="display:block;width:100%;padding:13px;border:1px solid #e7ccd8;border-radius:12px;margin-top:6px;font:inherit"></label>
-      <p style="font-size:13px;color:#82737b;margin:0">Choose a photo of yourself that you are comfortable sharing. Your photo will be stored privately and will not be shown publicly by this form.</p>
-      <button class="btn primary" id="member-submit" type="submit">Join Free</button>
-      <p id="member-result" role="status" aria-live="polite" style="margin:0;line-height:1.5"></p>
-    </form>
-    <p style="font-size:13px;color:#82737b;line-height:1.5">Your registration is stored for community setup and will not create a public profile or start matching. Do not enter sensitive information.</p>
+    <p style="color:#75666e;line-height:1.6;text-align:left">Adults aged 18+ in Uganda and Botswana. The first 100 genuine founding members join free during testing. Payments are disabled. Complete our registration questionnaire below; submitting it records your interest but does not create a public dating profile or provide matches yet.</p>
+    <div style="background:#fde8f0;color:#8f1e51;padding:14px 16px;border-radius:12px;line-height:1.5;text-align:left;margin:18px 0">
+      <strong>Registration is open.</strong><br>
+      We are temporarily using our established registration form while we finish technical improvements. You do not need to create a password or pay to join the founding list.
+    </div>
+    <a class="btn primary" style="margin:8px auto" href="https://forms.gle/SQMn7KmatDnh814fA" target="_blank" rel="noopener noreferrer">❤️ Open the Free Registration Form</a>
+    <p style="font-size:13px;color:#82737b;line-height:1.5;text-align:left;margin-top:18px">Please register only if you are 18 or older. Keep your information respectful and do not submit sensitive personal information. Member discovery and messaging are not live yet; profiles will require review before the full launch.</p>
   </div>
 </section>
 
@@ -98,7 +88,7 @@
 <footer class="footer wrap">© 2026 Find Your Person • Uganda 🇺🇬 & Botswana 🇧🇼 • 18+<br>Private, respectful and relationship-focused.</footer>
 
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 (() => {
   const SUPABASE_URL = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
