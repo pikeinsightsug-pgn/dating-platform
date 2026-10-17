@@ -160,8 +160,9 @@ button:disabled{opacity:.6;cursor:wait}
 
   document.getElementById("register-form").addEventListener("submit", async event => {
     event.preventDefault();
-    if (busy || !event.currentTarget.reportValidity()) return;
-    const values = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    if (busy || !form.reportValidity()) return;
+    const values = new FormData(form);
     const password = String(values.get("password"));
     if (password !== String(values.get("password_confirm"))) { say("The passwords do not match."); return; }
     const age = Number(values.get("age"));
@@ -184,7 +185,7 @@ button:disabled{opacity:.6;cursor:wait}
         options: { data: userMetadata, emailRedirectTo: callbackUrl("") }
       });
       if (error) throw error;
-      event.currentTarget.reset();
+      form.reset();
       if (data.session && data.user) {
         say("Account created. Saving your private profile…");
         await finishSignIn(data.user);
@@ -218,8 +219,9 @@ button:disabled{opacity:.6;cursor:wait}
 
   document.getElementById("forgot-form").addEventListener("submit", async event => {
     event.preventDefault();
-    if (busy || !event.currentTarget.reportValidity()) return;
-    const email = String(new FormData(event.currentTarget).get("email")).trim();
+    const form = event.currentTarget;
+    if (busy || !form.reportValidity()) return;
+    const email = String(new FormData(form).get("email")).trim();
     setBusy(true); say("Sending reset instructions…");
     try {
       const { error } = await db.auth.resetPasswordForEmail(email, {
@@ -227,7 +229,7 @@ button:disabled{opacity:.6;cursor:wait}
       });
       if (error) throw error;
       say("If an account matches that email, password reset instructions have been sent.");
-      event.currentTarget.reset();
+      form.reset();
     } catch (error) {
       say("We could not send reset instructions right now. Please try again later.");
     } finally { setBusy(false); }
@@ -235,8 +237,9 @@ button:disabled{opacity:.6;cursor:wait}
 
   document.getElementById("recovery-form").addEventListener("submit", async event => {
     event.preventDefault();
-    if (busy || !event.currentTarget.reportValidity()) return;
-    const values = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    if (busy || !form.reportValidity()) return;
+    const values = new FormData(form);
     const password = String(values.get("password"));
     if (password !== String(values.get("password_confirm"))) { say("The passwords do not match."); return; }
     setBusy(true); say("Updating your password…");
@@ -244,7 +247,7 @@ button:disabled{opacity:.6;cursor:wait}
       const { error } = await db.auth.updateUser({ password });
       if (error) throw error;
       await db.auth.signOut();
-      event.currentTarget.reset();
+      form.reset();
       show("login");
       say("Your password has been updated. Sign in with your new password.");
     } catch (error) {
