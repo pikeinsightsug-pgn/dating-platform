@@ -69,27 +69,25 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   if (!window.supabase) { loading.textContent = "Account service could not load. Refresh and try again."; return; }
   const PHOTO_REQUEST_TIMEOUT_MS = 60000;
   function photoRequestFetch(input, init = {}) {
+    // Bound all Supabase HTTP requests so an Auth token refresh cannot leave photo
+    // uploads waiting indefinitely before the Storage request begins.
     const requestUrl = typeof input === "string" ? input : input.url;
     const url = new URL(requestUrl, SUPABASE_URL);
-    const isPhotoStorageRequest = url.origin === SUPABASE_URL &&
-      url.pathname.includes("/storage/v1/object/") &&
-      url.pathname.includes("/profile-photos/");
-    const isMemberPhotoUpdate = url.origin === SUPABASE_URL &&
-      url.pathname === "/rest/v1/members" && init.method === "PATCH";
-    if (!isPhotoStorageRequest && !isMemberPhotoUpdate) return fetch(input, init);
+    if (url.origin !== SUPABASE_URL) return fetch(input, init);
 
     const controller = new AbortController();
-    const upstreamSignal = init.signal;
+    const requestSignal = init.signal ||
+      (typeof Request !== "undefined" && input instanceof Request ? input.signal : null);
     const abortFromCaller = () => controller.abort();
-    if (upstreamSignal) {
-      if (upstreamSignal.aborted) controller.abort();
-      else upstreamSignal.addEventListener("abort", abortFromCaller, { once: true });
+    if (requestSignal) {
+      if (requestSignal.aborted) controller.abort();
+      else requestSignal.addEventListener("abort", abortFromCaller, { once: true });
     }
     const timeout = setTimeout(() => controller.abort(), PHOTO_REQUEST_TIMEOUT_MS);
     return fetch(input, { ...init, signal: controller.signal })
       .catch(error => {
-        if (controller.signal.aborted && !(upstreamSignal && upstreamSignal.aborted)) {
-          const timeoutError = new Error("The photo request timed out.");
+        if (controller.signal.aborted && !(requestSignal && requestSignal.aborted)) {
+          const timeoutError = new Error("The Supabase request timed out.");
           timeoutError.code = "PHOTO_REQUEST_TIMEOUT";
           throw timeoutError;
         }
@@ -97,7 +95,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       })
       .finally(() => {
         clearTimeout(timeout);
-        if (upstreamSignal) upstreamSignal.removeEventListener("abort", abortFromCaller);
+        if (requestSignal) requestSignal.removeEventListener("abort", abortFromCaller);
       });
   }
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -205,6 +203,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   const photoInput = document.getElementById("photo-file");
   const photoButton = document.getElementById("upload-photo");
   const photoStatus = document.getElementById("photo-status");
+  let photoUploading = false;
   let previewObjectUrl = null;
   function photoMessage(message) { photoStatus.textContent = message; }
   async function loadPhotoPreview(path) {
@@ -220,7 +219,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   }
   photoInput.addEventListener("change", () => {
     const file = photoInput.files && photoInput.files[0];
-    photoButton.disabled = !file || !memberProfile;
+    photoButton.disabled = photoUploading || !file || !memberProfile;
     photoMessage(file && !memberProfile ? "Save your profile before uploading a photo." : "");
     if (!file) return;
     if (!["image/jpeg","image/png","image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
@@ -235,7 +234,8 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   });
   photoButton.addEventListener("click", async () => {
     const file = photoInput.files && photoInput.files[0];
-    if (!file || !memberProfile || photoButton.disabled) return;
+    if (!file || !memberProfile || photoButton.disabled || photoUploading) return;
+    photoUploading = true; photoInput.disabled = true;
     photoButton.disabled = true; photoButton.textContent = "Uploading…";
     photoButton.setAttribute("aria-busy", "true");
     photoMessage("Uploading your private photo…");
@@ -287,13 +287,14 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
         }
       }
     } finally {
+      photoUploading = false; photoInput.disabled = false;
       photoButton.removeAttribute("aria-busy");
       photoButton.textContent = "Upload photo";
       photoButton.disabled = !(photoInput.files && photoInput.files[0] && memberProfile);
     }
   });
   photoInput.addEventListener("input", () => {
-    photoButton.disabled = !(photoInput.files && photoInput.files[0] && memberProfile);
+    photoButton.disabled = photoUploading || !(photoInput.files && photoInput.files[0] && memberProfile);
   });
 
   signout.addEventListener("click", async () => {
