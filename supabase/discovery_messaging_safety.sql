@@ -447,7 +447,7 @@ begin
   end if;
   if (select count(*) from public.member_reports r
       where r.reporter_member_id = me and r.created_at > now() - interval '1 day') >= 20 then
-    raise exception 'Too many reports today. Please contact support.' using errcode = '54000';
+    raise exception 'Too many reports today. Please email pikeinsightsug@gmail.com.' using errcode = '54000';
   end if;
   insert into public.member_reports (reporter_member_id, reported_member_id, reason, details)
   values (me, p_member_id, p_reason, nullif(trim(coalesce(p_details, '')), ''))
