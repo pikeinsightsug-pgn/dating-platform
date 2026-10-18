@@ -95,10 +95,9 @@ Deno.serve(async (req: Request) => {
         pending: rows.filter((m) => m.approved !== true).length,
         linked: rows.filter((m) => !!m.user_id).length,
         test_accounts: rows.filter((m) => m.is_test_account).length,
-        // The free founding-member allowance counts genuine members only.
+        // Genuine members only: the owner's test accounts are excluded.
         genuine_approved: rows.filter((m) => m.approved && !m.is_test_account && m.user_id && (m.age ?? 0) >= 18).length,
         unlinked: rows.filter((m) => !m.user_id).length,
-        target: 100,
       },
     });
   }

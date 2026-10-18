@@ -268,3 +268,20 @@ test("reconciliation reads the real Google Form layout: combined contact answer,
     assert.ok(!shareable.includes(secret), "redacted output leaks " + secret);
   }
 });
+
+test("the first-100-free offer is gone and payments are described as off during testing", async () => {
+  for (const path of ["index.html", "account.html", "dashboard.html", "discover.html", "messages.html", "admin/index.html", "agent/dashboard.html"]) {
+    const html = await read(path);
+    assert.doesNotMatch(html, /first 100[^.<]{0,40}free|join free|free founding|founding members? (can )?join|free (member )?account|for free/i, path + " still advertises a free-membership offer");
+  }
+  assert.match(await read("index.html"), /No payment is requested during testing/);
+});
+
+test("every member-facing page shows a clickable contact email", async () => {
+  for (const path of ["index.html", "account.html", "dashboard.html", "discover.html", "messages.html"]) {
+    assert.match(await read(path), /<a href="mailto:pikeinsightsug@gmail\.com"/, path);
+  }
+  for (const path of ["account.html", "dashboard.html", "assets/member-core.js"]) {
+    assert.doesNotMatch(await read(path), /contact (the owner|support)/i, path + " still points to an unnamed contact");
+  }
+});

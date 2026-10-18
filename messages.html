@@ -28,7 +28,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
 .time{display:block;font-size:11px;opacity:.75;margin-top:4px}
 .compose{display:flex;gap:9px;padding:12px;border-top:1px solid #f6e9ef}.compose textarea{flex:1;resize:none;padding:11px;border:1px solid #e7ccd8;border-radius:14px;font:inherit;font-size:16px;min-height:46px;max-height:140px}
 .safety{font-size:13px;color:#75666e;padding:0 16px 12px;margin:0}
-.empty{padding:22px;color:#75666e}.hidden{display:none!important}
+.empty{padding:22px;color:#75666e}.help{font-size:14px;color:#75666e;text-align:center;margin-top:18px}.help a{color:#a21f59;font-weight:700;overflow-wrap:anywhere}.hidden{display:none!important}
 @media(max-width:760px){.layout{grid-template-columns:1fr}.layout.thread-open .list-panel{display:none}.layout:not(.thread-open) .thread-panel{display:none}.back{display:inline-flex}.wrap{padding:16px 12px 30px}.messages{max-height:none}}
 </style>
 </head>
@@ -52,7 +52,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
         <div class="actions"><button id="block" class="quiet hidden" type="button">Block</button></div>
       </div>
       <div id="thread" class="messages" aria-live="polite"></div>
-      <p class="safety">Stay safe: never send money, and keep personal contact details private until you trust someone. Report anyone who asks for payment.</p>
+      <p class="safety">Stay safe: never send money, and keep personal contact details private until you trust someone. Report anyone who asks for payment, or email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a>.</p>
       <form id="compose" class="compose hidden">
         <label class="hidden" for="body">Message</label>
         <textarea id="body" name="body" rows="2" maxlength="2000" required placeholder="Write a message…"></textarea>
@@ -60,6 +60,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
       </form>
     </section>
   </div>
+  <p class="help">Need help? Email us at <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a></p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script src="assets/member-core.js"></script>

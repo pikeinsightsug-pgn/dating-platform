@@ -26,6 +26,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(560px,calc(100vw - 24px))
 dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialog-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
 .report{display:grid;gap:10px;margin-top:14px;padding:14px;border:1px solid #f0dfe7;border-radius:14px}.report select,.report textarea{width:100%;padding:10px;border:1px solid #e7ccd8;border-radius:10px;font:inherit;font-size:16px}
 #dialog-status{color:#8f1e51;white-space:pre-wrap}
+.help{font-size:14px;color:#75666e;text-align:center}.help a{color:#a21f59;font-weight:700;overflow-wrap:anywhere}
 .hidden{display:none!important}@media(max-width:480px){.wrap{padding:16px 14px 40px}.top .btn,.top button{flex:1 1 auto}.filters{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -51,6 +52,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   <p id="status" role="status" aria-live="polite">Checking your account…</p>
   <section id="profiles" class="grid" aria-label="Approved member profiles"></section>
   <div class="more"><button id="load-more" class="secondary hidden" type="button">Show more profiles</button></div>
+  <p class="help">Need help? Email us at <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a></p>
 </main>
 <dialog id="profile-dialog" aria-labelledby="dialog-name">
   <div id="dialog-photo"></div>
@@ -196,7 +198,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
       loadMore.classList.toggle("hidden", !more);
       if (!shown.size) {
         say(legacyMode || !hasActiveFilters()
-          ? "There are no other approved member profiles yet. You are one of our founding members — check back soon as more people are approved."
+          ? "There are no other approved member profiles yet. You are one of our first members — check back soon as more people are approved."
           : "No approved members match these filters. Try a wider age range or another country.");
       } else {
         say("Showing " + shown.size + " of " + total + " approved member " + (total === 1 ? "profile." : "profiles."));

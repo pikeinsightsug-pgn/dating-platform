@@ -17,6 +17,7 @@ input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #e7
 button,.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:13px 19px;font:inherit;font-weight:800;cursor:pointer;background:#b32663;color:#fff;text-decoration:none}
 button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}
 .notice{padding:13px 15px;background:#fde8f0;border-radius:12px;color:#8f1e51;line-height:1.5}
+.help{font-size:14px;color:#75666e;line-height:1.5}.help a,#recovery-panel a{color:#a21f59;font-weight:700;overflow-wrap:anywhere}
 #status{white-space:pre-wrap;overflow-wrap:anywhere;min-height:1.4em}.hidden{display:none!important}
 @media(max-width:480px){.panel{padding:18px}.top button{width:100%}.wrap{padding:16px 14px 40px}}
 
@@ -32,7 +33,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     <nav class="member-nav" aria-label="Member dashboard"><a id="discover-nav" class="btn" href="discover.html">Discover Members</a><a id="messages-nav" class="btn secondary" href="messages.html">Messages</a><a id="profile-nav" class="btn secondary" href="#profile-panel">My Profile</a><a id="preferences-nav" class="btn secondary" href="#preferences">Preferences</a><button id="signout" class="secondary" type="button">Log out</button></nav>
   </header>
   <section id="profile-panel" class="panel hidden">
-    <div class="notice" id="approval-guidance"><strong>How approval works:</strong> The platform owner reviews member profiles and linked accounts manually. Until your profile is approved, it stays private and you cannot browse or message other members. Approval is never automatic. Membership is free for founding members; no payment is ever requested.</div>
+    <div class="notice" id="approval-guidance"><strong>How approval works:</strong> The platform owner reviews member profiles and linked accounts manually. Until your profile is approved, it stays private and you cannot browse or message other members. Approval is never automatic. No payment is requested during testing.</div>
     <h1>My profile</h1>
     <p id="approval-status" role="status" aria-live="polite"></p>
     <section class="photo-actions" aria-labelledby="photo-title"><h2 id="photo-title">Profile photo</h2><p class="photo-note">Choose a clear photo of yourself. Large phone photos are resized automatically before upload. Photos are private and shown only to approved members.</p><img id="photo-preview" class="photo-preview hidden" alt="Preview of your profile photo"><p id="photo-empty" class="photo-note">No profile photo uploaded yet.</p><label for="photo-file">Upload or replace photo<input id="photo-file" type="file" accept="image/*"></label><button id="upload-photo" type="button" disabled>Upload photo</button><p id="photo-status" class="photo-note" role="status" aria-live="polite"></p></section>
@@ -56,9 +57,10 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     <h1>Account recovery needed</h1>
     <p id="recovery-message">You are signed in, but this account does not have a linked member profile. We have not created a profile or linked an existing registration automatically.</p>
     <p id="recovery-account"></p>
-    <p>If you registered through our earlier Google Form, tell the platform owner the email address shown above. The owner will verify your original registration and link it to this account. Do not register again while this is being checked.</p>
+    <p>If you registered through our earlier Google Form, email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a> with the email address shown above. We will verify your original registration and link it to this account. Do not register again while this is being checked.</p>
   </section>
   <p id="loading" role="status" aria-live="polite">Checking your private account…</p>
+  <p class="help">Need help? Email us at <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a></p>
   <p><a class="btn secondary" href="index.html">Back to homepage</a></p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
@@ -147,7 +149,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     } catch (error) {
       setStatus(error && error.code === "REQUEST_TIMEOUT"
         ? "Saving took too long. Check your connection and try again."
-        : "Could not save your profile. Check your connection and try again. If the problem continues, contact support.");
+        : "Could not save your profile. Check your connection and try again. If the problem continues, email pikeinsightsug@gmail.com.");
     } finally { save.disabled = false; save.textContent = "Save profile"; }
   });
 
@@ -222,7 +224,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       } else if (stage === "prepare") {
         photoMessage((error && error.message) || "This photo could not be prepared. Choose a different photo.");
       } else if (stage === "profile") {
-        photoMessage("The photo uploaded, but we could not link it to your profile. Please try again or contact support.");
+        photoMessage("The photo uploaded, but we could not link it to your profile. Please try again or email pikeinsightsug@gmail.com.");
       } else if (stage === "preview") {
         photoMessage("Your photo was saved, but its preview could not be refreshed. Reload the page to check it.");
       } else {
@@ -231,17 +233,17 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
         if (statusCode === 401 || detail.includes("jwt") || detail.includes("unauthorized")) {
           photoMessage("Your sign-in may have expired. Log in again, then retry the photo upload.");
         } else if (statusCode === 403 || detail.includes("row-level security") || detail.includes("permission denied")) {
-          photoMessage("Supabase denied this photo upload. Please contact support so the Storage permissions can be checked.");
+          photoMessage("Supabase denied this photo upload. Please email pikeinsightsug@gmail.com so the photo storage settings can be checked.");
         } else if (statusCode === 413 || detail.includes("too large") || detail.includes("exceeded the maximum")) {
           photoMessage("This photo is too large. Choose an image no larger than 5 MB.");
         } else if (detail.includes("mime") || detail.includes("invalid_mime_type")) {
           photoMessage("This photo format is not accepted. Choose a JPEG, PNG or WebP photo.");
         } else if (detail.includes("bucket not found") || detail.includes("not found")) {
-          photoMessage("The profile photo storage is unavailable. Please contact support.");
+          photoMessage("The profile photo storage is unavailable. Please email pikeinsightsug@gmail.com.");
         } else if (detail.includes("failed to fetch") || detail.includes("network")) {
           photoMessage("Could not reach photo storage. Check your connection and try again.");
         } else {
-          photoMessage("Photo upload failed. Please try again. If it continues, contact support.");
+          photoMessage("Photo upload failed. Please try again. If it continues, email pikeinsightsug@gmail.com.");
         }
       }
     } finally {

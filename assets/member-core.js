@@ -5,6 +5,8 @@
 
   const SUPABASE_URL = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_vzGFbhe7X3CpobiHZAk9Lw_2V3O-F3V";
+  // Official contact address, shown as a clickable link on every member page.
+  const CONTACT_EMAIL = "pikeinsightsug@gmail.com";
   const REQUEST_TIMEOUT_MS = 60000;
   const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
@@ -106,7 +108,7 @@
       // A concurrent tab or the trigger may have created it; read again before failing.
       const raced = await readOwnProfile(db, user);
       if (raced) return raced;
-      const failure = new Error("Your account is signed in, but your profile could not be saved. Please contact support.");
+      const failure = new Error("Your account is signed in, but your profile could not be saved. Please email " + CONTACT_EMAIL + ".");
       failure.cause = error;
       throw failure;
     }
@@ -129,11 +131,11 @@
     if (code === "user_already_exists" || message.includes("already registered")) return "An account with this email already exists. Log in instead, or reset your password.";
     if (code === "weak_password" || message.includes("password should")) return "Choose a stronger password: at least 8 characters, mixing letters and numbers.";
     if (status === 429 || code.includes("rate_limit") || message.includes("rate limit")) return "Too many attempts. Please wait a few minutes and try again.";
-    if (code === "signup_disabled" || message.includes("signups not allowed")) return "New registrations are paused right now. Please contact support.";
-    if (message.includes("database error saving new user")) return "Your account could not be created because of a server setup problem. Please contact support.";
+    if (code === "signup_disabled" || message.includes("signups not allowed")) return "New registrations are paused right now. Please email " + CONTACT_EMAIL + ".";
+    if (message.includes("database error saving new user")) return "Your account could not be created because of a server setup problem. Please email " + CONTACT_EMAIL + ".";
     return action === "signup"
-      ? "Could not create the account. Check the details and try again. If the problem continues, contact support."
-      : "Could not sign in right now. Please try again. If the problem continues, contact support.";
+      ? "Could not create the account. Check the details and try again. If the problem continues, email " + CONTACT_EMAIL + "."
+      : "Could not sign in right now. Please try again. If the problem continues, email " + CONTACT_EMAIL + ".";
   }
 
   // Some Android pickers report an empty MIME type, so fall back to the file extension.
@@ -233,7 +235,7 @@
   }
 
   const api = {
-    SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, PHOTO_TYPES, PHOTO_MAX_BYTES, GENDERS, COUNTRIES, GOALS,
+    SUPABASE_URL, CONTACT_EMAIL, SUPABASE_PUBLISHABLE_KEY, PHOTO_TYPES, PHOTO_MAX_BYTES, GENDERS, COUNTRIES, GOALS,
     boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile, destinationFor,
     authErrorMessage, photoTypeOf, preparePhoto, signedPhotoUrls, isMissingFunction, isNotApproved
   };

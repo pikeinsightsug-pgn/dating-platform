@@ -63,7 +63,7 @@ select * from (
   union all select 17, 'members', 'linked but pending approval (these members only see their own profile)',
     (select count(*) from mm where not approved and user_id is not null)::text
   union all select 24, 'members', 'marked as owner test accounts (kept apart from genuine members)', (select count(*) from mm where is_test)::text
-  union all select 25, 'members', 'GENUINE approved, linked, 18+ (counts toward the free founding 100)',
+  union all select 25, 'members', 'GENUINE approved, linked, 18+ (excludes owner test accounts)',
     (select count(*) from mm where approved and not is_test and user_id is not null and age >= 18)::text
   union all select 26, 'schema', 'legacy_registrations archive rows (original form records)',
     case when to_regclass('public.legacy_registrations') is null then 'table missing'

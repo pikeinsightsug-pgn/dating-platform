@@ -114,7 +114,7 @@ Every migration is exercised locally by `npm run test:db` (66 RLS assertions) an
 
 In `/admin/`, use **Mark as my test account** on each of your own test profiles. Test accounts
 see and message only other test accounts, genuine members never see them, and they do not
-count toward the 100 free founding places. Members cannot change this flag themselves.
+count as genuine members. Members cannot change this flag themselves.
 
 ## Restoring the original Google Form registrations
 
@@ -144,7 +144,7 @@ Nothing here creates, merges, links or approves a profile automatically.
 5. **Link the original.** In `/admin/` → Original registrations, choose the person's member profile,
    confirm you verified them, and **Link to profile**. This records the match only.
 6. **Approve** each verified, eligible adult separately with **Approve**. The genuine approved
-   count shows the free founding places left.
+   count excludes your test accounts.
 
 Photos from the form remain in your Google Drive. Ask each person to upload their photo in
 the app (or for consent before you add it); do not copy them automatically.

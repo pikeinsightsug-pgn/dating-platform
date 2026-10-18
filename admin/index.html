@@ -12,7 +12,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 </style>
 </head>
 <body><main class="wrap">
-<header><div>OWNER ONLY • 18+ COMMUNITY</div><h1>❤️ Find Your Person — Member Approval</h1><p>Review real registrations. Approve only genuine profiles after review. Payments remain disabled; founding members join free during testing.</p></header>
+<header><div>OWNER ONLY • 18+ COMMUNITY</div><h1>❤️ Find Your Person — Member Approval</h1><p>Review real registrations. Approve only genuine profiles after review. Payments remain disabled during testing.</p></header>
 <section class="panel" id="config"><h2>Connect owner access</h2>
 <p class="muted">This page requires the public Supabase project URL/key and a deployed admin-members Edge Function. The owner account email must match the ADMIN_EMAIL secret configured for that function. Never enter a service-role key here.</p>
 <label>Supabase project URL<input id="project" placeholder="https://your-project.supabase.co" autocomplete="url"></label>
@@ -22,7 +22,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <button id="signin">Sign in</button><button class="secondary" id="signout">Sign out</button><p id="status" role="status"></p>
 </section>
 <section id="app" class="hidden">
-<div class="grid"><div class="metric">Profiles<div class="num" id="total">—</div><div class="muted" id="test-count"></div></div><div class="metric">Genuine approved<div class="num" id="approved">—</div><div class="muted">Free founding places: <span id="founding-left">—</span> of 100 left</div></div><div class="metric">Pending review<div class="num" id="pending">—</div></div></div>
+<div class="grid"><div class="metric">Profiles<div class="num" id="total">—</div><div class="muted" id="test-count"></div></div><div class="metric">Genuine approved<div class="num" id="approved">—</div><div class="muted">Excludes your test accounts</div></div><div class="metric">Pending review<div class="num" id="pending">—</div></div></div>
 <div class="panel" id="recovery"><h2>Safely link a verified existing profile</h2>
 <p class="muted">Use only after independently verifying the person against their original registration information. Select an existing email-confirmed Auth account; linking changes only the profile's user ID. It does not approve the profile. Never match by name or an unverified email.</p>
 <div id="recovery-status" role="status" class="muted">Load registrations to see eligible unlinked accounts.</div></div>
@@ -103,7 +103,6 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     $("test-count").textContent = m.test_accounts != null ? m.test_accounts + " marked as test accounts" : "";
     const genuine = m.genuine_approved != null ? m.genuine_approved : m.approved;
     $("approved").textContent = genuine;
-    $("founding-left").textContent = Math.max(0, 100 - genuine);
     $("pending").textContent = m.pending;
     const accounts = accountResult.status === "fulfilled" ? accountResult.value.accounts || [] : [];
     $("recovery-status").textContent = accountResult.status === "rejected" ? notDeployed(accountResult.reason)
@@ -166,7 +165,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
   async function setTest(m, isTest) {
     try {
       if (!confirm(isTest
-        ? "Mark " + (m.first_name || "this profile") + " as your test account? Genuine members will no longer see or message it, and it will not count toward the founding 100."
+        ? "Mark " + (m.first_name || "this profile") + " as your test account? Genuine members will no longer see or message it, and it will not be counted as a genuine member."
         : "Mark " + (m.first_name || "this profile") + " as a genuine member?")) return;
       await invoke("set_test_account", m.id, { is_test_account: isTest });
       await load();

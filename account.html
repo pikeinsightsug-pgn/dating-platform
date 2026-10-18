@@ -22,6 +22,7 @@ button:disabled{opacity:.6;cursor:wait}
 .row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 160px}
 .notice{padding:13px 15px;background:#fde8f0;border-radius:12px;color:#8f1e51;line-height:1.5}
 .hidden{display:none!important}
+.help{font-size:14px;color:#75666e;line-height:1.5}.help a,.notice a,p a[href^="mailto"]{color:#a21f59;font-weight:700;overflow-wrap:anywhere}
 #status{white-space:pre-wrap;overflow-wrap:anywhere;min-height:1.4em}
 .links{display:flex;gap:15px;flex-wrap:wrap;font-weight:700;color:#a21f59}
 .links button{padding:0;background:none;color:#a21f59;text-decoration:underline}
@@ -32,10 +33,10 @@ button:disabled{opacity:.6;cursor:wait}
 <main class="wrap">
 <div class="brand">Find<span>Your</span>Person ❤️</div>
 <section class="panel">
-  <div class="notice"><strong>Founding members:</strong> free during testing. Payments and automatic charges are disabled. Member profiles stay private until reviewed and approved.</div>
+  <div class="notice"><strong>Testing phase:</strong> no payment is requested and no automatic charges are made. Member profiles stay private until reviewed and approved.</div>
   <div id="register-view">
-    <h1>Create your free account</h1>
-    <p>Adults 18+ in Uganda and Botswana. If we email you a confirmation link, open it and then log in. Already registered through our earlier Google Form? Do not register again here — contact the owner so your original registration can be verified and linked to an account.</p>
+    <h1>Create your account</h1>
+    <p>Adults 18+ in Uganda and Botswana. If we email you a confirmation link, open it and then log in. Registered through our earlier Google Form? Your answers are kept safely. Create your account here, then email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a> with the email address you used, so we can link it to your original registration.</p>
     <form id="register-form" class="grid">
       <label>First name<input name="first_name" required maxlength="80" autocomplete="given-name"></label>
       <label>Email address<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
@@ -86,6 +87,7 @@ button:disabled{opacity:.6;cursor:wait}
   </div>
   <p id="status" role="status" aria-live="polite"></p>
 </section>
+<p class="help">Need help? Email us at <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a></p>
 <p><a class="links" href="index.html">← Back to Find Your Person</a></p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>

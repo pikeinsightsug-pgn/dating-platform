@@ -3,7 +3,7 @@
 Examples the owner can use with the agent:
 
 - "Give me today's platform report."
-- "How many of the first 100 places are filled?"
+- "How many genuine members are approved so far?"
 - "Show me the registration trend."
 - "Find incomplete profiles that need follow-up."
 - "Suggest compatible matches for member X."

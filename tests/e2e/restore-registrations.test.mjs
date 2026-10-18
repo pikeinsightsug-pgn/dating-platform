@@ -143,7 +143,6 @@ test("restoring original registrations: archive, activate, link, approve, then m
       await page.waitForFunction(n => [...document.querySelectorAll("#members article")].some(a => a.textContent.includes(n) && a.textContent.includes("Approved")), name);
     }
     assert.equal(await page.textContent("#approved"), "2", "genuine approved count excludes test accounts");
-    assert.equal(await page.textContent("#founding-left"), "98");
   });
 
   await t.test("restored members see each other; test accounts stay out of their view", async () => {
