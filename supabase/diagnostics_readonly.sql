@@ -1,11 +1,9 @@
 -- READ-ONLY launch diagnostics for Find Your Person.
--- Paste into the Supabase SQL Editor and run. It changes nothing: the transaction is
--- read-only and rolled back. Output is one table (section, check, value) because the
--- SQL Editor shows only the last result. It reports counts, never names, emails or phones,
--- so the result is safe to share with your developer.
-begin;
-set transaction read only;
-
+-- Paste the whole file into the Supabase SQL Editor and press Run.
+-- It is a single SELECT statement: it cannot insert, update, delete, drop, truncate or
+-- alter anything. The output is one table (ord, section, check_name, value) with counts,
+-- yes/no answers and object names only — never names, emails, phone numbers, passwords
+-- or tokens — so it is safe to copy and share with your developer.
 with
 -- Optional columns are read through JSON so the report also runs on a database where
 -- the earlier setup files were never applied (missing columns simply read as null).
@@ -16,7 +14,7 @@ mm as (
   select nullif(j->>'user_id', '')::uuid as user_id,
          coalesce((j->>'approved')::boolean, false) as approved,
          coalesce((j->>'is_test_account')::boolean, false) as is_test,
-         nullif(j->>'age', '')::numeric as age,
+         case when j->>'age' ~ '^[0-9]{1,3}$' then (j->>'age')::integer end as age,
          j->>'first_name' as first_name, j->>'city' as city, j->>'bio' as bio,
          j->>'relationship_goal' as relationship_goal, j->>'gender' as gender, j->>'location' as location,
          j->>'profile_photo_url' as profile_photo_url, j
@@ -91,6 +89,23 @@ select * from (
     (select count(*) from (select 1 from mm group by lower(trim(first_name)), age, lower(trim(coalesce(city, ''))) having count(*) > 1) d)::text
   union all select 41, 'duplicates', 'groups sharing the same email column value',
     (select count(*) from (select 1 from mm where nullif(j->>'email', '') is not null group by lower(trim(j->>'email')) having count(*) > 1) d)::text
+  union all select 27, 'schema', 'preference columns present (seeking_gender, preferred_age_min, preferred_age_max)',
+    (select count(*) = 3 from information_schema.columns where table_schema = 'public' and table_name = 'members'
+       and column_name in ('seeking_gender', 'preferred_age_min', 'preferred_age_max'))::text
+  union all select 28, 'schema', 'is_test_account column present', exists (select 1 from information_schema.columns
+       where table_schema = 'public' and table_name = 'members' and column_name = 'is_test_account')::text
+  union all select 29, 'schema', 'approved column default (should be false)',
+    coalesce((select column_default from information_schema.columns where table_schema = 'public' and table_name = 'members' and column_name = 'approved'), 'column missing')
+  union all select 36, 'members', 'profiles with preferences filled in', (select count(*) from mm where nullif(j->>'seeking_gender', '') is not null)::text
+  union all select 62, 'messaging', 'messaging, block and report functions present (of 9)',
+    (select count(distinct proname) from fn where proname in ('browse_member_profiles', 'get_member_profile', 'send_member_message',
+       'list_my_conversations', 'get_conversation', 'mark_conversation_read', 'block_member', 'unblock_member', 'report_member'))::text
+  union all select 63, 'messaging', 'member blocks recorded',
+    case when to_regclass('public.member_blocks') is null then 'table missing'
+         else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.member_blocks', false, true, '')))[1]::text end
+  union all select 55, 'security', 'policies on member_messages', coalesce((select string_agg(policyname, '; ') from pg_policies where schemaname = 'public' and tablename = 'member_messages'), 'none')
+  union all select 56, 'security', 'authenticated can INSERT into member_messages directly (should be false after the new file)',
+    case when to_regclass('public.member_messages') is null then 'table missing' else has_table_privilege('authenticated', 'public.member_messages', 'insert')::text end
   union all select 9, 'migrations', 'registration_setup.sql columns present (user_id, approved, city, bio)',
     (select count(*) = 4 from information_schema.columns where table_schema = 'public' and table_name = 'members'
        and column_name in ('user_id', 'approved', 'city', 'bio'))::text
@@ -109,5 +124,3 @@ select * from (
          else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.member_reports where status = ''open''', false, true, '')))[1]::text end
 ) report
 order by ord;
-
-rollback;
