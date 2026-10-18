@@ -8,7 +8,7 @@ const read = async (path) => readFile(new URL(path, repo), "utf8");
 const scriptBlocks = (html) => [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1]);
 
 test("inline application scripts parse", async () => {
-  for (const path of ["account.html", "dashboard.html", "discover.html", "messages.html", "admin/index.html"]) {
+  for (const path of ["account.html", "login.html", "index.html", "dashboard.html", "discover.html", "messages.html", "admin/index.html"]) {
     const html = await read(path);
     const scripts = scriptBlocks(html);
     assert.ok(scripts.length, path + " has an inline script");
@@ -108,7 +108,7 @@ test("request timeout aborts a stalled Supabase request and classifies it for re
 });
 
 test("no page ships a service-role key or an unpinned Supabase library", async () => {
-  for (const path of ["index.html", "account.html", "dashboard.html", "discover.html", "messages.html", "admin/index.html", "assets/member-core.js"]) {
+  for (const path of ["index.html", "account.html", "login.html", "privacy.html", "dashboard.html", "discover.html", "messages.html", "admin/index.html", "assets/member-core.js"]) {
     const text = await read(path);
     assert.doesNotMatch(text, /service_role|sb_secret_/i, path);
     assert.doesNotMatch(text, /supabase-js@2"/, path + " pins the Supabase library version");
@@ -274,11 +274,15 @@ test("the first-100-free offer is gone and payments are described as off during 
     const html = await read(path);
     assert.doesNotMatch(html, /first 100[^.<]{0,40}free|join free|free founding|founding members? (can )?join|free (member )?account|for free/i, path + " still advertises a free-membership offer");
   }
-  assert.match(await read("index.html"), /No payment is requested during testing/);
+  assert.match(await read("index.html"), /registration does not require any payment/i);
+  for (const path of ["index.html", "account.html", "login.html", "dashboard.html"]) {
+    // No payment collection anywhere: no card fields, no payment provider scripts.
+    assert.doesNotMatch(await read(path), /card number|cvv|stripe|paystack|flutterwave|checkout/i, path);
+  }
 });
 
 test("every member-facing page shows a clickable contact email", async () => {
-  for (const path of ["index.html", "account.html", "dashboard.html", "discover.html", "messages.html"]) {
+  for (const path of ["index.html", "account.html", "login.html", "privacy.html", "dashboard.html", "discover.html", "messages.html"]) {
     assert.match(await read(path), /<a href="mailto:pikeinsightsug@gmail\.com"/, path);
   }
   for (const path of ["account.html", "dashboard.html", "assets/member-core.js"]) {

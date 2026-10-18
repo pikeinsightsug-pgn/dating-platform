@@ -14,6 +14,28 @@ begin
 end;
 $preflight$;
 
+-- Registration questionnaire preferences. Optional, so existing profiles stay valid.
+alter table public.members
+  add column if not exists seeking_gender text,
+  add column if not exists preferred_age_min integer,
+  add column if not exists preferred_age_max integer;
+do $preference_checks$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'members_seeking_gender_check') then
+    alter table public.members add constraint members_seeking_gender_check
+      check (seeking_gender is null or seeking_gender in ('Men', 'Women', 'Everyone'));
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'members_preferred_age_check') then
+    alter table public.members add constraint members_preferred_age_check
+      check ((preferred_age_min is null or preferred_age_min between 18 and 120)
+         and (preferred_age_max is null or preferred_age_max between 18 and 120)
+         and (preferred_age_min is null or preferred_age_max is null or preferred_age_min <= preferred_age_max));
+  end if;
+end;
+$preference_checks$;
+-- Members may edit their own preferences (row access is still limited by the update policies).
+grant update (seeking_gender, preferred_age_min, preferred_age_max) on public.members to authenticated;
+
 -- A malformed signup must never block Auth from creating or confirming the account.
 -- Invalid metadata now skips profile creation (the member sees the recovery guidance)
 -- instead of raising and failing the whole Auth request.
@@ -34,6 +56,9 @@ declare
   profile_bio text;
   profile_interests text;
   profile_preference text;
+  profile_seeking text;
+  profile_age_min integer;
+  profile_age_max integer;
 begin
   if new.email_confirmed_at is null
      or coalesce(profile->>'profile_type', '') <> 'member_registration'
@@ -54,6 +79,14 @@ begin
   profile_bio := nullif(trim(profile->>'bio'), '');
   profile_interests := nullif(trim(coalesce(profile->>'interests', '')), '');
   profile_preference := nullif(trim(coalesce(profile->>'partner_preference', '')), '');
+  -- Optional preferences: anything unexpected is stored as "not given" rather than rejected.
+  profile_seeking := case when profile->>'seeking_gender' in ('Men', 'Women', 'Everyone') then profile->>'seeking_gender' end;
+  if coalesce(profile->>'preferred_age_min', '') ~ '^[0-9]{2,3}$' and coalesce(profile->>'preferred_age_max', '') ~ '^[0-9]{2,3}$'
+     and (profile->>'preferred_age_min')::integer between 18 and 120
+     and (profile->>'preferred_age_max')::integer between (profile->>'preferred_age_min')::integer and 120 then
+    profile_age_min := (profile->>'preferred_age_min')::integer;
+    profile_age_max := (profile->>'preferred_age_max')::integer;
+  end if;
 
   if profile_age < 18 or profile_age > 120
      or profile_first_name is null or length(profile_first_name) > 80
@@ -74,10 +107,12 @@ begin
   begin
     insert into public.members (
       user_id, first_name, age, gender, location, city,
-      relationship_goal, bio, interests, partner_preference, approved
+      relationship_goal, bio, interests, partner_preference,
+      seeking_gender, preferred_age_min, preferred_age_max, approved
     ) values (
       new.id, profile_first_name, profile_age, profile_gender, profile_location, profile_city,
-      profile_goal, profile_bio, profile_interests, profile_preference, false
+      profile_goal, profile_bio, profile_interests, profile_preference,
+      profile_seeking, profile_age_min, profile_age_max, false
     )
     on conflict (user_id) where user_id is not null do nothing;
   exception when others then

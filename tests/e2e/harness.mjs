@@ -71,13 +71,34 @@ export async function setup(name, files = ALL) {
     return row.id;
   }
   async function login(page, email, password = "Test-pass-123") {
-    await page.goto(base + "account.html?mode=login");
-    await page.fill("#login-form [name=email]", email);
-    await page.fill("#login-form [name=password]", password);
+    await page.goto(base + "login.html");
+    await page.fill("#login-email", email);
+    await page.fill("#login-password", password);
     await page.click("#login-form button[type=submit]");
   }
+  // Fills the registration questionnaire on account.html (does not submit).
+  async function fillRegistration(page, f) {
+    const v = { password: "Test-pass-123", age: "29", gender: "Woman", location: "Uganda", city: "Kampala",
+      seeking: "Men", goal: "Serious relationship", min: "25", max: "40", bio: "Synthetic test member who enjoys music and long walks.", ...f };
+    await page.goto(base + "account.html");
+    await page.fill("#first_name", v.name);
+    await page.fill("#email", v.email);
+    await page.fill("#password", v.password);
+    await page.fill("#password_confirm", v.confirm ?? v.password);
+    await page.fill("#age", v.age);
+    await page.selectOption("#gender", v.gender);
+    await page.check(`input[name=location][value="${v.location}"]`);
+    await page.fill("#city", v.city);
+    await page.check(`input[name=seeking_gender][value="${v.seeking}"]`);
+    await page.selectOption("#relationship_goal", v.goal);
+    await page.selectOption("#preferred_age_min", v.min);
+    await page.selectOption("#preferred_age_max", v.max);
+    await page.fill("#bio", v.bio);
+    if (v.adult !== false) await page.check("#adult_confirm");
+    if (v.privacy !== false) await page.check("#privacy_accept");
+  }
   return {
-    base, gateway, sql, newPage, member, login, repo,
+    base, gateway, sql, newPage, member, login, fillRegistration, repo,
     async close() { await browser.close(); await gateway.close(); site.close(); }
   };
 }

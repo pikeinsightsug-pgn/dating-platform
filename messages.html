@@ -192,7 +192,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
   document.getElementById("signout").addEventListener("click", async () => {
     const { error } = await db.auth.signOut();
     if (error) say("Could not log out right now. Please try again.");
-    else window.location.replace("account.html?mode=login");
+    else window.location.replace("login.html?signedout=1");
   });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
   async function poll() {
@@ -203,7 +203,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
   (async () => {
     const { data, error } = await db.auth.getSession();
     if (error) { say("Your session could not be restored. Please sign in again."); return; }
-    if (!data.session) { window.location.replace("account.html?mode=login"); return; }
+    if (!data.session) { window.location.replace("login.html"); return; }
     const profile = await window.FYP.readOwnProfile(db, data.session.user);
     if (!profile) { window.location.replace("dashboard.html?profile=recovery"); return; }
     if (!profile.approved) { say("Messaging opens once the platform owner approves your profile. Your profile stays private until then."); return; }

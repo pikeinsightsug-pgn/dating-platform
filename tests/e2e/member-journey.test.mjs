@@ -14,23 +14,16 @@ test("browser journeys on the full migration set", async (t) => {
 
   await t.test("MANDATORY 1: a new member registers, confirms, logs out and back in without recreating the profile", async () => {
     const page = await env.newPage({ mobile: true });
-    await page.goto(env.base + "account.html");
-    const form = "#register-form ";
-    await page.fill(form + "[name=first_name]", "NewTester");
-    await page.fill(form + "[name=email]", "new-member@test.invalid");
-    await page.fill(form + "[name=password]", "Test-pass-123");
-    await page.fill(form + "[name=password_confirm]", "Test-pass-123");
-    await page.fill(form + "[name=age]", "27");
-    await page.selectOption(form + "[name=gender]", "Woman");
-    await page.selectOption(form + "[name=location]", "Botswana");
-    await page.fill(form + "[name=city]", "Gaborone");
-    await page.selectOption(form + "[name=relationship_goal]", "Serious relationship");
-    await page.fill(form + "[name=bio]", "Synthetic new member.");
-    await page.click(form + "button[type=submit]");
-    await page.waitForFunction(() => /confirmation link/.test(document.getElementById("status").textContent));
+    await env.fillRegistration(page, { name: "NewTester", email: "new-member@test.invalid", age: "27", location: "Botswana", city: "Gaborone" });
+    await page.click("#register-form button[type=submit]");
+    await page.waitForSelector("#success-view:not(.hidden)");
+    assert.match(await page.textContent("#success-message"), /new-member@test\.invalid/);
+    await page.click("#success-view a[href='login.html']");
+    await page.waitForURL(/login\.html$/);
 
     // Logging in before confirming gives a clear message and a resend option.
-    await page.fill("#login-form [name=password]", "Test-pass-123");
+    await page.fill("#login-email", "new-member@test.invalid");
+    await page.fill("#login-password", "Test-pass-123");
     await page.click("#login-form button[type=submit]");
     await page.waitForFunction(() => /confirm your email/i.test(document.getElementById("status").textContent));
     assert.equal(await page.isVisible("#resend-confirmation"), true);
@@ -51,7 +44,8 @@ test("browser journeys on the full migration set", async (t) => {
     await page.waitForFunction(() => /has been saved/.test(document.getElementById("status").textContent));
 
     await page.click("#signout");
-    await page.waitForURL(/account\.html\?mode=login/);
+    await page.waitForURL(/login\.html\?signedout=1$/);
+    assert.equal(await page.isVisible("#signed-out"), true, "a clear logged-out confirmation");
     await env.login(page, "new-member@test.invalid");
     await page.waitForURL(/dashboard\.html$/);
     await page.waitForSelector("#profile-panel:not(.hidden)");
@@ -276,7 +270,7 @@ test("browser journeys on the full migration set", async (t) => {
     const page = await env.newPage();
     for (const path of ["dashboard.html", "discover.html", "messages.html"]) {
       await page.goto(env.base + path);
-      await page.waitForURL(/account\.html\?mode=login$/);
+      await page.waitForURL(/login\.html$/);
     }
   });
 });

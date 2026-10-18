@@ -199,7 +199,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
       if (!shown.size) {
         say(legacyMode || !hasActiveFilters()
           ? "There are no other approved member profiles yet. You are one of our first members — check back soon as more people are approved."
-          : "No approved members match these filters. Try a wider age range or another country.");
+          : "No approved members match these filters (they start from your preferences). Try a wider age range, another country or “Any” gender.");
       } else {
         say("Showing " + shown.size + " of " + total + " approved member " + (total === 1 ? "profile." : "profiles."));
       }
@@ -246,14 +246,21 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   document.getElementById("signout").addEventListener("click", async () => {
     const { error } = await db.auth.signOut();
     if (error) say("Could not log out right now. Please try again.");
-    else window.location.replace("account.html?mode=login");
+    else window.location.replace("login.html?signedout=1");
   });
   (async () => {
     const { data, error } = await db.auth.getSession();
     if (error) { say("Your session could not be restored. Please sign in again."); return; }
-    if (!data.session) { window.location.replace("account.html?mode=login"); return; }
+    if (!data.session) { window.location.replace("login.html"); return; }
     const profile = await window.FYP.readOwnProfile(db, data.session.user);
     if (!profile) { window.location.replace("dashboard.html?profile=recovery"); return; }
+    // Start from the member's own preferences; they can widen the filters at any time.
+    const wanted = { Men: "Man", Women: "Woman" }[profile.seeking_gender];
+    if (wanted) filters.elements.gender.value = wanted;
+    if (profile.preferred_age_min && profile.preferred_age_max) {
+      filters.elements.min_age.value = profile.preferred_age_min;
+      filters.elements.max_age.value = Math.min(120, profile.preferred_age_max);
+    }
     await loadPage(true);
   })().catch(error => say(failureMessage(error)));
 })();

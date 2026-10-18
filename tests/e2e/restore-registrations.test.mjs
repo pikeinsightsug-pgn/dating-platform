@@ -56,20 +56,9 @@ test("restoring original registrations: archive, activate, link, approve, then m
 
   await t.test("an original registrant re-registers on account.html and gets one pending profile", async () => {
     const page = await env.newPage({ mobile: true });
-    await page.goto(env.base + "account.html");
-    const f = "#register-form ";
-    await page.fill(f + "[name=first_name]", "Restora");
-    await page.fill(f + "[name=email]", "restora@test.invalid");
-    await page.fill(f + "[name=password]", "Restora-pass-1");
-    await page.fill(f + "[name=password_confirm]", "Restora-pass-1");
-    await page.fill(f + "[name=age]", "27");
-    await page.selectOption(f + "[name=gender]", "Woman");
-    await page.selectOption(f + "[name=location]", "Uganda");
-    await page.fill(f + "[name=city]", "Kampala");
-    await page.selectOption(f + "[name=relationship_goal]", "Serious relationship");
-    await page.fill(f + "[name=bio]", "Back from the original form.");
-    await page.click(f + "button[type=submit]");
-    await page.waitForFunction(() => /confirmation link/.test(document.getElementById("status").textContent));
+    await env.fillRegistration(page, { name: "Restora", email: "restora@test.invalid", password: "Restora-pass-1", age: "27", seeking: "Everyone", min: "18", max: "120", bio: "Back from the original form, still hoping to meet someone kind." });
+    await page.click("#register-form button[type=submit]");
+    await page.waitForSelector("#success-view:not(.hidden)");
     await env.sql("update auth.users set email_confirmed_at = now() where email = 'restora@test.invalid'");
     await env.login(page, "restora@test.invalid", "Restora-pass-1");
     await page.waitForURL(/dashboard\.html$/);
@@ -89,6 +78,7 @@ test("restoring original registrations: archive, activate, link, approve, then m
     await page.fill("#recovery-form [name=password_confirm]", "Revivo-pass-1");
     await page.click("#recovery-form button[type=submit]");
     await page.waitForURL(/dashboard\.html\?profile=recovery$/);
+    await page.waitForSelector("#recovery-panel:not(.hidden)");
     assert.match(await page.textContent("#recovery-account"), /revivo@test\.invalid/);
     assert.equal((await env.sql("select count(*)::int as n from public.members where first_name = 'Revivo'")).rows[0].n, 1, "no duplicate profile");
   });

@@ -60,6 +60,8 @@ Deno.serve(async (req: Request) => {
       interests: m.interests, partner_preference: m.partner_preference,
       profile_photo_url: m.profile_photo_url, approved: m.approved === true,
       is_test_account: m.is_test_account === true, created_at: m.created_at,
+      seeking_gender: m.seeking_gender ?? null,
+      preferred_age_min: m.preferred_age_min ?? null, preferred_age_max: m.preferred_age_max ?? null,
     }));
     const authUsers = new Map<string, { email: string | null }>();
     for (let page = 1; ; page++) {

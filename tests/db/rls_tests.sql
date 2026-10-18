@@ -199,3 +199,19 @@ select t_assert((select count(*) = 1 from send_member_message(:'e_id', 'test to 
 select t_assert((select count(*) = 0 from list_my_conversations() where other_member_id = :'a_id'), 'no genuine conversations are visible to a test account');
 commit;
 update members set is_test_account = false where id = :'e_id';
+
+-- ===== Registration questionnaire preferences =====
+insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
+ ('14141414-0000-4000-8000-000000000014', 'prefs@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Prefs","age":29,"gender":"Woman","location":"Botswana","city":"Maun","relationship_goal":"Marriage","bio":"x","seeking_gender":"Men","preferred_age_min":28,"preferred_age_max":40}'),
+ ('15151515-0000-4000-8000-000000000015', 'badprefs@test.invalid', now(), '{"profile_type":"member_registration","first_name":"BadPrefs","age":29,"gender":"Woman","location":"Botswana","city":"Maun","relationship_goal":"Marriage","bio":"x","seeking_gender":"Aliens","preferred_age_min":50,"preferred_age_max":20}');
+select t_assert((select seeking_gender = 'Men' and preferred_age_min = 28 and preferred_age_max = 40 from members where user_id = '14141414-0000-4000-8000-000000000014'), 'signup copies who they want to meet and the preferred age range');
+select t_assert((select seeking_gender is null and preferred_age_min is null and first_name = 'BadPrefs' from members where user_id = '15151515-0000-4000-8000-000000000015'), 'invalid optional preferences are stored as not given; the profile is still created');
+begin; select set_config('request.jwt.claim.sub', '14141414-0000-4000-8000-000000000014', true); set local role authenticated;
+update members set seeking_gender = 'Everyone', preferred_age_min = 25, preferred_age_max = 45 where user_id = auth.uid();
+select t_assert((select seeking_gender = 'Everyone' and preferred_age_max = 45 from members), 'members can edit their own preferences');
+select t_denied('update public.members set preferred_age_min = 60, preferred_age_max = 30 where user_id = auth.uid()', 'an impossible age range is rejected');
+select t_denied('update public.members set seeking_gender = ''Robots'' where user_id = auth.uid()', 'unknown seeking values are rejected');
+commit;
+begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', true); set local role authenticated;
+select t_assert((select count(*) = 0 from members where seeking_gender is not null), 'other members cannot read anyone''s preferences directly');
+commit;

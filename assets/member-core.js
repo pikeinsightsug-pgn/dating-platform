@@ -13,6 +13,17 @@
   const GENDERS = ["Woman", "Man", "Non-binary", "Prefer not to say"];
   const COUNTRIES = ["Uganda", "Botswana"];
   const GOALS = ["Serious relationship", "Marriage", "Friendship", "Exploring connections"];
+  // Stored values stay as above (the database checks them); these are the labels people see.
+  const GOAL_LABELS = {
+    "Serious relationship": "Serious relationship",
+    "Marriage": "Marriage-oriented relationship",
+    "Friendship": "Friendship",
+    "Exploring connections": "Still exploring"
+  };
+  const SEEKING = ["Men", "Women", "Everyone"];
+  // Columns added by supabase/discovery_messaging_safety.sql. Until that file is applied,
+  // writes are retried without them so registration and profile saving keep working.
+  const PREFERENCE_COLUMNS = ["seeking_gender", "preferred_age_min", "preferred_age_max"];
 
   // Bound every Supabase request so a stalled token refresh or upload can never
   // leave a button spinning forever.
@@ -73,6 +84,13 @@
       partner_preference: text(meta.partner_preference),
       approved: false
     };
+    const seeking = text(meta.seeking_gender);
+    const ageMin = Number(meta.preferred_age_min), ageMax = Number(meta.preferred_age_max);
+    if (SEEKING.includes(seeking)) profile.seeking_gender = seeking;
+    if (Number.isInteger(ageMin) && Number.isInteger(ageMax) && ageMin >= 18 && ageMax <= 120 && ageMin <= ageMax) {
+      profile.preferred_age_min = ageMin;
+      profile.preferred_age_max = ageMax;
+    }
     if (!profile.first_name || profile.first_name.length > 80 ||
         !Number.isInteger(age) || age < 18 || age > 120 ||
         !GENDERS.includes(profile.gender) || !COUNTRIES.includes(profile.location) ||
@@ -82,10 +100,10 @@
     return profile;
   }
 
-  const PROFILE_COLUMNS = "id,user_id,first_name,age,gender,location,city,relationship_goal,bio,interests,partner_preference,profile_photo_url,approved";
-
+  // A member can only ever read their own row (RLS). "*" keeps this working whether or not
+  // the optional preference columns exist yet.
   async function readOwnProfile(db, user) {
-    const { data, error } = await db.from("members").select(PROFILE_COLUMNS).eq("user_id", user.id).limit(1);
+    const { data, error } = await db.from("members").select("*").eq("user_id", user.id).limit(1);
     if (error) {
       const failure = new Error("Your private profile could not be loaded. Check your connection and try again.");
       failure.cause = error;
@@ -103,7 +121,7 @@
     if (existing) return existing;
     const profile = profileFromMetadata(user);
     if (!profile) return null;
-    const { error } = await db.from("members").insert(profile);
+    const { error } = await withoutMissingColumns(profile, row => db.from("members").insert(row));
     if (error && error.code !== "23505") {
       // A concurrent tab or the trigger may have created it; read again before failing.
       const raced = await readOwnProfile(db, user);
@@ -115,9 +133,32 @@
     return readOwnProfile(db, user);
   }
 
+  // PGRST204: the column is not in the database yet (migration not applied).
+  function isMissingColumn(error) {
+    return Boolean(error) && (error.code === "PGRST204" || error.code === "42703" ||
+      /column .* (does not exist|could not find)|could not find the .* column/i.test(String(error.message || "")));
+  }
+  async function withoutMissingColumns(row, write) {
+    const result = await write(row);
+    if (!isMissingColumn(result.error) || !PREFERENCE_COLUMNS.some(c => c in row)) return result;
+    const reduced = { ...row };
+    PREFERENCE_COLUMNS.forEach(c => delete reduced[c]);
+    return write(reduced);
+  }
+  async function saveOwnProfile(db, user, payload) {
+    return withoutMissingColumns(payload, row => db.from("members").update(row).eq("user_id", user.id).select("id").maybeSingle());
+  }
+
+  // The single client-side gate for member features (discovery, profiles, messaging).
+  // Today it is owner approval; a future paid-access check belongs here and in the
+  // database's require_approved_member(), never in a page of its own.
+  function canUseMemberFeatures(profile) {
+    return Boolean(profile && profile.approved === true);
+  }
+
   function destinationFor(profile) {
     if (!profile) return "dashboard.html?profile=recovery";
-    return profile.approved ? "discover.html" : "dashboard.html";
+    return canUseMemberFeatures(profile) ? "discover.html" : "dashboard.html";
   }
 
   function authErrorMessage(error, action) {
@@ -236,7 +277,8 @@
 
   const api = {
     SUPABASE_URL, CONTACT_EMAIL, SUPABASE_PUBLISHABLE_KEY, PHOTO_TYPES, PHOTO_MAX_BYTES, GENDERS, COUNTRIES, GOALS,
-    boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile, destinationFor,
+    GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
+    saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor,
     authErrorMessage, photoTypeOf, preparePhoto, signedPhotoUrls, isMissingFunction, isNotApproved
   };
   root.FYP = api;

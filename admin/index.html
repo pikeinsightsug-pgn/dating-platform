@@ -123,6 +123,8 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     card.append(el("p", "Registered email: " + (m.account_email || "No linked Auth email") + " · Supabase Auth ID: " + (m.user_id || "No linked Auth ID"), "bio"));
     card.append(el("p", [m.gender, m.location, m.city, m.relationship_goal, m.created_at ? new Date(m.created_at).toLocaleString() : null].filter(Boolean).join(" · "), "muted"));
     card.append(el("p", m.bio || "No bio provided.", "bio"));
+    card.append(el("p", "Wants to meet: " + (m.seeking_gender || "Not given") + " · Preferred age: " +
+      (m.preferred_age_min ? m.preferred_age_min + "–" + (m.preferred_age_max >= 120 ? "80+" : m.preferred_age_max) : "Not given"), "muted"));
     card.append(el("p", "Interests: " + (m.interests || "Not provided")));
     card.append(el("p", "Partner preferences: " + (m.partner_preference || "Not provided"), "bio"));
     const actions = el("div", null, "actions");

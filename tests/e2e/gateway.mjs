@@ -34,7 +34,7 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
     id: row.id, aud: "authenticated", role: "authenticated", email: row.email, phone: row.phone || "",
     email_confirmed_at: row.email_confirmed_at, confirmed_at: row.email_confirmed_at,
     user_metadata: row.raw_user_meta_data || {}, app_metadata: { provider: "email" },
-    created_at: row.created_at, updated_at: row.created_at, identities: []
+    created_at: row.created_at, updated_at: row.created_at, identities: [{ id: row.id, provider: "email" }]
   });
   const session = row => ({
     access_token: token(row), token_type: "bearer", expires_in: 3600,
@@ -226,7 +226,12 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
     if (route === "signup" && req.method === "POST") {
       const email = String(body.email || "").toLowerCase();
       const exists = await pool.query("select 1 from auth.users where email = $1", [email]);
-      if (exists.rows.length) return authError(422, "user_already_exists", "User already registered");
+      if (exists.rows.length) {
+        // Supabase with email confirmation on hides existing accounts: a fake user with no
+        // identities and no email sent. Without confirmation it returns an error.
+        if (options.requireEmailConfirmation) return send(res, 200, { id: randomUUID(), aud: "authenticated", role: "", email, identities: [], user_metadata: {}, app_metadata: {}, created_at: new Date().toISOString() });
+        return authError(422, "user_already_exists", "User already registered");
+      }
       const row = (await pool.query(
         "insert into auth.users (email, email_confirmed_at, raw_user_meta_data) values ($1, $2, $3) returning *",
         [email, options.requireEmailConfirmation ? null : new Date(), body.data || {}])).rows[0];
