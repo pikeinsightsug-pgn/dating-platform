@@ -156,6 +156,15 @@
     return Boolean(profile && profile.approved === true);
   }
 
+  // Shows which account this browser is signed in to, so two test accounts are never confused.
+  function showSignedIn(profile, user) {
+    const node = typeof document !== "undefined" && document.getElementById("signed-in");
+    if (!node) return;
+    const name = profile && profile.first_name ? profile.first_name : "your account";
+    node.textContent = "Signed in as " + name + (user && user.email ? " (" + user.email + ")" : "");
+    node.classList.remove("hidden");
+  }
+
   function destinationFor(profile) {
     if (!profile) return "dashboard.html?profile=recovery";
     return canUseMemberFeatures(profile) ? "discover.html" : "dashboard.html";
@@ -278,7 +287,7 @@
   const api = {
     SUPABASE_URL, CONTACT_EMAIL, SUPABASE_PUBLISHABLE_KEY, PHOTO_TYPES, PHOTO_MAX_BYTES, GENDERS, COUNTRIES, GOALS,
     GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
-    saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor,
+    saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor, showSignedIn,
     authErrorMessage, photoTypeOf, preparePhoto, signedPhotoUrls, isMissingFunction, isNotApproved
   };
   root.FYP = api;

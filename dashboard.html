@@ -24,6 +24,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
 .photo-preview{width:min(100%,340px);aspect-ratio:4/3;object-fit:cover;border-radius:16px;background:#fde8f0;display:block;margin:12px 0}
 .photo-actions{display:grid;gap:9px;margin:18px 0;padding:18px;border:1px solid #f0dfe7;border-radius:16px;background:#fffafd}
 .photo-actions input[type=file]{margin-top:5px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}.photo-note{font-size:13px;color:#75666e;margin:0}
+.signed-in{margin:10px 0 0;font-size:14px;color:#75666e;font-weight:600}
 </style>
 </head>
 <body>
@@ -32,6 +33,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     <div class="brand">Find<span>Your</span>Person ❤️</div>
     <nav class="member-nav" aria-label="Member dashboard"><a id="discover-nav" class="btn" href="discover.html">Discover Members</a><a id="messages-nav" class="btn secondary" href="messages.html">Messages</a><a id="profile-nav" class="btn secondary" href="#profile-panel">My Profile</a><a id="preferences-nav" class="btn secondary" href="#preferences">Preferences</a><button id="signout" class="secondary" type="button">Log out</button></nav>
   </header>
+  <p id="signed-in" class="signed-in hidden" role="status"></p>
   <section id="profile-panel" class="panel hidden">
     <div class="notice" id="approval-guidance"><strong>How approval works:</strong> The platform owner reviews member profiles and linked accounts manually. Until your profile is approved, it stays private and you cannot browse or message other members. Approval is never automatic. No payment is requested during testing.</div>
     <h1>My profile</h1>
@@ -135,6 +137,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     memberProfile = profile;
     valuesFor(profile);
     showApproval(profile);
+    window.FYP.showSignedIn(profile, user);
     loadPhotoPreview(profile.profile_photo_url);
     try {
       if (sessionStorage.getItem("fyp_photo_notice")) {

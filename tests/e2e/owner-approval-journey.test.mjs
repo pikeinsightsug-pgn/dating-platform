@@ -65,6 +65,21 @@ test("Daniel: pending until the owner approves, then discovery, photo and two-wa
   await daniel.waitForSelector("#profiles .card");
   const seen = await daniel.locator("#profiles .card h2").allTextContents();
     assert.deepEqual(seen.sort(), ["Alp, 40", "Tiago, 42"]);
+  assert.match(await daniel.textContent("#signed-in"), /^Signed in as Daniel \(daniel@test\.invalid\)$/);
+
+  // Even if the server ever returned the member's own row, Discover must not show it as a match.
+  const ownId = (await env.sql("select id from public.members where first_name = 'Daniel'")).rows[0].id;
+  await daniel.route("**/rest/v1/rpc/browse_member_profiles", async route => {
+    const request = route.request();
+    const response = await fetch(env.gateway.url + request.url().slice(SUPABASE.length), { method: request.method(), headers: request.headers(), body: request.postData() });
+    const rows = await response.json();
+    const own = { ...rows[0], id: ownId, first_name: "Daniel", age: 30 };
+    await route.fulfill({ status: 200, json: [own, ...rows].map(r => ({ ...r, total_count: rows.length + 1 })) });
+  });
+  await daniel.reload();
+  await daniel.waitForSelector("#profiles .card");
+  assert.deepEqual((await daniel.locator("#profiles .card h2").allTextContents()).sort(), ["Alp, 40", "Tiago, 42"], "own profile never shown");
+  await daniel.unroute("**/rest/v1/rpc/browse_member_profiles");
 
   // 5. Daniel uploads his photo from My Profile; it persists and Tiago can see it.
   await daniel.goto(env.base + "dashboard.html");
@@ -85,6 +100,7 @@ test("Daniel: pending until the owner approves, then discovery, photo and two-wa
   const tiago = await env.newPage({ mobile: true });
   await env.login(tiago, "tiago@test.invalid"); await tiago.waitForURL(/discover\.html$/);
   await tiago.waitForSelector("#profiles .card");
+  assert.match(await tiago.textContent("#signed-in"), /^Signed in as Tiago /);
   const danielCard = tiago.locator("#profiles .card", { hasText: "Daniel" });
   assert.ok(await danielCard.locator("img.photo").evaluate(i => new Promise(r => i.complete ? r(i.naturalWidth > 0) : i.onload = () => r(i.naturalWidth > 0))), "Tiago sees Daniel's photo");
   await tiago.goto(env.base + "messages.html");

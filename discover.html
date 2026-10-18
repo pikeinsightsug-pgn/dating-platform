@@ -28,6 +28,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
 #dialog-status{color:#8f1e51;white-space:pre-wrap}
 .help{font-size:14px;color:#75666e;text-align:center}.help a{color:#a21f59;font-weight:700;overflow-wrap:anywhere}
 .hidden{display:none!important}@media(max-width:480px){.wrap{padding:16px 14px 40px}.top .btn,.top button{flex:1 1 auto}.filters{grid-template-columns:1fr 1fr}}
+.signed-in{margin:10px 0 0;font-size:14px;color:#75666e;font-weight:600}
 </style>
 </head>
 <body>
@@ -39,6 +40,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
       <button class="secondary" id="signout" type="button">Log out</button>
     </nav>
   </header>
+  <p id="signed-in" class="signed-in hidden" role="status"></p>
   <h1>Discover members</h1>
   <p>Genuine adult profiles reviewed and approved by our team. Contact details are never shown — use private messages to get to know someone.</p>
   <form id="filters" class="filters hidden" aria-label="Filter profiles">
@@ -96,6 +98,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   let loading = false;
   let current = null;
   const shown = new Map();
+  let ownId = null;
 
   function addText(parent, tag, value, className) {
     const node = document.createElement(tag); node.textContent = value || "";
@@ -114,6 +117,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   }
   function detailsLine(profile) { return [profile.gender, profile.city, profile.location].filter(Boolean).join(" · "); }
   function showCard(profile, url) {
+    if (profile.id === ownId) return; // never present the signed-in member as a match
     shown.set(profile.id, { profile, url });
     const card = document.createElement("article"); card.className = "card";
     const open = document.createElement("button"); open.type = "button"; open.className = "open";
@@ -254,6 +258,8 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     if (!data.session) { window.location.replace("login.html"); return; }
     const profile = await window.FYP.readOwnProfile(db, data.session.user);
     if (!profile) { window.location.replace("dashboard.html?profile=recovery"); return; }
+    ownId = profile.id;
+    window.FYP.showSignedIn(profile, data.session.user);
     // Start from the member's own preferences; they can widen the filters at any time.
     const wanted = { Men: "Man", Women: "Woman" }[profile.seeking_gender];
     if (wanted) filters.elements.gender.value = wanted;

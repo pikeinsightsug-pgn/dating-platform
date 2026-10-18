@@ -30,6 +30,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
 .safety{font-size:13px;color:#75666e;padding:0 16px 12px;margin:0}
 .empty{padding:22px;color:#75666e}.help{font-size:14px;color:#75666e;text-align:center;margin-top:18px}.help a{color:#a21f59;font-weight:700;overflow-wrap:anywhere}.hidden{display:none!important}
 @media(max-width:760px){.layout{grid-template-columns:1fr}.layout.thread-open .list-panel{display:none}.layout:not(.thread-open) .thread-panel{display:none}.back{display:inline-flex}.wrap{padding:16px 12px 30px}.messages{max-height:none}}
+.signed-in{margin:10px 0 0;font-size:14px;color:#75666e;font-weight:600}
 </style>
 </head>
 <body>
@@ -41,6 +42,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
       <button class="secondary" id="signout" type="button">Log out</button>
     </nav>
   </header>
+  <p id="signed-in" class="signed-in hidden" role="status"></p>
   <h1>Messages</h1>
   <p id="status" role="status" aria-live="polite">Checking your account…</p>
   <div id="layout" class="layout hidden">
@@ -206,6 +208,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
     if (!data.session) { window.location.replace("login.html"); return; }
     const profile = await window.FYP.readOwnProfile(db, data.session.user);
     if (!profile) { window.location.replace("dashboard.html?profile=recovery"); return; }
+    window.FYP.showSignedIn(profile, data.session.user);
     if (!profile.approved) { say("Messaging opens once the platform owner approves your profile. Your profile stays private until then."); return; }
     try { await refreshList(); }
     catch (error) { say(failure(error)); return; }
