@@ -177,7 +177,9 @@ test("reconciliation matches only on email/phone, flags duplicates and minors, a
   const authUsers = [{ id: "u2", email: "kabo@test.invalid", email_confirmed_at: "2026-01-04" }, { id: "u9", email: "grace@test.invalid", email_confirmed_at: "" }];
   const report = reconcile({ formRows, members, authUsers });
   const byRow = Object.fromEntries(report.results.map(r => [r.form_row, r]));
-  assert.equal(byRow[2].status, "needs_account");
+  // Rows 2 and 3 share an email: both are flagged, neither is merged.
+  assert.equal(byRow[2].status, "possible_duplicate");
+  assert.equal(byRow[3].duplicate_group, byRow[2].duplicate_group);
   assert.equal(byRow[2].matched_member_id, "m1");
   assert.equal(byRow[2].phone, "+256772000001");
   assert.equal(byRow[2].referral_code, "REF1");
@@ -193,4 +195,70 @@ test("reconciliation matches only on email/phone, flags duplicates and minors, a
   assert.match(sql, /on conflict \(source_row_hash\) do nothing/);
   assert.doesNotMatch(sql, /update public\.members|insert into public\.members/);
   assert.match(sql, /"Full name": "Sam, Jr"|Sam, Jr/);
+});
+
+test("reconciliation reads the real Google Form layout: combined contact answer, age groups, nickname, 'other country' question", async () => {
+  const { reconcile, parseCsv, parsePhone, toCsv, REDACTED_FIELDS, summaryMarkdown } = await import("../tools/reconcile-registrations.mjs");
+  // Question titles copied from the live form; every answer below is invented.
+  const header = [
+    "Timestamp", "1. 🌍 Where are you currently based? ", "  2. 📍 What city or town are you in?  ", "  3. ❤️ What's your gender?  ",
+    "  4. 🎂 What age group are you in?  ", "  6. 🎯 What age range would you prefer?  ",
+    "8. 🌍❤️ Would you consider dating someone from the other country? ", "  16. 👋 What should we call you?  ", "  17. 📸 Add your profile photo  ",
+    "18. WhatsApp or phone number — please include your country code. 📱 You may also provide your email address. 📧  ", "Column 19",
+    "\"Referral Code (if someone invited you)\nDid someone invite you to join our dating platform? If yes, enter their referral code.\n\""
+  ].join(",");
+  const row = (when, country, city, age, other, name, contact, ref = "") =>
+    [when, country, city, "Female", age, "25–34", `"${other}"`, `"${name}"`, "https://drive.example.invalid/photo-" + name.length, `"${contact}"`, "", ref].join(",");
+  const formRows = parseCsv([header,
+    row("10/7/2026 18:00:00", "Uganda", "Kampala", "25–29", "🤔 Maybe", "Testa", "+256 700 000 001", "UG1"),
+    row("10/7/2026 19:00:00", "Botswana", "Gaborone", "45–49", "❤️ Yes, definitely", "Testb", "+26770000002 testb@example.invalid"),
+    row("10/8/2026 08:00:00", "Uganda", "Gulu", "18–24", "💕 Yes, if we connect well", "Testc", "0700000003"),
+    row("10/8/2026 09:00:00", "Uganda", "Gulu", "18–24", "💕 Yes, if we connect well", "Testd", "+256700000003"),
+    row("10/9/2026 10:00:00", "🌍 Another country", "Gulu city", "30–34", "❤️ Yes, definitely", "Teste", "+256700000006 country code UG1"),
+    row("10/9/2026 11:00:00", "Uganda", "Kampala", "25–29", "🤔 Maybe", "someone@example.invalid", "Ok"),
+    row("10/9/2026 12:00:00", "Botswana", "Maun", "50–54", "🤔 Maybe", "Yes", "Ok"),
+    row("10/10/2026 12:00:00", "Uganda", "Kampala", "25–29", "🤔 Maybe", "Testa", "+256700000009"),
+    row("10/10/2026 13:00:00", "Botswana", "Lobatse", "55+", "🤔 Maybe", "Testf", "00267 71 000 010"),
+    row("10/11/2026 13:00:00", "Uganda", "Jinja", "30–34", "🤔 Maybe", "Testg", "+256700000011")
+  ].join("\n"));
+  assert.equal(formRows.length, 10);
+  const members = [
+    { id: "m-b", first_name: "Testb", age: "46", location: "Botswana", user_id: "u-b", approved: "false" },
+    { id: "m-g", first_name: "Testg", age: "33", location: "Uganda", user_id: "", approved: "false" }
+  ];
+  const authUsers = [{ id: "u-b", email: "testb@example.invalid", email_confirmed_at: "2026-10-17" }];
+  const report = reconcile({ formRows, members, authUsers });
+  const cols = report.columns;
+  assert.match(cols.country, /^1\./, "country is Q1, not the 'other country' question");
+  assert.match(cols.age, /^4\./, "age group is Q4, not the preferred range");
+  assert.match(cols.name, /16\./);
+  assert.equal(cols.phone, cols.email, "one combined contact question supplies both");
+  const r = Object.fromEntries(report.results.map(x => [x.form_row, x]));
+  assert.equal(r[3].status, "matched_profile", "email in the combined answer confirms the linked member");
+  assert.equal(r[3].matched_member_id, "m-b");
+  assert.equal(r[4].phone, "+256700000003");
+  assert.ok(r[4].flags.includes("phone_country_code_assumed"));
+  assert.equal(r[4].status, "possible_duplicate");
+  assert.equal(r[5].duplicate_group, r[4].duplicate_group, "same phone → same review group, nothing merged");
+  assert.equal(r[6].status, "needs_verification", "'Another country' is checked by hand, not rejected");
+  assert.equal(r[6].phone, "+256700000006", "a trailing note such as UG1 is not glued onto the number");
+  assert.ok(r[7].flags.includes("email_written_in_name_field") && r[7].flags.includes("name_needs_review"));
+  assert.equal(r[7].has_email, true);
+  assert.equal(r[8].status, "incomplete");
+  assert.equal(r[2].status, "possible_duplicate", "same nickname, age group and country is flagged…");
+  assert.match(r[2].notes, /name-only — not proof/, "…but explicitly not treated as the same person");
+  assert.equal(r[2].matched_member_id, "");
+  assert.equal(r[10].phone, "+26771000010");
+  assert.equal(r[10].age_group, "55+");
+  assert.equal(r[11].status, "possible_duplicate", "name + age resemblance to a member is review-only");
+  assert.equal(r[11].matched_member_id, "");
+  assert.ok(report.results.every(x => x.status !== "ineligible"), "every age group here is 18+");
+  assert.deepEqual(report.duplicateGroups, { contact: 1, contact_rows: 2, name_only: 1, name_only_rows: 2 });
+  assert.equal(parsePhone("+256781000000. Email. a@b.invalid", "Uganda").phone, "+256781000000");
+
+  // The shareable outputs never contain names, contact details or photo links.
+  const shareable = toCsv(report.results, REDACTED_FIELDS) + summaryMarkdown(report, { members: true, auth: true });
+  for (const secret of ["Testa", "Testb", "example.invalid", "drive.example", "+256700", "700 000 001", "+26771000010"]) {
+    assert.ok(!shareable.includes(secret), "redacted output leaks " + secret);
+  }
 });
