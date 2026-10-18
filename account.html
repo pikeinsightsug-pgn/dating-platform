@@ -35,7 +35,7 @@ button:disabled{opacity:.6;cursor:wait}
   <div class="notice"><strong>Founding members:</strong> free during testing. Payments and automatic charges are disabled. Member profiles stay private until reviewed and approved.</div>
   <div id="register-view">
     <h1>Create your free account</h1>
-    <p>Adults 18+ in Uganda and Botswana. If email confirmation is enabled, confirm your address and sign in. If your profile is not linked, contact the owner to verify it; we will not create a duplicate profile automatically.</p>
+    <p>Adults 18+ in Uganda and Botswana. If we email you a confirmation link, open it and then log in. Already registered through our earlier Google Form? Do not register again here — contact the owner so your original registration can be verified and linked to an account.</p>
     <form id="register-form" class="grid">
       <label>First name<input name="first_name" required maxlength="80" autocomplete="given-name"></label>
       <label>Email address<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
@@ -61,6 +61,7 @@ button:disabled{opacity:.6;cursor:wait}
       <label>Password<input name="password" type="password" required autocomplete="current-password"></label>
       <button type="submit">Log in</button>
     </form>
+    <button id="resend-confirmation" class="secondary hidden" type="button">Resend confirmation email</button>
     <p class="links"><button type="button" data-view="forgot">Forgot password?</button><button type="button" data-view="register">Create an account</button></p>
   </div>
 
@@ -86,17 +87,16 @@ button:disabled{opacity:.6;cursor:wait}
 </section>
 <p><a class="links" href="index.html">← Back to Find Your Person</a></p>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="assets/member-core.js"></script>
 <script>
 (() => {
-  const SUPABASE_URL = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_vzGFbhe7X3CpobiHZAk9Lw_2V3O-F3V";
   const status = document.getElementById("status");
-  if (!window.supabase) { status.textContent = "Account service could not load. Check your connection and refresh the page."; return; }
-  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  const db = window.FYP && window.FYP.createClient();
+  if (!db) { status.textContent = "Account service could not load. Check your connection and refresh the page."; return; }
   const views = ["register", "login", "forgot", "recovery"];
+  const resend = document.getElementById("resend-confirmation");
   let busy = false;
-  let registrationCompletionPending = false;
   let finishing = null;
   function say(message) { status.textContent = message; }
   function show(view) {
@@ -104,7 +104,7 @@ button:disabled{opacity:.6;cursor:wait}
   }
   function setBusy(value) {
     busy = value;
-    document.querySelectorAll("form button[type=submit]").forEach(button => { button.disabled = value; });
+    document.querySelectorAll("form button[type=submit], #resend-confirmation").forEach(button => { button.disabled = value; });
   }
   function callbackUrl(mode) {
     const url = new URL(window.location.href);
@@ -112,54 +112,15 @@ button:disabled{opacity:.6;cursor:wait}
     url.hash = "";
     return url.toString();
   }
-  function profileFromMetadata(user) {
-    const meta = user.user_metadata || {};
-    const age = Number(meta.age);
-    if (!meta.first_name || !Number.isInteger(age) || age < 18 || age > 120 ||
-        !meta.gender || !meta.location || !meta.city || !meta.relationship_goal || !meta.bio) return null;
-    return {
-      user_id: user.id,
-      first_name: String(meta.first_name).trim(),
-      age,
-      gender: String(meta.gender),
-      location: String(meta.location),
-      city: String(meta.city).trim(),
-      relationship_goal: String(meta.relationship_goal),
-      bio: String(meta.bio).trim(),
-      interests: String(meta.interests || "").trim(),
-      partner_preference: String(meta.partner_preference || "").trim(),
-      approved: false
-    };
-  }
-  async function ensureProfile(user, allowCreate = false) {
-    const { data: existing, error: readError } = await db.from("members").select("id,approved").eq("user_id", user.id).limit(1);
-    if (readError) throw new Error("Profile database setup is unavailable.");
-    if (existing && existing.length) return existing[0];
-
-    // A normal sign-in must never guess which unlinked legacy profile belongs to this person.
-    if (!allowCreate) return null;
-    const profile = profileFromMetadata(user);
-    if (!profile) return null;
-    const { data, error } = await db.from("members").insert(profile).select("id,approved").single();
-    if (error) {
-      const { data: raced, error: retryError } = await db.from("members").select("id,approved").eq("user_id", user.id).limit(1);
-      if (!retryError && raced && raced.length) return raced[0];
-      throw new Error("Profile could not be saved. Ask the administrator to verify the Supabase setup.");
-    }
-    return data;
-  }
-  async function finishSignIn(user, allowCreateProfile = false) {
+  async function finishSignIn(user) {
     if (finishing) return finishing;
     finishing = (async () => {
       try {
-        const profile = await ensureProfile(user, allowCreateProfile);
-        if (!profile) {
-          // Keep the verified Auth session and show dashboard recovery guidance.
-          // Never create or guess-link a legacy profile during ordinary login.
-          window.location.replace("dashboard.html?profile=recovery");
-          return;
-        }
-        window.location.replace("dashboard.html");
+        say("Signed in. Loading your profile…");
+        // Reuses the linked profile, or creates one pending profile from this person's own
+        // signup details. Never links or guesses a legacy registration.
+        const profile = await window.FYP.ensureOwnProfile(db, user);
+        window.location.replace(window.FYP.destinationFor(profile));
       } catch (error) {
         say((error && error.message) || "Your account is signed in, but the private profile could not be loaded.");
       } finally { finishing = null; }
@@ -169,6 +130,7 @@ button:disabled{opacity:.6;cursor:wait}
 
   document.querySelectorAll("[data-view]").forEach(button => button.addEventListener("click", () => {
     show(button.dataset.view);
+    resend.classList.add("hidden");
     say("");
   }));
 
@@ -194,7 +156,7 @@ button:disabled{opacity:.6;cursor:wait}
       interests: String(values.get("interests") || "").trim(),
       partner_preference: String(values.get("partner_preference") || "").trim()
     };
-    setBusy(true); say("Creating your account…"); registrationCompletionPending = true;
+    setBusy(true); say("Creating your account…");
     try {
       const { data, error } = await db.auth.signUp({
         email,
@@ -205,15 +167,16 @@ button:disabled{opacity:.6;cursor:wait}
       form.reset();
       if (data.session && data.user) {
         say("Account created. Saving your private profile…");
-        await finishSignIn(data.user, true);
+        await finishSignIn(data.user);
       } else {
         document.querySelector('#login-form [name="email"]').value = email;
         show("login");
-        say("Account created. Check your email and confirm your address, then sign in. If no profile is linked, contact the owner to verify your registration safely.");
+        resend.classList.remove("hidden");
+        say("Account created. We sent a confirmation link to " + email + ". Open it, then log in here. Check your spam folder if it does not arrive within a few minutes.");
       }
     } catch (error) {
-      say("Could not create the account. Check the email and password, then try again. If the problem continues, contact support.");
-    } finally { registrationCompletionPending = false; setBusy(false); }
+      say(window.FYP.authErrorMessage(error, "signup"));
+    } finally { setBusy(false); }
   });
 
   document.getElementById("login-form").addEventListener("submit", async event => {
@@ -228,9 +191,26 @@ button:disabled{opacity:.6;cursor:wait}
       });
       if (error) throw error;
       if (!data.user) throw new Error("No account session returned.");
+      resend.classList.add("hidden");
       await finishSignIn(data.user);
     } catch (error) {
-      say("Could not sign in. Check your email and password, and confirm your email address if requested.");
+      const message = window.FYP.authErrorMessage(error, "login");
+      resend.classList.toggle("hidden", !/confirm your email/i.test(message));
+      say(message);
+    } finally { setBusy(false); }
+  });
+
+  resend.addEventListener("click", async () => {
+    const email = String(document.querySelector('#login-form [name="email"]').value || "").trim();
+    if (busy) return;
+    if (!email) { say("Enter your email address above, then press resend."); return; }
+    setBusy(true); say("Sending a new confirmation email…");
+    try {
+      const { error } = await db.auth.resend({ type: "signup", email, options: { emailRedirectTo: callbackUrl("") } });
+      if (error) throw error;
+      say("If this email has an unconfirmed account, a new confirmation link has been sent.");
+    } catch (error) {
+      say(window.FYP.authErrorMessage(error, "login"));
     } finally { setBusy(false); }
   });
 
@@ -274,8 +254,9 @@ button:disabled{opacity:.6;cursor:wait}
 
   db.auth.onAuthStateChange((event, session) => {
     if (event === "PASSWORD_RECOVERY") { show("recovery"); say("Choose a new password for your account."); }
-    else if (event === "SIGNED_IN" && session && !new URLSearchParams(location.search).has("mode")) {
-      setTimeout(() => finishSignIn(session.user, registrationCompletionPending), 0);
+    else if (event === "SIGNED_IN" && session && !busy && !new URLSearchParams(location.search).has("mode")) {
+      // Email-confirmation links land here already signed in.
+      setTimeout(() => finishSignIn(session.user), 0);
     }
   });
 

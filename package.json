@@ -1,0 +1,15 @@
+{
+  "name": "find-your-person",
+  "private": true,
+  "description": "Static GitHub Pages site backed by Supabase. Dev dependencies are for tests only and are never deployed.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:db": "bash tests/db/run-db-tests.sh",
+    "test:e2e": "node --test tests/e2e/*.test.mjs"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "2.117.2",
+    "pg": "8.16.3",
+    "playwright": "1.56.1"
+  }
+}

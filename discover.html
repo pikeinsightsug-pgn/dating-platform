@@ -10,14 +10,23 @@
 .wrap{max-width:1080px;margin:0 auto;padding:24px 18px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .brand{font-weight:900;font-size:22px}.brand span{color:#b32663}.actions{display:flex;gap:9px;flex-wrap:wrap}
 .btn,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer;background:#b32663;color:#fff;text-decoration:none}
-.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}
+button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}.quiet{background:none;color:#75666e;border:1px solid #e9d9e1}
 h1{font-size:clamp(32px,6vw,48px);letter-spacing:-1.5px;margin:24px 0 8px}p{line-height:1.55;color:#6a5b64}
-#status{padding:14px 16px;border-radius:13px;background:#fde8f0;color:#8f1e51;white-space:pre-wrap}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;margin-top:22px}
-.card{overflow:hidden;background:#fff;border:1px solid #f0dfe7;border-radius:22px;box-shadow:0 8px 30px #5c18300b}
+#status{padding:14px 16px;border-radius:13px;background:#fde8f0;color:#8f1e51;white-space:pre-wrap}#status:empty{display:none}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end;background:#fff;border:1px solid #f0dfe7;border-radius:18px;padding:16px;margin:18px 0}
+.filters label{font-weight:650;font-size:14px}.filters select,.filters input{display:block;width:100%;padding:11px;border:1px solid #e7ccd8;border-radius:11px;margin-top:6px;font:inherit;font-size:16px;background:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px;margin-top:22px}
+.card{overflow:hidden;background:#fff;border:1px solid #f0dfe7;border-radius:22px;box-shadow:0 8px 30px #5c18300b;display:flex;flex-direction:column}
+.card button.open{all:unset;cursor:pointer;display:block}.card button.open:focus-visible{outline:3px solid #b32663;outline-offset:-3px}
 .photo{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#f7e8ee}.no-photo{display:grid;place-items:center;width:100%;aspect-ratio:4/3;background:#fde8f0;color:#a21f59;font-size:44px}
-.body{padding:20px}.body h2{margin:0 0 7px;font-size:22px}.details{font-size:14px;color:#75666e}.bio{white-space:pre-wrap;overflow-wrap:anywhere}
-.hidden{display:none!important}@media(max-width:480px){.wrap{padding:16px 14px 40px}.top .btn{flex:1}}
+.body{padding:18px 20px}.body h2{margin:0 0 6px;font-size:22px}.details{font-size:14px;color:#75666e;margin:0 0 8px}.bio{white-space:pre-wrap;overflow-wrap:anywhere}
+.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.more{display:flex;justify-content:center;margin:26px 0}
+dialog{border:0;border-radius:22px;padding:0;width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 24px);box-shadow:0 20px 60px #0004}
+dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialog-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+.report{display:grid;gap:10px;margin-top:14px;padding:14px;border:1px solid #f0dfe7;border-radius:14px}.report select,.report textarea{width:100%;padding:10px;border:1px solid #e7ccd8;border-radius:10px;font:inherit;font-size:16px}
+#dialog-status{color:#8f1e51;white-space:pre-wrap}
+.hidden{display:none!important}@media(max-width:480px){.wrap{padding:16px 14px 40px}.top .btn,.top button{flex:1 1 auto}.filters{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -25,81 +34,226 @@ h1{font-size:clamp(32px,6vw,48px);letter-spacing:-1.5px;margin:24px 0 8px}p{line
   <header class="top">
     <div class="brand">Find<span>Your</span>Person ❤️</div>
     <nav class="actions" aria-label="Member navigation">
-      <a class="btn" href="discover.html" aria-current="page">Discover Members</a><a class="btn secondary" href="dashboard.html#profile-panel">My Profile</a><a class="btn secondary" href="dashboard.html#preferences">Preferences</a>
+      <a class="btn" href="discover.html" aria-current="page">Discover Members</a><a class="btn secondary" href="messages.html">Messages</a><a class="btn secondary" href="dashboard.html#profile-panel">My Profile</a>
       <button class="secondary" id="signout" type="button">Log out</button>
     </nav>
   </header>
   <h1>Discover members</h1>
-  <p>Browse genuine profiles reviewed and approved by our team. Only profile details members chose to share are shown.</p>
+  <p>Genuine adult profiles reviewed and approved by our team. Contact details are never shown — use private messages to get to know someone.</p>
+  <form id="filters" class="filters hidden" aria-label="Filter profiles">
+    <label>Country<select name="country"><option value="">Uganda &amp; Botswana</option><option>Uganda</option><option>Botswana</option></select></label>
+    <label>Gender<select name="gender"><option value="">Any</option><option>Woman</option><option>Man</option><option>Non-binary</option></select></label>
+    <label>Age from<input name="min_age" type="number" min="18" max="120" value="18" inputmode="numeric"></label>
+    <label>Age to<input name="max_age" type="number" min="18" max="120" value="120" inputmode="numeric"></label>
+    <label>Looking for<select name="goal"><option value="">Any goal</option><option>Serious relationship</option><option>Marriage</option><option>Friendship</option><option>Exploring connections</option></select></label>
+    <button type="submit">Apply filters</button>
+  </form>
   <p id="status" role="status" aria-live="polite">Checking your account…</p>
   <section id="profiles" class="grid" aria-label="Approved member profiles"></section>
+  <div class="more"><button id="load-more" class="secondary hidden" type="button">Show more profiles</button></div>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<dialog id="profile-dialog" aria-labelledby="dialog-name">
+  <div id="dialog-photo"></div>
+  <div class="dialog-body">
+    <h2 id="dialog-name"></h2>
+    <p id="dialog-details" class="details"></p>
+    <div id="dialog-text"></div>
+    <div class="dialog-actions">
+      <a id="dialog-message" class="btn" href="messages.html">Send a private message</a>
+      <button id="dialog-close" class="secondary" type="button">Close</button>
+    </div>
+    <div class="dialog-actions">
+      <button id="dialog-block" class="quiet" type="button">Block</button>
+      <button id="dialog-report-toggle" class="quiet" type="button">Report</button>
+    </div>
+    <form id="report-form" class="report hidden">
+      <label>Why are you reporting this profile?<select name="reason" required><option value="">Choose a reason</option><option>Fake profile</option><option>Under 18</option><option>Harassment</option><option>Scam or payment request</option><option>Inappropriate content</option><option>Other</option></select></label>
+      <label>Details (optional)<textarea name="details" rows="3" maxlength="1000"></textarea></label>
+      <button type="submit">Send report</button>
+    </form>
+    <p id="dialog-status" role="status" aria-live="polite"></p>
+  </div>
+</dialog>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="assets/member-core.js"></script>
 <script>
 (() => {
-  const SUPABASE_URL = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_vzGFbhe7X3CpobiHZAk9Lw_2V3O-F3V";
+  const PAGE_SIZE = 24;
   const status = document.getElementById("status");
   const root = document.getElementById("profiles");
-  if (!window.supabase) { status.textContent = "Account service could not load. Refresh and try again."; return; }
-  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  const filters = document.getElementById("filters");
+  const loadMore = document.getElementById("load-more");
+  const dialog = document.getElementById("profile-dialog");
+  const dialogStatus = document.getElementById("dialog-status");
+  const db = window.FYP && window.FYP.createClient();
+  if (!db) { status.textContent = "Account service could not load. Refresh and try again."; return; }
   const say = message => { status.textContent = message; };
+  let legacyMode = false;
+  let offset = 0;
+  let total = 0;
+  let loading = false;
+  let current = null;
+  const shown = new Map();
+
   function addText(parent, tag, value, className) {
     const node = document.createElement(tag); node.textContent = value || "";
     if (className) node.className = className; parent.append(node); return node;
   }
-  function showProfile(profile, signedPhoto) {
-    const card = document.createElement("article"); card.className = "card";
-    if (signedPhoto) {
+  function photoNode(profile, url) {
+    if (url) {
       const image = document.createElement("img"); image.className = "photo";
-      image.src = signedPhoto; image.alt = "Profile photo of " + profile.first_name;
-      image.loading = "lazy"; card.append(image);
-    } else {
-      const placeholder = document.createElement("div"); placeholder.className = "no-photo";
-      placeholder.setAttribute("aria-label", "No profile photo"); placeholder.textContent = "❤️"; card.append(placeholder);
+      image.src = url; image.alt = "Profile photo of " + profile.first_name; image.loading = "lazy";
+      image.addEventListener("error", () => image.replaceWith(photoNode(profile, null)), { once: true });
+      return image;
     }
+    const placeholder = document.createElement("div"); placeholder.className = "no-photo";
+    placeholder.setAttribute("role", "img"); placeholder.setAttribute("aria-label", "No profile photo yet"); placeholder.textContent = "❤️";
+    return placeholder;
+  }
+  function detailsLine(profile) { return [profile.gender, profile.city, profile.location].filter(Boolean).join(" · "); }
+  function showCard(profile, url) {
+    shown.set(profile.id, { profile, url });
+    const card = document.createElement("article"); card.className = "card";
+    const open = document.createElement("button"); open.type = "button"; open.className = "open";
+    open.setAttribute("aria-label", "View profile of " + profile.first_name);
+    open.append(photoNode(profile, url));
     const body = document.createElement("div"); body.className = "body";
     addText(body, "h2", profile.first_name + ", " + profile.age);
-    addText(body, "p", [profile.gender, profile.city, profile.location].filter(Boolean).join(" · "), "details");
+    addText(body, "p", detailsLine(profile), "details");
     if (profile.relationship_goal) addText(body, "p", "Looking for: " + profile.relationship_goal);
-    if (profile.bio) addText(body, "p", profile.bio, "bio");
-    if (profile.interests) addText(body, "p", "Interests: " + profile.interests);
-    card.append(body); root.append(card);
+    if (profile.bio) addText(body, "p", profile.bio, "bio clamp");
+    open.append(body);
+    open.addEventListener("click", () => openProfile(profile.id));
+    card.append(open); root.append(card);
   }
-  async function load() {
-    const { data: sessionData, error: sessionError } = await db.auth.getSession();
-    if (sessionError) throw new Error("Your session could not be restored. Please sign in again.");
-    if (!sessionData.session) { window.location.replace("account.html?mode=login"); return; }
+  function openProfile(id) {
+    const entry = shown.get(id); if (!entry) return;
+    current = entry.profile;
+    const photo = document.getElementById("dialog-photo"); photo.replaceChildren(photoNode(current, entry.url));
+    document.getElementById("dialog-name").textContent = current.first_name + ", " + current.age;
+    document.getElementById("dialog-details").textContent = detailsLine(current);
+    const text = document.getElementById("dialog-text"); text.replaceChildren();
+    if (current.relationship_goal) addText(text, "p", "Looking for: " + current.relationship_goal);
+    if (current.bio) addText(text, "p", current.bio, "bio");
+    if (current.interests) addText(text, "p", "Interests: " + current.interests, "bio");
+    document.getElementById("dialog-message").href = "messages.html?member=" + encodeURIComponent(current.id);
+    document.getElementById("report-form").classList.add("hidden");
+    document.getElementById("dialog-block").classList.toggle("hidden", legacyMode);
+    document.getElementById("dialog-report-toggle").classList.toggle("hidden", legacyMode);
+    document.getElementById("dialog-message").classList.toggle("hidden", legacyMode);
+    dialogStatus.textContent = legacyMode ? "Messaging, blocking and reporting open once the administrator finishes the latest database setup." : "";
+    if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
+  }
+  function closeDialog() { if (typeof dialog.close === "function") dialog.close(); else dialog.removeAttribute("open"); }
+  document.getElementById("dialog-close").addEventListener("click", closeDialog);
+  dialog.addEventListener("click", event => { if (event.target === dialog) closeDialog(); });
+
+  function filterValues() {
+    const values = new FormData(filters);
+    let min = Number(values.get("min_age")) || 18, max = Number(values.get("max_age")) || 120;
+    min = Math.min(120, Math.max(18, min)); max = Math.min(120, Math.max(18, max));
+    if (min > max) [min, max] = [max, min];
+    return {
+      p_country: String(values.get("country") || "") || null,
+      p_gender: String(values.get("gender") || "") || null,
+      p_min_age: min, p_max_age: max,
+      p_relationship_goal: String(values.get("goal") || "") || null
+    };
+  }
+  function failureMessage(error) {
+    const message = String((error && error.message) || "");
+    if (error && error.code === "REQUEST_TIMEOUT") return "Loading profiles took too long. Check your connection and try again.";
+    if (window.FYP.isNotApproved(error)) return "Your profile is awaiting manual review by the platform owner. It remains private until approved. Once approved you can browse and message other approved members here.";
+    if (/opens after 100 approved|column reference "age" is ambiguous/i.test(message) || (error && error.code === "42702"))
+      return "Member discovery is blocked by an older database function that waits for 100 approved members (and fails with an \u201cambiguous age\u201d error). The administrator needs to apply supabase/member_discovery_photos.sql (see the setup guide).";
+    if (/jwt|not authenticated|401/i.test(message)) return "Your sign-in has expired. Please log in again.";
+    return "Could not load member profiles. Check your connection and refresh the page.";
+  }
+  async function fetchPage() {
+    if (!legacyMode) {
+      const { data, error } = await db.rpc("browse_member_profiles", { ...filterValues(), p_limit: PAGE_SIZE, p_offset: offset });
+      if (!error) return data || [];
+      if (!window.FYP.isMissingFunction(error)) throw error;
+      legacyMode = true; // The newest migration is not applied yet: use the earlier discovery function.
+      filters.classList.add("hidden");
+    }
     const { data, error } = await db.rpc("browse_approved_profiles");
-    if (error) {
-      const message = String(error.message || "");
-      if (/Only approved adult members/i.test(message)) {
-        say("Your profile is awaiting manual review by the platform owner. It remains private until approved. Open My Profile for details. Only approved, signed-in adult members can discover profiles.");
-      } else {
-        say("Member discovery is not ready yet. The administrator may need to apply the member discovery and photo setup in the repository.");
-      }
-      return;
-    }
-    const profiles = Array.isArray(data) ? data : [];
-    if (!profiles.length) {
-      say("There are no other approved member profiles yet. Check back later as our community grows.");
-      return;
-    }
-    const rendered = await Promise.all(profiles.map(async profile => {
-      if (!profile.profile_photo_path) return [profile, null];
-      const { data: signed, error: photoError } = await db.storage.from("profile-photos")
-        .createSignedUrl(profile.profile_photo_path, 300);
-      return [profile, photoError ? null : signed && signed.signedUrl];
-    }));
-    rendered.forEach(([profile, photo]) => showProfile(profile, photo));
-    say("Showing " + profiles.length + " approved member " + (profiles.length === 1 ? "profile." : "profiles."));
+    if (error) throw error;
+    return (data || []).map(row => ({ ...row, total_count: (data || []).length }));
   }
+  async function loadPage(reset) {
+    if (loading) return;
+    loading = true; loadMore.disabled = true; filters.querySelector("button").disabled = true;
+    if (reset) { offset = 0; total = 0; root.replaceChildren(); shown.clear(); say("Loading profiles…"); }
+    try {
+      const rows = await fetchPage();
+      if (!legacyMode) filters.classList.remove("hidden");
+      const urls = await window.FYP.signedPhotoUrls(db, rows.map(row => row.profile_photo_path));
+      rows.forEach(row => showCard(row, urls.get(row.profile_photo_path) || null));
+      total = rows.length ? Number(rows[0].total_count) || rows.length : (reset ? 0 : total);
+      offset += rows.length;
+      const more = !legacyMode && offset < total && rows.length > 0;
+      loadMore.classList.toggle("hidden", !more);
+      if (!shown.size) {
+        say(legacyMode || !hasActiveFilters()
+          ? "There are no other approved member profiles yet. You are one of our founding members — check back soon as more people are approved."
+          : "No approved members match these filters. Try a wider age range or another country.");
+      } else {
+        say("Showing " + shown.size + " of " + total + " approved member " + (total === 1 ? "profile." : "profiles."));
+      }
+    } catch (error) {
+      say(failureMessage(error));
+      loadMore.classList.add("hidden");
+      if (window.FYP.isNotApproved(error)) filters.classList.add("hidden");
+    } finally {
+      loading = false; loadMore.disabled = false; filters.querySelector("button").disabled = false;
+    }
+  }
+  function hasActiveFilters() {
+    const f = filterValues();
+    return Boolean(f.p_country || f.p_gender || f.p_relationship_goal || f.p_min_age !== 18 || f.p_max_age !== 120);
+  }
+  filters.addEventListener("submit", event => { event.preventDefault(); loadPage(true); });
+  loadMore.addEventListener("click", () => loadPage(false));
+
+  document.getElementById("dialog-block").addEventListener("click", async () => {
+    if (!current || !confirm("Block " + current.first_name + "? You will no longer see each other or be able to exchange messages.")) return;
+    dialogStatus.textContent = "Blocking…";
+    const { error } = await db.rpc("block_member", { p_member_id: current.id });
+    if (error) { dialogStatus.textContent = "Could not block this member. Please try again."; return; }
+    closeDialog(); loadPage(true);
+  });
+  document.getElementById("dialog-report-toggle").addEventListener("click", () => {
+    document.getElementById("report-form").classList.toggle("hidden");
+  });
+  document.getElementById("report-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!current || !form.reportValidity()) return;
+    const values = new FormData(form);
+    form.querySelector("button").disabled = true; dialogStatus.textContent = "Sending report…";
+    const { error } = await db.rpc("report_member", {
+      p_member_id: current.id, p_reason: String(values.get("reason")), p_details: String(values.get("details") || "")
+    });
+    form.querySelector("button").disabled = false;
+    if (error) { dialogStatus.textContent = "Could not send the report. Please try again."; return; }
+    form.reset(); form.classList.add("hidden");
+    dialogStatus.textContent = "Thank you. The platform owner will review this report. You can also block this member.";
+  });
+
   document.getElementById("signout").addEventListener("click", async () => {
     const { error } = await db.auth.signOut();
     if (error) say("Could not log out right now. Please try again.");
     else window.location.replace("account.html?mode=login");
   });
-  load().catch(() => say("Could not load member profiles. Refresh and try again."));
+  (async () => {
+    const { data, error } = await db.auth.getSession();
+    if (error) { say("Your session could not be restored. Please sign in again."); return; }
+    if (!data.session) { window.location.replace("account.html?mode=login"); return; }
+    const profile = await window.FYP.readOwnProfile(db, data.session.user);
+    if (!profile) { window.location.replace("dashboard.html?profile=recovery"); return; }
+    await loadPage(true);
+  })().catch(error => say(failureMessage(error)));
 })();
 </script>
 </body>

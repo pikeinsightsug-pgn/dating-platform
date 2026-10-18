@@ -83,9 +83,37 @@ Deno.serve(async (req: Request) => {
         total: rows.length,
         approved: rows.filter((m) => m.approved === true).length,
         pending: rows.filter((m) => m.approved !== true).length,
+        linked: rows.filter((m) => !!m.user_id).length,
+        unlinked: rows.filter((m) => !m.user_id).length,
         target: 100,
       },
     });
+  }
+
+  if (body.action === "list_reports") {
+    const { data, error } = await db.from("member_reports")
+      .select("id, reason, details, status, created_at, reporter:reporter_member_id(id, first_name), reported:reported_member_id(id, first_name, approved)")
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) return json({ error: "Could not load member reports. Apply supabase/discovery_messaging_safety.sql first.", detail: error.message }, 500);
+    return json({ reports: data || [] });
+  }
+
+  if (body.action === "resolve_report") {
+    const reportStatus = (body as { status?: string }).status;
+    if (typeof body.member_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.member_id) ||
+        (reportStatus !== "reviewed" && reportStatus !== "dismissed")) {
+      return json({ error: "A valid report ID and outcome are required." }, 400);
+    }
+    const { data, error } = await db.from("member_reports")
+      .update({ status: reportStatus })
+      .eq("id", body.member_id)
+      .select("id, status")
+      .maybeSingle();
+    if (error) return json({ error: "Could not update the report.", detail: error.message }, 500);
+    if (!data) return json({ error: "Report not found." }, 404);
+    return json({ report: data });
   }
 
   if (body.action === "list_unlinked_accounts") {

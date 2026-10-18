@@ -2,7 +2,7 @@
 
 The website is static on GitHub Pages and uses the existing Supabase Auth project. Registration creates an Auth user first. The database trigger writes the private `members` row with the trusted Auth user ID when the email is confirmed (or immediately if confirmation is disabled). The profile remains unapproved until an owner reviews it. After confirmation, the member signs in to the private dashboard.
 
-The setup is additive. It does not remove, truncate, relink, approve, or overwrite existing member records. The Auth trigger runs only for signups marked by the website as member registrations; it does not create profiles for owner accounts. Payments, automatic charging, referral commissions, member discovery, and unrestricted messaging remain disabled.
+The setup is additive. It does not remove, truncate, relink, approve, or overwrite existing member records. The Auth trigger runs only for signups marked by the website as member registrations; it does not create profiles for owner accounts. Payments, automatic charging, referral commissions and paid features remain disabled. Discovery and private messaging are limited to signed-in members whose profiles the owner has approved.
 
 ## Before enabling registration
 
@@ -69,3 +69,54 @@ The Google Form remains separate and unchanged. Its responses and uploaded files
 imported or linked by this migration. Do not create duplicate profiles by importing its
 responses automatically; first reconcile the form's response data with the live member
 table and Auth accounts.
+
+
+## Pilot launch: apply order and checks (October 2026)
+
+First run `supabase/diagnostics_readonly.sql` in the SQL Editor. It is read-only and
+reports counts only. It shows which of the files below are already live, and whether the
+older discovery function is still blocking. Then apply, in this order, only the files
+it reports as missing. Each one is additive and safe to rerun:
+
+1. `supabase/registration_setup.sql`
+2. `supabase/launch_features_secure.sql`
+3. `supabase/member_discovery_photos.sql`. **Required for discovery.** The version of
+   `browse_approved_profiles()` in step 2 fails on every call ("column reference age is
+   ambiguous") and would also refuse to run below 100 approved members. This file replaces it.
+4. `supabase/discovery_messaging_safety.sql`: filters, paging, profile details, private
+   messaging, blocking and reporting. It also makes the signup trigger skip invalid
+   metadata instead of failing the Auth request.
+5. `supabase/legacy_registrations.sql`: a private archive table for the original form records.
+
+Then redeploy the owner function (`supabase functions deploy admin-members --project-ref cyvkpcwjkeifpvegwhpt`)
+so `/admin/` gains verified account linking and the report queue. Re-run the diagnostics and
+check that line 6 is `false` and line 7 is `true`.
+
+Every migration is exercised locally by `npm run test:db` (66 RLS assertions) and
+`npm run test:e2e` (browser journeys). Both use a throwaway local Postgres, never this project.
+
+## Reconciling the original Google Form registrations
+
+Nothing here creates or links a profile automatically.
+
+1. Export the inputs: Google Form → Responses → Link to Sheets → File → Download → CSV;
+   Supabase Table Editor → `members` → Export CSV; SQL Editor →
+   `select id, email, email_confirmed_at, created_at from auth.users;` → Download CSV.
+   Airtable, if it holds extra records: Grid view → Download CSV (`--source airtable`).
+2. Run `node tools/reconcile-registrations.mjs --form responses.csv --members members.csv --auth auth.csv`
+   on your own computer. It writes `reconciliation-output/` (git-ignored; it contains contact
+   details). Each person gets a status and next action. Only email or phone are treated as
+   reliable matches; similar names are flagged for manual review, never linked.
+3. Optional: run `reconciliation-output/archive-original-registrations.sql` in the SQL Editor to
+   keep every original answer, including dates and referral codes, in the private
+   `legacy_registrations` table.
+4. For a person whose profile exists but who has no account (`needs_account`): Supabase →
+   Authentication → Users → **Invite user** with their verified email. An invite carries no signup
+   profile, so no duplicate is created. After they accept, open `/admin/`, choose their confirmed
+   account on their original profile, tick the verification box and link it. Approve separately.
+5. People who only appear in the form (`not_in_app`) can register at `account.html`. Review their
+   new pending profile in `/admin/` before approving.
+
+Approved members see only approved, linked, 18+ profiles. Pending members see their own profile
+and an explanation. Accounts without a profile see a recovery screen that shows the email
+address to give the owner.
