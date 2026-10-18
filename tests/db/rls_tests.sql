@@ -168,3 +168,34 @@ commit;
 -- ===== Legacy registrations are preserved =====
 select t_assert((select count(*) = 2 from members where user_id is null), 'MANDATORY 4 (database part): legacy registrations without accounts remain preserved and unlinked');
 select t_assert((select email = 'legacy1@test.invalid' and phone = '+256700000001' from members where first_name = 'LegacyOne'), 'legacy contact details are intact');
+
+-- ===== A database rule rejecting the profile row must not fail Auth signup =====
+alter table public.members add constraint t_reject_name check (first_name is distinct from 'RejectMe') not valid;
+insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
+ ('12121212-0000-4000-8000-000000000012', 'rejected@test.invalid', now(), '{"profile_type":"member_registration","first_name":"RejectMe","age":30,"gender":"Woman","location":"Uganda","city":"Kampala","relationship_goal":"Marriage","bio":"x"}');
+select t_assert(exists (select 1 from auth.users where email = 'rejected@test.invalid')
+  and not exists (select 1 from members where user_id = '12121212-0000-4000-8000-000000000012'),
+  'a profile row the database rejects is skipped; the Auth signup still succeeds');
+alter table public.members drop constraint t_reject_name;
+
+-- ===== Owner test accounts are kept apart from genuine members =====
+insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
+ ('13131313-0000-4000-8000-000000000013', 'owner-test-2@test.invalid', now(), '{"profile_type":"member_registration","first_name":"OwnerTest2","age":35,"gender":"Man","location":"Uganda","city":"Kampala","relationship_goal":"Friendship","bio":"owner test"}');
+update members set approved = true, is_test_account = true where user_id = '13131313-0000-4000-8000-000000000013';
+update members set is_test_account = true where id = :'e_id';
+select id as t2_id from members where user_id = '13131313-0000-4000-8000-000000000013' \gset
+select t_assert((select count(*) = 0 from members where is_test_account and user_id::text like 'aaaaaaaa%'), 'genuine profiles start unmarked');
+begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', true); set local role authenticated;
+select t_assert((select array_agg(first_name order by first_name) = array['TestB'] from browse_member_profiles()), 'a genuine member never sees test accounts in discovery');
+select t_assert((select array_agg(first_name order by first_name) = array['TestB'] from browse_approved_profiles()), 'the older discovery function also hides test accounts');
+select t_assert((select count(*) = 0 from get_member_profile(:'t2_id')), 'a genuine member cannot open a test profile');
+select t_denied(format('select * from public.send_member_message(%L, %L)', :'t2_id', 'hi'), 'a genuine member cannot message a test account');
+select t_denied('update public.members set is_test_account = true where user_id = auth.uid()', 'members cannot mark themselves as test accounts');
+commit;
+begin; select set_config('request.jwt.claim.sub', '13131313-0000-4000-8000-000000000013', true); set local role authenticated;
+select t_assert((select array_agg(first_name order by first_name) = array['TestE'] from browse_member_profiles()), 'test accounts see only other test accounts');
+select t_denied(format('select * from public.send_member_message(%L, %L)', :'a_id', 'hi'), 'a test account cannot message a genuine member');
+select t_assert((select count(*) = 1 from send_member_message(:'e_id', 'test to test')), 'two test accounts can message each other');
+select t_assert((select count(*) = 0 from list_my_conversations() where other_member_id = :'a_id'), 'no genuine conversations are visible to a test account');
+commit;
+update members set is_test_account = false where id = :'e_id';

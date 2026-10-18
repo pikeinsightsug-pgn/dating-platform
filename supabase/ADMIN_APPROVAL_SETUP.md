@@ -95,27 +95,59 @@ check that line 6 is `false` and line 7 is `true`.
 Every migration is exercised locally by `npm run test:db` (66 RLS assertions) and
 `npm run test:e2e` (browser journeys). Both use a throwaway local Postgres, never this project.
 
-## Reconciling the original Google Form registrations
+## Deployment order for the pilot
 
-Nothing here creates or links a profile automatically.
+1. Run `supabase/diagnostics_readonly.sql` (read-only) and keep the result.
+2. Apply the missing SQL files in the order above.
+3. Redeploy `admin-members`. The owner console now keeps working with an older
+   deployment, but linking, test accounts, original registrations and reports need the
+   new one.
+4. Only then merge the pull request (GitHub Pages publishes `main`).
+5. Authentication → URL Configuration: keep **Site URL** as
+   `https://pikeinsightsug-pgn.github.io/dating-platform/` and make sure **Redirect URLs**
+   include `https://pikeinsightsug-pgn.github.io/dating-platform/account.html` and
+   `https://pikeinsightsug-pgn.github.io/dating-platform/account.html?mode=recovery`.
+   Invitation and confirmation links that land on the homepage are forwarded to
+   `account.html`, where invited people choose their password.
 
-1. Export the inputs: Google Form → Responses → Link to Sheets → File → Download → CSV;
-   Supabase Table Editor → `members` → Export CSV; SQL Editor →
-   `select id, email, email_confirmed_at, created_at from auth.users;` → Download CSV.
-   Airtable, if it holds extra records: Grid view → Download CSV (`--source airtable`).
-2. Run `node tools/reconcile-registrations.mjs --form responses.csv --members members.csv --auth auth.csv`
-   on your own computer. It writes `reconciliation-output/` (git-ignored; it contains contact
-   details). Each person gets a status and next action. Only email or phone are treated as
-   reliable matches; similar names are flagged for manual review, never linked.
-3. Optional: run `reconciliation-output/archive-original-registrations.sql` in the SQL Editor to
-   keep every original answer, including dates and referral codes, in the private
-   `legacy_registrations` table.
-4. For a person whose profile exists but who has no account (`needs_account`): Supabase →
-   Authentication → Users → **Invite user** with their verified email. An invite carries no signup
-   profile, so no duplicate is created. After they accept, open `/admin/`, choose their confirmed
-   account on their original profile, tick the verification box and link it. Approve separately.
-5. People who only appear in the form (`not_in_app`) can register at `account.html`. Review their
-   new pending profile in `/admin/` before approving.
+## Owner test accounts
+
+In `/admin/`, use **Mark as my test account** on each of your own test profiles. Test accounts
+see and message only other test accounts, genuine members never see them, and they do not
+count toward the 100 free founding places. Members cannot change this flag themselves.
+
+## Restoring the original Google Form registrations
+
+Nothing here creates, merges, links or approves a profile automatically.
+
+1. **Export (read-only).**
+   - `members.csv`: Table Editor → `members` → Export → Export table as CSV.
+   - `auth.csv`: SQL Editor → `select id, email, phone, email_confirmed_at, created_at from auth.users;`
+     → Download CSV.
+2. **Compare.** On your own computer:
+   `node tools/reconcile-registrations.mjs --form responses.csv --members members.csv --auth auth.csv`
+   Output in `reconciliation-output/` is counts plus a per-row status with no names, contacts or
+   photo links. Add `--include-contacts` only when you need a private follow-up sheet. Matches
+   use email or phone only. Shared contacts and name resemblances are flagged for review,
+   never merged.
+3. **Archive the originals.** Apply `supabase/legacy_registrations.sql`, run the tool again with
+   `--archive-sql`, and run `reconciliation-output/archive-original-registrations.sql` in the SQL
+   Editor. Every original answer, including photo links, referral codes and dates, is kept in
+   the private `legacy_registrations` table. Rerunning skips rows already archived.
+4. **Help each person activate.** Contact them on the WhatsApp/phone number they gave.
+   - **No profile in the app** (most of the original 47): send them
+     `https://pikeinsightsug-pgn.github.io/dating-platform/account.html` to register with their
+     own email. Ask which email they used.
+   - **An old profile exists without an account:** Authentication → Users → **Invite user** with
+     their email. The invitation creates no profile, so there is no duplicate. They choose a
+     password from the link. Then use **Link verified account** on their old profile in `/admin/`.
+5. **Link the original.** In `/admin/` → Original registrations, choose the person's member profile,
+   confirm you verified them, and **Link to profile**. This records the match only.
+6. **Approve** each verified, eligible adult separately with **Approve**. The genuine approved
+   count shows the free founding places left.
+
+Photos from the form remain in your Google Drive. Ask each person to upload their photo in
+the app (or for consent before you add it); do not copy them automatically.
 
 Approved members see only approved, linked, 18+ profiles. Pending members see their own profile
 and an explanation. Accounts without a profile see a recovery screen that shows the email

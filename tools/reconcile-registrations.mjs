@@ -13,7 +13,7 @@
 // private follow-up sheet; --archive-sql writes the SQL that archives the original answers.
 //
 // members.csv: Supabase Table Editor → members → Export → CSV.
-// auth-users.csv: SQL Editor → `select id, email, email_confirmed_at, created_at from auth.users;` → Download CSV.
+// auth-users.csv: SQL Editor → `select id, email, phone, email_confirmed_at, created_at from auth.users;` → Download CSV.
 // Column names in the form export are detected by keyword; override with --map field=Header,
 // e.g. --map phone="WhatsApp number". Fields: timestamp,email,phone,name,age,dob,gender,country,city,referral.
 // One question may supply both phone and email; age may be an exact age or an age group.
@@ -156,8 +156,11 @@ export function reconcile({ formRows, members = [], authUsers = [], overrides = 
   const cols = detectColumns(formRows.length ? Object.keys(formRows[0]) : [], overrides);
   const authById = new Map(authUsers.map(u => [u.id, u]));
   const authByEmail = new Map(authUsers.filter(u => normalizeEmail(u.email)).map(u => [normalizeEmail(u.email), u]));
+  // Supabase stores Auth phone numbers without "+"; normalise both sides the same way.
+  const authPhone = u => u && u.phone ? normalizePhone(String(u.phone).startsWith("+") ? u.phone : "+" + u.phone) : "";
+  const authByPhone = new Map(authUsers.filter(u => authPhone(u)).map(u => [authPhone(u), u]));
   const memberEmail = m => normalizeEmail(m.email || (m.user_id && authById.get(m.user_id)?.email));
-  const memberPhone = m => normalizePhone(m.phone || m.whatsapp || m.phone_number, m.location);
+  const memberPhone = m => normalizePhone(m.phone || m.whatsapp || m.phone_number, m.location) || authPhone(m.user_id && authById.get(m.user_id));
   const membersByEmail = new Map(), membersByPhone = new Map();
   for (const m of members) {
     const e = memberEmail(m), p = memberPhone(m);
@@ -221,7 +224,7 @@ export function reconcile({ formRows, members = [], authUsers = [], overrides = 
     // A name resemblance is reported for manual review only; it is never a match.
     const weak = matched.length ? [] : members.filter(m => firstName && normalizeName(m.first_name) === normalizeName(firstName) &&
       age && Number(m.age) >= age.min && Number(m.age) <= age.max && (!country || country === "Other" || m.location === country));
-    const account = email ? authByEmail.get(email) : null;
+    const account = (email && authByEmail.get(email)) || (phone && authByPhone.get(phone)) || null;
     const group = groupOf.get(index) || "";
     const notes = [];
 
@@ -258,8 +261,9 @@ export function reconcile({ formRows, members = [], authUsers = [], overrides = 
   });
 
   const formEmails = new Set(results.map(r => r.email).filter(Boolean));
+  const formPhones = new Set(results.map(r => r.phone).filter(Boolean));
   const accountsWithoutProfile = authUsers.filter(u => !members.some(m => m.user_id === u.id))
-    .map(u => ({ id: u.id, in_form: formEmails.has(normalizeEmail(u.email)), confirmed: Boolean(u.email_confirmed_at) }));
+    .map(u => ({ id: u.id, in_form: formEmails.has(normalizeEmail(u.email)) || formPhones.has(authPhone(u)), confirmed: Boolean(u.email_confirmed_at) }));
   const counts = results.reduce((acc, r) => ({ ...acc, [r.status]: (acc[r.status] || 0) + 1 }), {});
   const flagCounts = results.flatMap(r => r.flags ? r.flags.split(" ") : []).reduce((acc, f) => ({ ...acc, [f]: (acc[f] || 0) + 1 }), {});
   const groups = [...new Set(results.map(r => r.duplicate_group).filter(Boolean))];
@@ -311,7 +315,7 @@ export function summaryMarkdown(report, { members, auth }) {
     "## Form questions used", ...mapped,
     ...(missing.length ? ["", "Not found in this form (fine if the form never asked): " + missing.join(", ")] : []), "",
     "## Auth accounts without a member profile",
-    `- ${report.accountsWithoutProfile.length} total; ${report.accountsWithoutProfile.filter(a => a.in_form).length} share an email with a form response`, ""
+    `- ${report.accountsWithoutProfile.length} total; ${report.accountsWithoutProfile.filter(a => a.in_form).length} share an email or phone with a form response`, ""
   ].join("\n");
 }
 

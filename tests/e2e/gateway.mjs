@@ -7,13 +7,16 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 
 const b64 = value => Buffer.from(JSON.stringify(value)).toString("base64url");
+// Test-only stand-in for the service-role key the Edge Function receives from Supabase.
+export const TEST_SERVICE_KEY = "service-role-test";
+const SERVICE = Symbol("service_role");
 const IDENT = /^[a-z_][a-z0-9_]*$/;
 
 export async function startGateway({ database, host, port: pgPort, user = "postgres" }) {
   const pool = new pg.Pool({ database, host, port: pgPort, user, max: 6 });
   const passwords = new Map();
   const objects = new Map();
-  const options = { requireEmailConfirmation: true, failUploads: null };
+  const options = { requireEmailConfirmation: true, failUploads: null, adminFunction: null, adminFunctionOnly: null };
 
   function token(userRow) {
     const exp = Math.floor(Date.now() / 1000) + 3600;
@@ -23,11 +26,12 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
   function subject(req) {
     const auth = String(req.headers.authorization || "");
     const jwt = auth.replace(/^Bearer\s+/i, "");
+    if (jwt === TEST_SERVICE_KEY) return SERVICE;
     try { const claims = JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString()); return claims.sub || null; }
     catch { return null; }
   }
   const userJson = row => ({
-    id: row.id, aud: "authenticated", role: "authenticated", email: row.email,
+    id: row.id, aud: "authenticated", role: "authenticated", email: row.email, phone: row.phone || "",
     email_confirmed_at: row.email_confirmed_at, confirmed_at: row.email_confirmed_at,
     user_metadata: row.raw_user_meta_data || {}, app_metadata: { provider: "email" },
     created_at: row.created_at, updated_at: row.created_at, identities: []
@@ -41,8 +45,11 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
     const client = await pool.connect();
     try {
       await client.query("begin");
-      await client.query(sub ? "set local role authenticated" : "set local role anon");
-      await client.query("select set_config('request.jwt.claim.sub', $1, true)", [sub || ""]);
+      // The service role bypasses RLS, like Supabase's service_role.
+      if (sub !== SERVICE) {
+        await client.query(sub ? "set local role authenticated" : "set local role anon");
+        await client.query("select set_config('request.jwt.claim.sub', $1, true)", [sub || ""]);
+      }
       const result = await fn(client);
       await client.query("commit");
       return result;
@@ -70,6 +77,7 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
       const [op, ...rest] = raw.split("."); const value = rest.join(".");
       if (op === "eq") { values.push(value); where.push(`${key} = $${values.length}`); }
       else if (op === "is" && value === "null") where.push(`${key} is null`);
+      else if (op === "not" && value === "is.null") where.push(`${key} is not null`);
       else throw Object.assign(new Error("unsupported filter " + raw), { code: "PGRST100" });
     }
     return { where: where.length ? " where " + where.join(" and ") : "", values };
@@ -118,7 +126,12 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
       if (req.method === "GET") {
         const { where, values } = filters(url);
         const limit = Number(url.searchParams.get("limit")) || null;
-        const rows = await asRole(sub, c => c.query(`select ${columns(url)} from public.${table}${where}${limit ? " limit " + limit : ""}`, values).then(r => r.rows));
+        const order = (url.searchParams.get("order") || "").split(",").filter(Boolean).map(term => {
+          const [col, dir = "asc"] = term.split(".");
+          if (!IDENT.test(col) || !/^(asc|desc)$/.test(dir)) throw Object.assign(new Error("bad order"), { code: "PGRST100" });
+          return col + " " + dir;
+        });
+        const rows = await asRole(sub, c => c.query(`select ${columns(url)} from public.${table}${where}${order.length ? " order by " + order.join(", ") : ""}${limit ? " limit " + limit : ""}`, values).then(r => r.rows));
         return respondRows(req, res, rows);
       }
       const wantRows = /return=representation/.test(String(req.headers.prefer || ""));
@@ -236,6 +249,25 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
       const row = sub && (await pool.query("select * from auth.users where id = $1", [sub])).rows[0];
       return row ? send(res, 200, userJson(row)) : authError(401, "bad_jwt", "invalid JWT");
     }
+    if (route === "user" && req.method === "PUT") {
+      const row = sub && (await pool.query("select * from auth.users where id = $1", [sub])).rows[0];
+      if (!row) return authError(401, "bad_jwt", "invalid JWT");
+      if (body.password) {
+        if (String(body.password).length < 8) return authError(422, "weak_password", "Password should be at least 8 characters.");
+        passwords.set(row.email, body.password);
+      }
+      return send(res, 200, userJson(row));
+    }
+    if (route.startsWith("admin/users")) {
+      if (sub !== SERVICE) return authError(403, "not_admin", "User not allowed");
+      const id = route.split("/")[2];
+      if (id) {
+        const row = (await pool.query("select * from auth.users where id::text = $1", [id])).rows[0];
+        return row ? send(res, 200, userJson(row)) : authError(404, "user_not_found", "User not found");
+      }
+      const rows = (await pool.query("select * from auth.users order by created_at")).rows;
+      return send(res, 200, { users: rows.map(userJson), aud: "authenticated" });
+    }
     if (route === "logout") return send(res, 204);
     if (route === "resend" || route === "recover") return send(res, 200, {});
     authError(404, "not_found", "unsupported in test gateway");
@@ -248,6 +280,19 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
       if (url.pathname.startsWith("/rest/v1/")) return await rest(req, res, url, sub);
       if (url.pathname.startsWith("/storage/v1/")) return await storage(req, res, url, sub);
       if (url.pathname.startsWith("/auth/v1/")) return await auth(req, res, url, sub);
+      if (url.pathname === "/functions/v1/admin-members" && options.adminFunction) {
+        const raw = await readBody(req);
+        const action = (() => { try { return JSON.parse(raw.toString()).action; } catch { return null; } })();
+        // Simulates an older deployment that lacks newer actions.
+        if (options.adminFunctionOnly && req.method === "POST" && !options.adminFunctionOnly.includes(action)) {
+          return send(res, 400, { error: "Unsupported action." });
+        }
+        const response = await options.adminFunction(new Request("http://edge" + req.url, {
+          method: req.method, headers: req.headers, body: ["GET", "HEAD"].includes(req.method) ? undefined : raw
+        }));
+        res.writeHead(response.status, Object.fromEntries(response.headers));
+        return res.end(Buffer.from(await response.arrayBuffer()));
+      }
       send(res, 404, { message: "not found" });
     } catch (error) {
       send(res, 500, { message: String(error && error.message) });
@@ -257,6 +302,8 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
   return {
     url: `http://127.0.0.1:${server.address().port}`,
     pool, passwords, options,
+    // A signed-in session for an existing user, as an email link would provide.
+    async sessionFor(email) { return session((await pool.query("select * from auth.users where email = $1", [email])).rows[0]); },
     async close() { await new Promise(r => server.close(r)); await pool.end(); }
   };
 }

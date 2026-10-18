@@ -68,19 +68,30 @@ begin
     return new;
   end if;
 
-  insert into public.members (
-    user_id, first_name, age, gender, location, city,
-    relationship_goal, bio, interests, partner_preference, approved
-  ) values (
-    new.id, profile_first_name, profile_age, profile_gender, profile_location, profile_city,
-    profile_goal, profile_bio, profile_interests, profile_preference, false
-  )
-  on conflict (user_id) where user_id is not null do nothing;
+  -- A database rule rejecting the row (for example an older NOT NULL column) must not
+  -- fail the person's signup or email confirmation. The sign-in page retries and shows
+  -- a clear message if the profile still cannot be saved.
+  begin
+    insert into public.members (
+      user_id, first_name, age, gender, location, city,
+      relationship_goal, bio, interests, partner_preference, approved
+    ) values (
+      new.id, profile_first_name, profile_age, profile_gender, profile_location, profile_city,
+      profile_goal, profile_bio, profile_interests, profile_preference, false
+    )
+    on conflict (user_id) where user_id is not null do nothing;
+  exception when others then
+    raise warning 'Skipped member profile for auth user %: % (%)', new.id, sqlerrm, sqlstate;
+  end;
 
   return new;
 end;
 $member_profile_trigger$;
 revoke all on function public.create_member_profile_from_auth_user() from public, anon, authenticated;
+
+-- Owner-controlled marker for the owner's own test accounts. Members cannot change it
+-- (no column grant), and test accounts never see or message genuine members.
+alter table public.members add column if not exists is_test_account boolean not null default false;
 
 create index if not exists members_discovery_idx
   on public.members(approved, location, age, created_at desc);
@@ -127,6 +138,15 @@ as $$
   )
 $$;
 revoke all on function public.members_are_blocked(uuid, uuid) from public, anon, authenticated;
+
+create or replace function public.members_share_audience(member_a uuid, member_b uuid)
+returns boolean language sql stable security definer set search_path = ''
+as $$
+  select coalesce((select a.is_test_account = b.is_test_account
+                   from public.members a, public.members b
+                   where a.id = member_a and b.id = member_b), false)
+$$;
+revoke all on function public.members_share_audience(uuid, uuid) from public, anon, authenticated;
 
 create or replace function public.require_approved_member()
 returns uuid language plpgsql stable security definer set search_path = ''
@@ -179,6 +199,7 @@ begin
   from public.members m
   where m.approved = true and m.age >= 18 and m.user_id is not null
     and m.id <> me
+    and public.members_share_audience(me, m.id)
     and m.age between min_age and max_age
     and (nullif(p_country, '') is null or m.location = p_country)
     and (nullif(p_relationship_goal, '') is null or m.relationship_goal = p_relationship_goal)
@@ -188,6 +209,40 @@ begin
   limit page_size offset page_offset;
 end;
 $$;
+
+-- The earlier discovery function stays callable; give it the same audience and block rules.
+create or replace function public.browse_approved_profiles()
+returns table (
+  id uuid, first_name text, age integer, gender text, location text, city text,
+  relationship_goal text, bio text, interests text, profile_photo_path text,
+  created_at timestamptz
+)
+language plpgsql stable security definer set search_path = ''
+as $$
+declare me uuid := public.current_approved_member_id();
+begin
+  if me is null then
+    raise exception 'Only approved adult members can browse profiles';
+  end if;
+  return query
+  select m.id, m.first_name, m.age, m.gender, m.location, m.city,
+         m.relationship_goal, m.bio, m.interests,
+         case
+           when m.profile_photo_url is not null
+            and (storage.foldername(m.profile_photo_url))[1] = m.user_id::text
+           then m.profile_photo_url
+         end,
+         m.created_at
+  from public.members m
+  where m.approved = true and m.age >= 18 and m.user_id is not null
+    and m.id <> me
+    and public.members_share_audience(me, m.id)
+    and not public.members_are_blocked(me, m.id)
+  order by m.created_at desc;
+end;
+$$;
+revoke all on function public.browse_approved_profiles() from public, anon;
+grant execute on function public.browse_approved_profiles() to authenticated;
 
 create or replace function public.get_member_profile(p_member_id uuid)
 returns table (
@@ -210,6 +265,7 @@ begin
          m.created_at
   from public.members m
   where m.id = p_member_id and m.id <> me
+    and public.members_share_audience(me, m.id)
     and m.approved = true and m.age >= 18 and m.user_id is not null
     and not public.members_are_blocked(me, m.id);
 end;
@@ -227,7 +283,8 @@ begin
      or not public.is_approved_member_profile(p_recipient_member_id) then
     raise exception 'This member cannot receive messages' using errcode = '42501';
   end if;
-  if public.members_are_blocked(me, p_recipient_member_id) then
+  if public.members_are_blocked(me, p_recipient_member_id)
+     or not public.members_share_audience(me, p_recipient_member_id) then
     raise exception 'This member cannot receive messages' using errcode = '42501';
   end if;
   if length(clean_body) < 1 or length(clean_body) > 2000 then
@@ -276,6 +333,7 @@ begin
   from latest l
   join public.members m on m.id = l.other_id
   where m.approved = true and not public.members_are_blocked(me, l.other_id)
+    and public.members_share_audience(me, l.other_id)
   order by l.created_at desc;
 end;
 $$;

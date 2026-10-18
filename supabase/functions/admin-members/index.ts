@@ -37,7 +37,10 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Not authorized for owner actions." }, 403);
   }
 
-  let body: { action?: string; member_id?: string; user_id?: string; identity_verified?: boolean };
+  let body: {
+    action?: string; member_id?: string; user_id?: string; identity_verified?: boolean;
+    status?: string; legacy_id?: string; is_test_account?: boolean; notes?: string;
+  };
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON." }, 400); }
 
   const db = createClient(url, serviceKey, {
@@ -46,11 +49,18 @@ Deno.serve(async (req: Request) => {
 
   if (body.action === "list") {
     const { data, error } = await db.from("members")
-      .select("id, user_id, first_name, age, gender, location, city, relationship_goal, bio, interests, partner_preference, profile_photo_url, approved, created_at")
+      // "*" keeps the console working before is_test_account exists; fields are picked below.
+      .select("*")
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(500);
     if (error) return json({ error: "Could not load registrations.", detail: error.message }, 500);
-    const rows = data || [];
+    const rows = (data || []).map((m) => ({
+      id: m.id, user_id: m.user_id, first_name: m.first_name, age: m.age, gender: m.gender,
+      location: m.location, city: m.city, relationship_goal: m.relationship_goal, bio: m.bio,
+      interests: m.interests, partner_preference: m.partner_preference,
+      profile_photo_url: m.profile_photo_url, approved: m.approved === true,
+      is_test_account: m.is_test_account === true, created_at: m.created_at,
+    }));
     const authUsers = new Map<string, { email: string | null }>();
     for (let page = 1; ; page++) {
       const { data: authPage, error: authListError } = await db.auth.admin.listUsers({ page, perPage: 1000 });
@@ -84,10 +94,78 @@ Deno.serve(async (req: Request) => {
         approved: rows.filter((m) => m.approved === true).length,
         pending: rows.filter((m) => m.approved !== true).length,
         linked: rows.filter((m) => !!m.user_id).length,
+        test_accounts: rows.filter((m) => m.is_test_account).length,
+        // The free founding-member allowance counts genuine members only.
+        genuine_approved: rows.filter((m) => m.approved && !m.is_test_account && m.user_id && (m.age ?? 0) >= 18).length,
         unlinked: rows.filter((m) => !m.user_id).length,
         target: 100,
       },
     });
+  }
+
+  const uuid = /^[0-9a-f-]{36}$/i;
+
+  if (body.action === "set_test_account") {
+    if (typeof body.member_id !== "string" || !uuid.test(body.member_id) || typeof body.is_test_account !== "boolean") {
+      return json({ error: "A valid member ID and test-account flag are required." }, 400);
+    }
+    const { data, error } = await db.from("members")
+      .update({ is_test_account: body.is_test_account })
+      .eq("id", body.member_id)
+      .select("id, is_test_account")
+      .maybeSingle();
+    if (error) return json({ error: "Could not update the test-account flag. Apply supabase/discovery_messaging_safety.sql first.", detail: error.message }, 500);
+    if (!data) return json({ error: "Member not found." }, 404);
+    return json({ member: data });
+  }
+
+  // Original Google Form / Airtable registrations archived by supabase/legacy_registrations.sql.
+  // These actions never create, link, approve or edit member profiles.
+  const LEGACY_STATUSES = ["unreviewed", "matched_profile", "needs_account", "needs_profile", "possible_duplicate", "ineligible", "incomplete", "linked", "declined"];
+  if (body.action === "list_legacy") {
+    const { data, error } = await db.from("legacy_registrations")
+      .select("id, source, submitted_at, first_name, age, country, email_normalized, phone_normalized, referral_code, reconciliation_status, matched_member_id, owner_notes")
+      .order("submitted_at", { ascending: true })
+      .limit(500);
+    if (error) return json({ error: "Original registrations are not archived yet. Apply supabase/legacy_registrations.sql and run the archive SQL first.", detail: error.message }, 500);
+    return json({ registrations: data || [] });
+  }
+
+  if (body.action === "link_legacy") {
+    if (typeof body.legacy_id !== "string" || !uuid.test(body.legacy_id) ||
+        typeof body.member_id !== "string" || !uuid.test(body.member_id)) {
+      return json({ error: "A valid original registration and member profile are required." }, 400);
+    }
+    if (body.identity_verified !== true) {
+      return json({ error: "Confirm you verified this person (for example by WhatsApp) before linking." }, 400);
+    }
+    const { data: member, error: memberError } = await db.from("members").select("id").eq("id", body.member_id).maybeSingle();
+    if (memberError) return json({ error: "Could not verify the member profile." }, 500);
+    if (!member) return json({ error: "Member profile not found." }, 404);
+    const { data, error } = await db.from("legacy_registrations")
+      .update({ matched_member_id: body.member_id, reconciliation_status: "linked" })
+      .eq("id", body.legacy_id)
+      .is("matched_member_id", null)
+      .select("id, matched_member_id, reconciliation_status")
+      .maybeSingle();
+    if (error) return json({ error: "Could not link the original registration.", detail: error.message }, 500);
+    if (!data) return json({ error: "This original registration is already linked or no longer exists. Refresh and check." }, 409);
+    return json({ registration: data });
+  }
+
+  if (body.action === "set_legacy_status") {
+    if (typeof body.legacy_id !== "string" || !uuid.test(body.legacy_id) ||
+        typeof body.status !== "string" || !LEGACY_STATUSES.includes(body.status) || body.status === "linked") {
+      return json({ error: "A valid original registration and review status are required." }, 400);
+    }
+    const update: Record<string, unknown> = { reconciliation_status: body.status };
+    if (typeof body.notes === "string") update.owner_notes = body.notes.slice(0, 1000);
+    const { data, error } = await db.from("legacy_registrations")
+      .update(update).eq("id", body.legacy_id)
+      .select("id, reconciliation_status, owner_notes").maybeSingle();
+    if (error) return json({ error: "Could not update the original registration.", detail: error.message }, 500);
+    if (!data) return json({ error: "Original registration not found." }, 404);
+    return json({ registration: data });
   }
 
   if (body.action === "list_reports") {

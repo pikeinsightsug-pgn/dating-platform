@@ -76,7 +76,8 @@ button:disabled{opacity:.6;cursor:wait}
   </div>
 
   <div id="recovery-view" class="hidden">
-    <h1>Choose a new password</h1>
+    <h1 id="recovery-title">Choose a new password</h1>
+    <p id="recovery-intro" class="hidden">Welcome to Find Your Person. Choose a password to activate your account. You will use it with your email address to log in.</p>
     <form id="recovery-form" class="grid">
       <label>New password<input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
       <label>Confirm new password<input name="password_confirm" type="password" required minlength="8" autocomplete="new-password"></label>
@@ -92,6 +93,13 @@ button:disabled{opacity:.6;cursor:wait}
 <script>
 (() => {
   const status = document.getElementById("status");
+  // Read the email-link details before the Supabase client consumes them from the URL.
+  const linkParams = new URLSearchParams(location.hash.replace(/^#/, ""));
+  new URLSearchParams(location.search).forEach((value, key) => { if (!linkParams.has(key)) linkParams.set(key, value); });
+  const linkType = linkParams.get("type");
+  const linkError = linkParams.get("error_description") || linkParams.get("error");
+  // An owner invitation signs the person in without a password; they must choose one first.
+  let activatingInvite = linkType === "invite" && !linkError;
   const db = window.FYP && window.FYP.createClient();
   if (!db) { status.textContent = "Account service could not load. Check your connection and refresh the page."; return; }
   const views = ["register", "login", "forgot", "recovery"];
@@ -239,22 +247,31 @@ button:disabled{opacity:.6;cursor:wait}
     const values = new FormData(form);
     const password = String(values.get("password"));
     if (password !== String(values.get("password_confirm"))) { say("The passwords do not match."); return; }
-    setBusy(true); say("Updating your password…");
+    setBusy(true); say(activatingInvite ? "Activating your account…" : "Updating your password…");
     try {
-      const { error } = await db.auth.updateUser({ password });
+      const { data, error } = await db.auth.updateUser({ password });
       if (error) throw error;
+      if (activatingInvite) {
+        activatingInvite = false;
+        form.reset();
+        say("Your password is set. Opening your account…");
+        await finishSignIn(data.user);
+        return;
+      }
       await db.auth.signOut();
       form.reset();
       show("login");
       say("Your password has been updated. Sign in with your new password.");
     } catch (error) {
-      say("Could not update the password. Reopen the latest reset email and try again.");
+      say(activatingInvite
+        ? "Could not set your password. Choose a password of at least 8 characters, or open the invitation link again."
+        : "Could not update the password. Reopen the latest reset email and try again.");
     } finally { setBusy(false); }
   });
 
   db.auth.onAuthStateChange((event, session) => {
     if (event === "PASSWORD_RECOVERY") { show("recovery"); say("Choose a new password for your account."); }
-    else if (event === "SIGNED_IN" && session && !busy && !new URLSearchParams(location.search).has("mode")) {
+    else if (event === "SIGNED_IN" && session && !busy && !activatingInvite && !new URLSearchParams(location.search).has("mode")) {
       // Email-confirmation links land here already signed in.
       setTimeout(() => finishSignIn(session.user), 0);
     }
@@ -262,6 +279,23 @@ button:disabled{opacity:.6;cursor:wait}
 
   (async () => {
     const mode = new URLSearchParams(location.search).get("mode");
+    if (linkError) {
+      show("login");
+      say(/expired|invalid/i.test(linkError)
+        ? "This email link has expired or was already used. Use “Forgot password?” below to get a fresh link, or ask the owner to send a new invitation."
+        : "This email link could not be used (" + linkError + "). Try “Forgot password?” below, or ask the owner for a new invitation.");
+      return;
+    }
+    if (activatingInvite) {
+      show("recovery");
+      document.getElementById("recovery-title").textContent = "Activate your account";
+      document.getElementById("recovery-intro").classList.remove("hidden");
+      document.querySelector("#recovery-form button[type=submit]").textContent = "Set password and continue";
+      const { data, error } = await db.auth.getSession();
+      if (error || !data.session) { activatingInvite = false; show("login"); say("This invitation link could not be used. Ask the owner to send a new invitation, or use “Forgot password?”."); }
+      else say("");
+      return;
+    }
     if (mode === "recovery") {
       show("recovery");
       const { data, error } = await db.auth.getSession();

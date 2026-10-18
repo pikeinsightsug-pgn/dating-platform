@@ -256,6 +256,12 @@ test("reconciliation reads the real Google Form layout: combined contact answer,
   assert.deepEqual(report.duplicateGroups, { contact: 1, contact_rows: 2, name_only: 1, name_only_rows: 2 });
   assert.equal(parsePhone("+256781000000. Email. a@b.invalid", "Uganda").phone, "+256781000000");
 
+  // A phone-only registration is confirmed through the phone on the person's Auth account.
+  const byPhone = reconcile({ formRows: formRows.slice(9, 10), members: [{ id: "m-p", first_name: "Other", age: "31", location: "Uganda", user_id: "u-p", approved: "false" }],
+    authUsers: [{ id: "u-p", email: "", phone: "256700000011", email_confirmed_at: "2026-10-17" }] });
+  assert.equal(byPhone.results[0].status, "matched_profile");
+  assert.equal(byPhone.results[0].matched_member_id, "m-p");
+
   // The shareable outputs never contain names, contact details or photo links.
   const shareable = toCsv(report.results, REDACTED_FIELDS) + summaryMarkdown(report, { members: true, auth: true });
   for (const secret of ["Testa", "Testb", "example.invalid", "drive.example", "+256700", "700 000 001", "+26771000010"]) {
