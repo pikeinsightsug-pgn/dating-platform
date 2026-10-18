@@ -112,6 +112,17 @@ test("Daniel: pending until the owner approves, then discovery, photo and two-wa
   await daniel.reload(); await daniel.waitForSelector(".bubble.theirs");
   assert.match(await daniel.textContent(".bubble.theirs"), /Test 2 from Tiago/);
 
+  // Both members log out and back in: the conversation is still there, in order, from the database.
+  for (const [page, email, other] of [[daniel, "daniel@test.invalid", "Tiago"], [tiago, "tiago@test.invalid", "Daniel"]]) {
+    await page.goto(env.base + "messages.html");
+    await page.click("#signout"); await page.waitForURL(/signedout=1/);
+    await env.login(page, email); await page.waitForURL(/discover\.html$/);
+    await page.goto(env.base + "messages.html");
+    await page.locator("#conversations button", { hasText: other }).click();
+    await page.waitForFunction(() => document.querySelectorAll(".bubble").length === 2);
+    assert.deepEqual((await page.locator(".bubble").allTextContents()).map(t => t.match(/Test \d/)[0]), ["Test 1", "Test 2"]);
+  }
+
   // 7. Privacy and data.
   const alp = await env.newPage();
   await env.login(alp, "alp@test.invalid"); await alp.waitForURL(/discover\.html$/);
