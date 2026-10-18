@@ -139,6 +139,17 @@ test("browser journeys on the full migration set", async (t) => {
     await bravo.fill("#body", "Hi Alpha!");
     await bravo.click("#compose button[type=submit]");
     await bravo.waitForFunction(() => document.querySelectorAll(".bubble").length === 2);
+
+    // Alpha reads the reply after reopening the conversation (it comes from the database).
+    await alpha.reload();
+    await alpha.waitForSelector(".bubble.theirs");
+    assert.match(await alpha.textContent(".bubble.theirs"), /Hi Alpha!/);
+    const stored = await env.sql("select count(*)::int as n from public.member_messages");
+    assert.equal(stored.rows[0].n, 2, "both messages are saved in the database");
+    for (const page of [alpha, bravo]) {
+      const local = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }));
+      assert.doesNotMatch(local, /Hello Bravo|Hi Alpha/, "message text is not kept in browser storage");
+    }
   });
 
   await t.test("MANDATORY 6: a non-participant cannot read the conversation, even by calling the API directly", async () => {
