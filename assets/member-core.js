@@ -288,7 +288,7 @@
     SUPABASE_URL, CONTACT_EMAIL, SUPABASE_PUBLISHABLE_KEY, PHOTO_TYPES, PHOTO_MAX_BYTES, GENDERS, COUNTRIES, GOALS,
     GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
     saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor, showSignedIn,
-    authErrorMessage, photoTypeOf, preparePhoto, signedPhotoUrls, isMissingFunction, isNotApproved
+    authErrorMessage, photoTypeOf, preparePhoto, decodeImage, signedPhotoUrls, isMissingFunction, isNotApproved
   };
   root.FYP = api;
   if (typeof module === "object" && module.exports) module.exports = api;

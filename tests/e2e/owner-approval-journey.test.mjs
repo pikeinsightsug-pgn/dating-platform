@@ -2,7 +2,7 @@
 // discovery, photo upload and two-way messaging work. Every person here is invented.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { setup, profile, SUPABASE, PNG } from "./harness.mjs";
+import { setup, profile, SUPABASE, PNG, confirmCrop } from "./harness.mjs";
 import { TEST_SERVICE_KEY } from "./gateway.mjs";
 import { loadAdminFunction } from "./edge-runtime.mjs";
 
@@ -85,6 +85,7 @@ test("Daniel: pending until the owner approves, then discovery, photo and two-wa
   await daniel.goto(env.base + "dashboard.html");
   await daniel.waitForSelector("#profile-panel:not(.hidden)");
   await daniel.setInputFiles("#photo-file", { name: "me.png", mimeType: "image/png", buffer: PNG });
+  await confirmCrop(daniel);
   await daniel.click("#upload-photo");
   await daniel.waitForFunction(() => /has been saved/.test(document.getElementById("photo-status").textContent));
   await daniel.reload(); await daniel.waitForSelector("#photo-preview:not(.hidden)");

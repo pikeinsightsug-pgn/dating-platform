@@ -6,7 +6,7 @@
 // Synthetic accounts only.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { setup, profile, ALL, PNG } from "./harness.mjs";
+import { setup, profile, ALL, PNG, confirmCrop } from "./harness.mjs";
 
 test("browser journeys on the full migration set", async (t) => {
   const env = await setup("e2e_full");
@@ -203,6 +203,7 @@ test("browser journeys on the full migration set", async (t) => {
       input.dispatchEvent(new Event("change", { bubbles: true }));
     }, [...PNG]);
     assert.equal(await page.evaluate(() => document.getElementById("photo-file").files[0].type), "");
+    await confirmCrop(page);
     await page.click("#upload-photo");
     await page.waitForFunction(() => /has been saved/.test(document.getElementById("photo-status").textContent));
     const stored = (await env.sql("select m.profile_photo_url from public.members m join auth.users u on u.id = m.user_id where u.email = 'alpha@test.invalid'")).rows[0].profile_photo_url;
@@ -211,6 +212,7 @@ test("browser journeys on the full migration set", async (t) => {
 
     env.gateway.options.failUploads = [400, { statusCode: "403", error: "Unauthorized", message: "new row violates row-level security policy" }];
     await page.setInputFiles("#photo-file", { name: "second.png", mimeType: "image/png", buffer: PNG });
+    await confirmCrop(page);
     await page.click("#upload-photo");
     await page.waitForFunction(() => /denied this photo upload/.test(document.getElementById("photo-status").textContent));
     assert.equal(await page.textContent("#upload-photo"), "Upload photo", "the button resets after a failure");
@@ -245,10 +247,103 @@ test("browser journeys on the full migration set", async (t) => {
       return blob.size;
     });
     assert.ok(originalSize > 5 * 1024 * 1024, "fixture is larger than the 5 MB bucket limit (" + originalSize + ")");
+    await confirmCrop(page);
     await page.click("#upload-photo");
     await page.waitForFunction(() => /has been saved/.test(document.getElementById("photo-status").textContent), null, { timeout: 60000 });
     const stored = (await env.sql("select m.profile_photo_url from public.members m join auth.users u on u.id = m.user_id where u.email = 'bravo@test.invalid'")).rows[0].profile_photo_url;
     assert.ok(stored.endsWith(".jpg"), "re-encoded as JPEG");
+  });
+
+  await t.test("photo cropping: zoom and drag choose the visible area; the cropped photo is what is saved, kept and shown", async () => {
+    // Centre pixel colour and size of an image, read through fetch so private signed URLs can be sampled.
+    const sample = (page, selector) => page.evaluate(async sel => {
+      const img = document.querySelector(sel);
+      await (img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; }));
+      const bitmap = await createImageBitmap(await (await fetch(img.src)).blob());
+      const canvas = document.createElement("canvas"); canvas.width = bitmap.width; canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d"); ctx.drawImage(bitmap, 0, 0);
+      const [r, g, b] = ctx.getImageData(bitmap.width / 2, bitmap.height / 2, 1, 1).data;
+      return { width: bitmap.width, height: bitmap.height, colour: r > 180 && g < 90 && b < 90 ? "red" : r < 90 && g > 150 && b < 90 ? "green" : r < 90 && g < 90 && b > 150 ? "blue" : r > 180 && g > 180 && b < 90 ? "yellow" : `${r},${g},${b}` };
+    }, selector);
+    const page = await env.newPage({ mobile: true });
+    await env.login(page, "alpha@test.invalid");
+    await page.waitForURL(/discover\.html$/);
+    await page.goto(env.base + "dashboard.html");
+    await page.waitForSelector("#profile-panel:not(.hidden)");
+    const before = (await env.sql("select profile_photo_url from public.members where first_name = 'Alpha'")).rows[0].profile_photo_url;
+    // A 1600x1200 WebP in four coloured quarters, handed over like an Android picker (no MIME type).
+    const choose = () => page.evaluate(async () => {
+      const canvas = document.createElement("canvas"); canvas.width = 1600; canvas.height = 1200;
+      const ctx = canvas.getContext("2d");
+      [["#ff0000", 0, 0], ["#00ff00", 800, 0], ["#0000ff", 0, 600], ["#ffff00", 800, 600]].forEach(([c, x, y]) => { ctx.fillStyle = c; ctx.fillRect(x, y, 800, 600); });
+      const blob = await new Promise(r => canvas.toBlob(r, "image/webp", 0.95));
+      const transfer = new DataTransfer(); transfer.items.add(new File([blob], "IMG_2024.webp", { type: "" }));
+      const input = document.getElementById("photo-file"); input.files = transfer.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    // Cancelling keeps the current photo.
+    await choose();
+    await page.waitForFunction(() => document.querySelector(".crop-dialog")?.open);
+    // Two-finger pinch outwards zooms in.
+    const zoomed = await page.evaluate(() => {
+      const stage = document.getElementById("crop-stage"); const r = stage.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const fire = (type, id, x) => stage.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: "touch", clientX: x, clientY: cy, bubbles: true }));
+      fire("pointerdown", 11, cx - 20); fire("pointerdown", 12, cx + 20);
+      fire("pointermove", 11, cx - 60); fire("pointermove", 12, cx + 60);
+      fire("pointerup", 11, cx - 60); fire("pointerup", 12, cx + 60);
+      return Number(document.getElementById("crop-zoom").value);
+    });
+    assert.ok(zoomed > 2.5, "pinch zoomed in (" + zoomed + ")");
+    await page.click("#crop-cancel");
+    await page.waitForFunction(() => /Photo not changed/.test(document.getElementById("photo-status").textContent));
+    assert.equal(await page.isDisabled("#upload-photo"), true);
+    assert.equal((await env.sql("select profile_photo_url from public.members where first_name = 'Alpha'")).rows[0].profile_photo_url, before);
+
+    // Zoom to 2x and drag so the red top-left quarter fills the frame, then check the confirmation.
+    await choose();
+    await page.waitForFunction(() => document.querySelector(".crop-dialog")?.open);
+    await page.evaluate(() => { const z = document.getElementById("crop-zoom"); z.value = "2"; z.dispatchEvent(new Event("input")); });
+    const box = await page.locator("#crop-stage").boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width, box.y + box.height, { steps: 8 });
+    await page.mouse.up();
+    await page.click("#crop-preview");
+    await page.waitForSelector("#crop-confirm:not(.hidden)");
+    assert.deepEqual(await sample(page, "#crop-result"), { width: 1200, height: 900, colour: "red" }, "the confirmation shows the cropped area");
+    await page.click("#crop-use");
+    await page.waitForFunction(() => !document.querySelector(".crop-dialog").open);
+    assert.deepEqual(await sample(page, "#photo-preview"), { width: 1200, height: 900, colour: "red" }, "preview before upload is the crop");
+    await page.click("#upload-photo");
+    await page.waitForFunction(() => /has been saved/.test(document.getElementById("photo-status").textContent));
+    const saved = (await env.sql("select profile_photo_url from public.members where first_name = 'Alpha'")).rows[0].profile_photo_url;
+    assert.ok(saved !== before && saved.endsWith(".jpg"), "replaced with a new JPEG");
+    assert.deepEqual(await sample(page, "#photo-preview"), { width: 1200, height: 900, colour: "red" }, "stored file is the crop");
+
+    // Still there after a refresh and a new login.
+    await page.reload(); await page.waitForSelector("#photo-preview:not(.hidden)");
+    assert.equal((await sample(page, "#photo-preview")).colour, "red");
+    await page.click("#signout"); await page.waitForURL(/signedout=1/);
+    await env.login(page, "alpha@test.invalid"); await page.waitForURL(/discover\.html$/);
+    await page.goto(env.base + "dashboard.html"); await page.waitForSelector("#photo-preview:not(.hidden)");
+    assert.equal((await sample(page, "#photo-preview")).colour, "red");
+
+    // Another approved member sees the cropped photo on Discover.
+    const bravo = await env.newPage();
+    await env.login(bravo, "bravo@test.invalid");
+    await bravo.waitForSelector("#profiles .card");
+    const card = bravo.locator("#profiles .card", { hasText: "Alpha" });
+    await card.locator("img.photo").waitFor();
+    assert.equal((await card.locator("img.photo").evaluate(async img => {
+      await (img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; }));
+      const bitmap = await createImageBitmap(await (await fetch(img.src)).blob());
+      const c = document.createElement("canvas"); c.width = bitmap.width; c.height = bitmap.height;
+      c.getContext("2d").drawImage(bitmap, 0, 0);
+      const [r, g, b] = c.getContext("2d").getImageData(bitmap.width / 2, bitmap.height / 2, 1, 1).data;
+      return r > 180 && g < 90 && b < 90;
+    })), true, "Bravo sees Alpha's cropped photo");
   });
 
   await t.test("pending members see their own profile with clear review guidance and cannot browse or message", async () => {

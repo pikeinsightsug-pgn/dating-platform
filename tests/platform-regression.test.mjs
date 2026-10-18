@@ -89,7 +89,9 @@ test("dashboard never inserts a member row directly and gates photo upload on a 
   const html = await read("dashboard.html");
   assert.doesNotMatch(html, /\.from\(["']members["']\)\s*\.insert/);
   assert.match(html, /\.eq\(["']user_id["'],\s*user\.id\)/);
-  assert.match(html, /photoButton\.disabled\s*=\s*photoUploading\s*\|\|\s*!file\s*\|\|\s*!memberProfile/);
+  // The upload button stays disabled until the member has a linked profile and a (cropped) photo is ready.
+  assert.match(html, /if \(!file \|\| !memberProfile\) return;/);
+  assert.match(html, /if \(!photoReady\(\) \|\| !memberProfile \|\| photoButton\.disabled \|\| photoUploading\) return;/);
   assert.match(html, /accept="image\/\*"/);
 });
 

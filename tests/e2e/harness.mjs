@@ -103,6 +103,17 @@ export async function setup(name, files = ALL) {
   };
 }
 
+// Completes the photo cropper that opens after choosing a profile photo. `adjust` may move or zoom first.
+export async function confirmCrop(page, adjust) {
+  await page.waitForFunction(() => { const d = document.querySelector(".crop-dialog"); return d && d.open; });
+  await page.waitForSelector("#crop-adjust:not(.hidden)");
+  if (adjust) await adjust();
+  await page.click("#crop-preview");
+  await page.waitForSelector("#crop-confirm:not(.hidden)");
+  await page.click("#crop-use");
+  await page.waitForFunction(() => !document.querySelector(".crop-dialog").open);
+}
+
 export const profile = (first_name, extra = {}) => ({
   profile_type: "member_registration", first_name, age: 30, gender: "Woman", location: "Uganda",
   city: "Kampala", relationship_goal: "Marriage", bio: "Synthetic test profile for " + first_name, ...extra
