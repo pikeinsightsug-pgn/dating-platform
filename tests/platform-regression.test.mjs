@@ -298,3 +298,11 @@ test("the owner console expects exactly the admin-members version in the reposit
   assert.ok(fn && page, "both version markers exist");
   assert.equal(page[1], fn[1], "bump both together when admin-members changes");
 });
+
+test("every public and member page is branded PikeConnection", async () => {
+  for (const page of ["index.html", "account.html", "login.html", "dashboard.html", "discover.html", "messages.html", "privacy.html", "admin/index.html"]) {
+    const html = await read(page);
+    assert.match(html, /<title>[^<]*PikeConnection[^<]*<\/title>/, page + " tab title");
+    assert.doesNotMatch(html, /Find ?(<span>)?Your(<\/span>)? ?Person/i, page + " still shows the old name");
+  }
+});
