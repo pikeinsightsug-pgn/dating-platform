@@ -30,14 +30,15 @@ Keep the project's email confirmation setting as intended. The page explains whe
 ## Owner approval console
 
 1. Create an owner account in Supabase Authentication using an email you control and confirm that email.
-2. From the repository root, deploy the existing function with:
-   `supabase login`
-   `supabase functions deploy admin-members --project-ref cyvkpcwjkeifpvegwhpt`
+2. Deploy the function. Either way deploys code only; it never runs SQL or changes member data.
+   - **Recommended — GitHub Actions** (deploys exactly what is in the repository): in Supabase open your avatar → **Account → Access Tokens → Generate new token**; in GitHub open the repository → **Settings → Secrets and variables → Actions → New repository secret**, name `SUPABASE_ACCESS_TOKEN`, paste the token there (never in chat or code). The workflow `.github/workflows/deploy-admin-function.yml` then deploys on every push that changes the function; to deploy now, open **Actions → Deploy admin-members Edge Function** and re-run the latest run (or **Run workflow** once it is on `main`).
+   - **Manually from a laptop** (use a fresh download of the reviewed branch, not an old folder): `npx supabase login`, then `npx supabase functions deploy admin-members --project-ref cyvkpcwjkeifpvegwhpt --use-api`.
    The function name is `admin-members`; its entry point is `supabase/functions/admin-members/index.ts`. Do not pass `--no-verify-jwt`.
+   **Check what is live:** sign in to `/admin/`. The page states "Owner function admin-members is up to date (version …)" or that an older version is deployed. The version is `FUNCTION_VERSION` in `index.ts`; bump it together with `EXPECTED_FUNCTION_VERSION` in `admin/index.html` whenever the function changes.
 3. Set only this custom Edge Function secret in the Supabase Dashboard under **Edge Functions → Secrets**:
    - `ADMIN_EMAIL`: the exact confirmed owner email address, in lowercase.
    Supabase provides `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to the function runtime. Do not try to add or override these reserved `SUPABASE_` variables as custom secrets. Never put the service-role key in HTML, GitHub Pages, or browser code.
-4. This repository has no `supabase/config.toml`; Supabase's default `verify_jwt` setting is `true`. Keep JWT verification enabled. The function also validates the bearer token with Auth and checks that its confirmed email exactly matches `ADMIN_EMAIL` before using the server-side service-role key.
+4. `supabase/config.toml` sets `verify_jwt = true` for `admin-members`, so Supabase rejects requests without a valid signed-in token before the function runs. Keep it enabled; the deploy workflow refuses to run if it is turned off. The function also validates the bearer token with Auth and checks that its confirmed email exactly matches `ADMIN_EMAIL` before using the server-side service-role key.
 5. Publish the repository's `admin/` directory with GitHub Pages and open `/admin/`. The console stores only the project URL and public key in that browser's local storage.
 
 ## Verify the approval service

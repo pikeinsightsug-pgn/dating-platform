@@ -174,6 +174,14 @@ test("launch pages", async (t) => {
       return res.status;
     }, SUPABASE);
     assert.equal(refused, 403);
+    // Nor can a member read the member list, and a signed-out caller is refused before any data is read.
+    const probes = await member.evaluate(async url => {
+      const { data } = await window.FYP.createClient().auth.getSession();
+      const call = (headers, action) => fetch(url + "/functions/v1/admin-members", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ action }) })
+        .then(async r => [r.status, (await r.json()).members === undefined]);
+      return { member: await call({ Authorization: "Bearer " + data.session.access_token }, "list"), anonymous: await call({}, "list") };
+    }, SUPABASE);
+    assert.deepEqual(probes, { member: [403, true], anonymous: [401, true] });
 
     const owner = await env.newPage();
     await owner.goto(env.base + "admin/");
@@ -181,6 +189,7 @@ test("launch pages", async (t) => {
     await owner.fill("#email", OWNER); await owner.fill("#password", "Owner-pass-123");
     await owner.click("#signin");
     await owner.waitForFunction(() => /Loaded \d+ profiles/.test(document.getElementById("status").textContent));
+    assert.match(await owner.textContent("#function-version"), /^Owner function admin-members is up to date \(version \d{4}-\d{2}-\d{2}\)\.$/);
     const card = name => owner.locator("#members article.member").filter({ has: owner.locator("h3", { hasText: name }) });
     assert.match(await card("Photogenic").textContent(), /Wants to meet: Everyone/);
     await card("Newbie").getByRole("button", { name: "Approve" }).click();

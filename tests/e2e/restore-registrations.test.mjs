@@ -94,6 +94,8 @@ test("restoring original registrations: archive, activate, link, approve, then m
     env.gateway.options.adminFunctionOnly = ["list", "approve", "reject"];
     const page = await ownerConsole(env);
     assert.match(await page.textContent("#recovery-status"), /Redeploy/);
+    assert.match(await page.textContent("#function-version"), /older version \(no version reported; this page expects \d{4}-\d{2}-\d{2}\)/);
+    assert.match(await page.textContent("#approved"), /incl\. test accounts/, "never presents test accounts as genuine members");
     assert.ok(await card(page, "Restora").count());
     env.gateway.options.adminFunctionOnly = null;
   });

@@ -6,7 +6,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fff8fb;color:#241b23;font:16px system-ui,sans-serif}.wrap{max-width:1050px;margin:auto;padding:24px}
 header,.panel,.member{background:#fff;border:1px solid #efdce5;border-radius:18px;padding:22px;margin-bottom:16px}header{background:#2b1723;color:white}
-h1{margin:0 0 8px}p{line-height:1.5}.muted{color:#766772}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{background:#fff;border:1px solid #efdce5;border-radius:15px;padding:18px}.num{font-size:30px;font-weight:900;color:#b32663}
+h1{margin:0 0 8px}p{line-height:1.5}.warning{color:#8f1e51;background:#fde8f0;border-radius:10px;padding:10px 12px;font-weight:650}.muted{color:#766772}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{background:#fff;border:1px solid #efdce5;border-radius:15px;padding:18px}.num{font-size:30px;font-weight:900;color:#b32663}
 input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;width:100%;margin:5px 0 12px}button{border:0;border-radius:999px;padding:11px 16px;font:inherit;font-weight:750;cursor:pointer;background:#b32663;color:white;margin:4px}button.secondary{background:white;color:#b32663;border:1px solid #e5cbd7}button.danger{background:#6e293c}#status{white-space:pre-wrap;color:#8f1e51}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.actions{display:flex;gap:5px;flex-wrap:wrap}.member h3{margin:0 0 6px}.badge{display:inline-block;border-radius:999px;background:#fff0f6;padding:5px 10px;font-size:13px}.bio{white-space:pre-wrap;overflow-wrap:anywhere}
 .admin-photo{display:block;width:min(100%,360px);max-height:320px;object-fit:cover;border-radius:14px;margin:12px 0;background:#fde8f0}.hidden{display:none!important}@media(max-width:650px){.grid{grid-template-columns:1fr}.wrap{padding:14px}}
 </style>
@@ -22,6 +22,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <button id="signin">Sign in</button><button class="secondary" id="signout">Sign out</button><p id="status" role="status"></p>
 </section>
 <section id="app" class="hidden">
+<p id="function-version" role="status" class="muted"></p>
 <div class="grid"><div class="metric">Profiles<div class="num" id="total">—</div><div class="muted" id="test-count"></div></div><div class="metric">Genuine approved<div class="num" id="approved">—</div><div class="muted">Excludes your test accounts</div></div><div class="metric">Pending review<div class="num" id="pending">—</div></div></div>
 <div class="panel" id="recovery"><h2>Safely link a verified existing profile</h2>
 <p class="muted">Use only after independently verifying the person against their original registration information. Select an existing email-confirmed Auth account; linking changes only the profile's user ID. It does not approve the profile. Never match by name or an unverified email.</p>
@@ -64,6 +65,8 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     if (!res.ok) throw Object.assign(Error(data.error || "Request failed"), { unsupported: data.error === "Unsupported action." });
     return data;
   }
+  // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
+  const EXPECTED_FUNCTION_VERSION = "2026-10-19";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
@@ -101,8 +104,13 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     const m = data.metrics;
     $("total").textContent = m.total;
     $("test-count").textContent = m.test_accounts != null ? m.test_accounts + " marked as test accounts" : "";
-    const genuine = m.genuine_approved != null ? m.genuine_approved : m.approved;
-    $("approved").textContent = genuine;
+    // An older function does not report genuine members separately; say so instead of counting test accounts.
+    $("approved").textContent = m.genuine_approved != null ? m.genuine_approved : m.approved + " (incl. test accounts)";
+    const current = data.function_version === EXPECTED_FUNCTION_VERSION;
+    $("function-version").textContent = current
+      ? "Owner function admin-members is up to date (version " + data.function_version + ")."
+      : "Owner function admin-members is an older version (" + (data.function_version || "no version reported") + "; this page expects " + EXPECTED_FUNCTION_VERSION + "). Redeploy it — see supabase/ADMIN_APPROVAL_SETUP.md.";
+    $("function-version").className = current ? "muted" : "warning";
     $("pending").textContent = m.pending;
     const accounts = accountResult.status === "fulfilled" ? accountResult.value.accounts || [] : [];
     $("recovery-status").textContent = accountResult.status === "rejected" ? notDeployed(accountResult.reason)

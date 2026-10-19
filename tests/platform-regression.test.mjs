@@ -291,3 +291,10 @@ test("every member-facing page shows a clickable contact email", async () => {
     assert.doesNotMatch(await read(path), /contact (the owner|support)/i, path + " still points to an unnamed contact");
   }
 });
+
+test("the owner console expects exactly the admin-members version in the repository", async () => {
+  const fn = (await read("supabase/functions/admin-members/index.ts")).match(/const FUNCTION_VERSION = "([^"]+)"/);
+  const page = (await read("admin/index.html")).match(/const EXPECTED_FUNCTION_VERSION = "([^"]+)"/);
+  assert.ok(fn && page, "both version markers exist");
+  assert.equal(page[1], fn[1], "bump both together when admin-members changes");
+});

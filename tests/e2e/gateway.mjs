@@ -295,8 +295,16 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
         const response = await options.adminFunction(new Request("http://edge" + req.url, {
           method: req.method, headers: req.headers, body: ["GET", "HEAD"].includes(req.method) ? undefined : raw
         }));
-        res.writeHead(response.status, Object.fromEntries(response.headers));
-        return res.end(Buffer.from(await response.arrayBuffer()));
+        let body = Buffer.from(await response.arrayBuffer());
+        if (options.adminFunctionOnly && action === "list" && response.ok) {
+          // The older deployment reported no version and no separate genuine/test-account counts.
+          const data = JSON.parse(body.toString());
+          delete data.function_version; delete data.metrics.genuine_approved; delete data.metrics.test_accounts;
+          body = Buffer.from(JSON.stringify(data));
+        }
+        const headers = Object.fromEntries(response.headers); delete headers["content-length"];
+        res.writeHead(response.status, headers);
+        return res.end(body);
       }
       send(res, 404, { message: "not found" });
     } catch (error) {

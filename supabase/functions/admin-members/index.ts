@@ -1,6 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isMemberPhotoPathOwnedByUser } from "../_shared/member-photo-path.js";
 
+// Bump when this function changes; the owner console compares it with the version it expects,
+// so the owner can see whether the deployed function is current without opening Supabase.
+const FUNCTION_VERSION = "2026-10-19";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
@@ -90,6 +94,7 @@ Deno.serve(async (req: Request) => {
       };
     }));
     return json({
+      function_version: FUNCTION_VERSION,
       members: identifiedRows,
       metrics: {
         total: rows.length,
