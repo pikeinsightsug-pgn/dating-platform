@@ -221,12 +221,15 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     photoButton.disabled = true; photoButton.textContent = "Uploading…";
     photoButton.setAttribute("aria-busy", "true");
     let stage = "prepare";
-    try {
+    // Every request is already limited to 60 seconds; this caps the whole sequence (including
+    // supabase-js sign-in bookkeeping, which is not a request) so the button always resets.
+    const PHOTO_OPERATION_TIMEOUT_MS = window.FYP_PHOTO_TIMEOUT_MS || 120000;
+    const save = async () => {
       photoMessage("Preparing your photo…");
       const prepared = croppedPhoto || await window.FYP.preparePhoto(file);
       stage = "upload";
       photoMessage("Uploading your private photo…");
-      const path = user.id + "/" + crypto.randomUUID() + "." + prepared.extension;
+      const path = user.id + "/" + window.FYP.randomId() + "." + prepared.extension;
       const { error: uploadError } = await db.storage.from("profile-photos")
         .upload(path, prepared.blob, { upsert: false, contentType: prepared.type });
       if (uploadError) throw uploadError;
@@ -245,9 +248,14 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       if (oldPath && oldPath !== path && oldPath.startsWith(user.id + "/"))
         await db.storage.from("profile-photos").remove([oldPath]);
       photoMessage("Your profile photo has been saved.");
+    };
+    try {
+      await window.FYP.withTimeout(save(), PHOTO_OPERATION_TIMEOUT_MS);
     } catch (error) {
       console.error("Profile photo request failed during " + stage + ":", error);
-      if (error && error.code === "REQUEST_TIMEOUT") {
+      if (error && error.code === "OPERATION_TIMEOUT") {
+        photoMessage("Saving your photo is taking too long. Check your connection, reload the page to see whether it was saved, and try again if needed.");
+      } else if (error && error.code === "REQUEST_TIMEOUT") {
         photoMessage("The photo request took longer than 60 seconds. Check your connection and try again.");
       } else if (stage === "prepare") {
         photoMessage((error && error.message) || "This photo could not be prepared. Choose a different photo.");

@@ -184,7 +184,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
 
   async function uploadPhoto(user, file) {
     const prepared = await window.FYP.preparePhoto(file);
-    const path = user.id + "/" + crypto.randomUUID() + "." + prepared.extension;
+    const path = user.id + "/" + window.FYP.randomId() + "." + prepared.extension;
     const { error } = await db.storage.from("profile-photos").upload(path, prepared.blob, { upsert: false, contentType: prepared.type });
     if (error) throw error;
     const saved = await window.FYP.saveOwnProfile(db, user, { profile_photo_url: path });

@@ -71,7 +71,7 @@
   // Opens the cropper for one file. Resolves with { blob, type, extension } or null if cancelled.
   async function openPhotoCropper(file) {
     let image;
-    try { image = await root.FYP.decodeImage(file); }
+    try { image = await root.FYP.withTimeout(root.FYP.decodeImage(file), 30000); }
     catch (error) { throw Object.assign(new Error(DECODE_MESSAGE), { code: "PHOTO_DECODE" }); }
     const width = image.naturalWidth || image.width;
     const height = image.naturalHeight || image.height;

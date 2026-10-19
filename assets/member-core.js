@@ -189,6 +189,29 @@
   }
 
   // Some Android pickers report an empty MIME type, so fall back to the file extension.
+  // A random identifier for new photo file names. crypto.randomUUID is missing on some older
+  // Android browsers and in-app browsers (such as Facebook's); fall back to getRandomValues.
+  function randomId() {
+    const c = root.crypto;
+    if (c && typeof c.randomUUID === "function") return c.randomUUID();
+    const bytes = new Uint8Array(16);
+    if (c && typeof c.getRandomValues === "function") c.getRandomValues(bytes);
+    else for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+    return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16) + "-" + hex.slice(16, 20) + "-" + hex.slice(20);
+  }
+
+  // Rejects with code OPERATION_TIMEOUT if the promise has not settled in time, so a step that is
+  // not an HTTP request (and so not covered by boundedFetch) can never leave a spinner running.
+  function withTimeout(promise, ms) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(Object.assign(new Error("The operation took too long."), { code: "OPERATION_TIMEOUT" })), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+  }
+
   function photoTypeOf(file) {
     const type = String((file && file.type) || "").toLowerCase();
     if (type) return type === "image/jpg" ? "image/jpeg" : type;
@@ -288,7 +311,7 @@
     SUPABASE_URL, CONTACT_EMAIL, SUPABASE_PUBLISHABLE_KEY, PHOTO_TYPES, PHOTO_MAX_BYTES, GENDERS, COUNTRIES, GOALS,
     GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
     saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor, showSignedIn,
-    authErrorMessage, photoTypeOf, preparePhoto, decodeImage, signedPhotoUrls, isMissingFunction, isNotApproved
+    authErrorMessage, photoTypeOf, preparePhoto, decodeImage, randomId, withTimeout, signedPhotoUrls, isMissingFunction, isNotApproved
   };
   root.FYP = api;
   if (typeof module === "object" && module.exports) module.exports = api;
