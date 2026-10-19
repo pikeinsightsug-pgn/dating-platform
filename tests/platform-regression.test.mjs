@@ -306,3 +306,9 @@ test("every public and member page is branded PikeConnection", async () => {
     assert.doesNotMatch(html, /Find ?(<span>)?Your(<\/span>)? ?Person/i, page + " still shows the old name");
   }
 });
+
+test("customer-facing pages no longer describe the site as a test or preview", async () => {
+  for (const page of ["index.html", "account.html", "login.html", "dashboard.html", "discover.html", "messages.html", "privacy.html"]) {
+    assert.doesNotMatch(await read(page), /testing phase|during testing|deploy preview|\bbeta\b/i, page);
+  }
+});
