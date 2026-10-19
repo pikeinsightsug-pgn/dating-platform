@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600" role="img" aria-label="Flag of Uganda">
+  <!-- Six equal stripes: black, yellow, red, black, yellow, red; white disc with a grey crowned
+       crane facing the hoist, right leg raised (stylised drawing). -->
+  <rect width="900" height="100" fill="#000000"/>
+  <rect y="100" width="900" height="100" fill="#FCDC04"/>
+  <rect y="200" width="900" height="100" fill="#D90000"/>
+  <rect y="300" width="900" height="100" fill="#000000"/>
+  <rect y="400" width="900" height="100" fill="#FCDC04"/>
+  <rect y="500" width="900" height="100" fill="#D90000"/>
+  <circle cx="450" cy="300" r="132" fill="#FFFFFF"/>
+  <g stroke-linecap="round" stroke-linejoin="round" transform="translate(450 300) scale(1.2) translate(-467 -299)">
+    <!-- legs: left leg standing, right leg raised and bent forward -->
+    <path d="M462 338 L470 392 L462 404" fill="none" stroke="#9CA6A4" stroke-width="6"/>
+    <path d="M478 336 L448 360 L470 372" fill="none" stroke="#9CA6A4" stroke-width="6"/>
+    <!-- tail -->
+    <path d="M500 312 C530 330 540 352 528 372 C512 352 500 340 486 334 Z" fill="#9CA6A4"/>
+    <!-- body and wing -->
+    <path d="M430 300 C440 276 482 272 506 296 C516 312 506 336 478 342 C452 346 432 330 430 300 Z" fill="#9CA6A4"/>
+    <path d="M456 300 C470 288 494 290 504 306 C490 312 470 314 456 300 Z" fill="#FFFFFF"/>
+    <path d="M470 312 C484 318 498 318 506 312" fill="none" stroke="#D90000" stroke-width="4"/>
+    <!-- neck -->
+    <path d="M436 300 C424 280 420 258 428 238" fill="none" stroke="#9CA6A4" stroke-width="13"/>
+    <!-- head, face patch, wattle and beak (facing the hoist, to the left) -->
+    <circle cx="428" cy="232" r="12" fill="#000000"/>
+    <path d="M426 236 C432 234 438 238 438 244 C432 246 426 242 426 236 Z" fill="#FFFFFF"/>
+    <path d="M420 242 C418 250 422 256 426 252 Z" fill="#D90000"/>
+    <path d="M417 230 L394 238 L417 236 Z" fill="#000000"/>
+    <!-- golden crown -->
+    <g stroke="#FCDC04" stroke-width="3" fill="none">
+      <path d="M430 220 L422 196"/><path d="M432 220 L432 194"/><path d="M434 221 L442 196"/>
+      <path d="M436 222 L450 202"/><path d="M428 221 L414 202"/>
+    </g>
+  </g>
+</svg>

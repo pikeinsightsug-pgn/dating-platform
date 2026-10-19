@@ -312,3 +312,15 @@ test("customer-facing pages no longer describe the site as a test or preview", a
     assert.doesNotMatch(await read(page), /testing phase|during testing|deploy preview|\bbeta\b/i, page);
   }
 });
+
+test("advert page: every JOIN NOW goes to the agreed address; no withdrawn offer; adults only", async () => {
+  const html = await read("promo/index.html");
+  const JOIN = "https://deploy-preview-15--pikeconnection.netlify.app/?utm_source=chatgpt.com";
+  const joins = [...html.matchAll(/<a\b[^>]*>(?:(?!<\/a>).)*JOIN NOW(?:(?!<\/a>).)*<\/a>/gs)].map(m => m[0]);
+  assert.ok(joins.length >= 4, "JOIN NOW buttons present");
+  for (const link of joins) assert.ok(link.includes(`href="${JOIN}"`), link);
+  assert.match(html, /ADULTS 18\+ ONLY/);
+  assert.doesNotMatch(html, /first 100|founding members? join free/i, "the free-founding-member offer was withdrawn");
+  assert.match(html, /<source src="pikeconnection-ad\.mp4" type="video\/mp4">/);
+  for (const asset of ["promo/pikeconnection-ad.mp4", "promo/pikeconnection-ad.webm", "promo/ad-poster.jpg"]) await readFile(new URL(asset, repo));
+});

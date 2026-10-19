@@ -1,0 +1,158 @@
+<!doctype html>
+<!-- Source of the 30-second PikeConnection vertical advert. render.mjs seeks this page frame by
+     frame (window.renderAt(seconds)) and encodes the frames with ffmpeg. Not a public page. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<title>PikeConnection advert composition</title>
+<style>
+:root{--purple:#2a0f3d;--burgundy:#7a1037;--pink:#e24a86;--gold:#e2bd72;--white:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:720px;height:1280px;overflow:hidden;background:var(--purple)}
+body{font-family:"Inter Display","Inter",system-ui,sans-serif;color:var(--white)}
+#stage{position:relative;width:720px;height:1280px;overflow:hidden}
+.bg{position:absolute;inset:0}
+#bg-night{background:radial-gradient(120% 80% at 50% 10%,#5b1a4e 0%,var(--purple) 55%,#14061f 100%)}
+#bg-sunset{background:linear-gradient(180deg,#ff9e5e 0%,#f2607a 38%,#9c2a6b 70%,#2a0f3d 100%);opacity:0}
+#particles{position:absolute;inset:0;pointer-events:none}
+.heart{position:absolute;color:var(--pink);opacity:.35;filter:blur(.3px)}
+.spark{position:absolute;width:4px;height:4px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px 3px #e2bd7288}
+.scene{position:absolute;inset:0;opacity:0}
+.card{position:absolute;left:50%;top:205px;width:620px;height:560px;margin-left:-310px;border-radius:30px;overflow:hidden;
+  box-shadow:0 30px 80px #0009,0 0 0 3px #e2bd7255}
+.card img{width:100%;height:100%;object-fit:cover;transform-origin:50% 40%}
+.card .tint{position:absolute;inset:0}
+.caption{position:absolute;left:50px;right:50px;top:830px;text-align:center}
+.caption h2{font-size:58px;line-height:1.08;font-weight:800;letter-spacing:-1px;text-shadow:0 4px 24px #0008}
+.caption h2 em{font-style:normal;color:var(--gold)}
+.caption p{margin-top:18px;font-size:28px;font-weight:500;color:#f6dbe7}
+.logo{position:absolute;left:0;right:0;top:70px;text-align:center;font-weight:800;font-size:34px;letter-spacing:.5px}
+.logo span{color:var(--pink)}
+.flags{position:absolute;left:0;right:0;top:300px;display:flex;justify-content:center;align-items:center;gap:30px}
+.flag{width:250px;border-radius:14px;overflow:hidden;box-shadow:0 18px 50px #0009;border:3px solid #ffffff22}
+.flag img{display:block;width:100%}
+.flag-name{text-align:center;margin-top:14px;font-size:30px;font-weight:700;letter-spacing:1px}
+.join-heart{font-size:64px;color:var(--pink);text-shadow:0 0 30px #e24a86aa}
+.brand{position:absolute;left:0;right:0;top:330px;text-align:center}
+.brand .big-heart{font-size:150px;line-height:1;color:var(--pink);text-shadow:0 0 60px #e24a86cc}
+.brand h1{margin-top:30px;font-size:60px;font-weight:900;letter-spacing:3px;
+  background:linear-gradient(90deg,#fff 0%,#ffd9e8 40%,var(--gold) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand .rule{width:220px;height:3px;margin:28px auto;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.brand h3{font-size:40px;font-weight:700;letter-spacing:6px;color:var(--gold)}
+.brand .mini-flags{display:flex;justify-content:center;gap:18px;margin-top:40px}
+.brand .mini-flags img{width:96px;border-radius:6px;box-shadow:0 8px 20px #0007}
+.cta{position:absolute;left:0;right:0;top:300px;text-align:center;padding:0 50px}
+.cta h2{font-size:52px;font-weight:800;line-height:1.1}
+.cta .button{display:inline-block;margin-top:60px;padding:34px 90px;border-radius:999px;font-size:52px;font-weight:900;letter-spacing:2px;
+  background:linear-gradient(135deg,#ff5f9c,#b3164f);box-shadow:0 20px 60px #e24a8688,0 0 0 4px #e2bd72aa}
+.cta .url{margin-top:56px;font-size:27px;font-weight:600;color:#ffe8f1;word-break:break-all;line-height:1.35}
+.cta .note{margin-top:34px;font-size:24px;color:var(--gold);font-weight:700;letter-spacing:2px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="bg" id="bg-night"></div>
+  <div class="bg" id="bg-sunset"></div>
+  <div id="particles"></div>
+  <div class="logo" id="logo">Pike<span>Connection</span> ❤</div>
+
+  <section class="scene" id="s1">
+    <div class="card"><img src="../../promo/couple-wide.jpg" alt=""></div>
+    <div class="caption"><h2>Looking for<br>someone <em>special?</em></h2></div>
+  </section>
+
+  <section class="scene" id="s2">
+    <div class="flags">
+      <div><div class="flag"><img src="../../promo/flag-uganda.svg" alt=""></div><div class="flag-name">UGANDA</div></div>
+      <div class="join-heart">❤</div>
+      <div><div class="flag"><img src="../../promo/flag-botswana.svg" alt=""></div><div class="flag-name">BOTSWANA</div></div>
+    </div>
+    <div class="caption" style="top:720px"><h2>Two Countries.<br><em>One Beautiful Connection.</em></h2></div>
+  </section>
+
+  <section class="scene" id="s3">
+    <div class="card"><img src="../../promo/couple-close.jpg" alt=""></div>
+    <div class="caption"><h2>Meet New People.</h2><p style="font-size:38px;font-weight:700;color:#fff">Discover <span style="color:var(--gold)">Meaningful Relationships.</span></p></div>
+  </section>
+
+  <section class="scene" id="s4">
+    <div class="card"><img src="../../promo/couple-smile.jpg" alt=""><div class="tint" style="background:linear-gradient(180deg,#ff9e5e33,#f2607a22 50%,#2a0f3d55)"></div></div>
+    <div class="caption"><h2>Your Love Story<br>Could <em>Begin Here!</em></h2></div>
+  </section>
+
+  <section class="scene" id="s5">
+    <div class="brand">
+      <div class="big-heart">❤</div>
+      <h1>PIKECONNECTION</h1>
+      <div class="rule"></div>
+      <h3>LOVE WITHOUT BORDERS</h3>
+      <div class="mini-flags"><img src="../../promo/flag-uganda.svg" alt=""><img src="../../promo/flag-botswana.svg" alt=""></div>
+    </div>
+  </section>
+
+  <section class="scene" id="s6">
+    <div class="cta">
+      <h2>Uganda meets Botswana.<br><em style="font-style:normal;color:var(--gold)">Your love story starts here.</em></h2>
+      <div class="button" id="join">JOIN NOW ❤</div>
+      <div class="url" id="url"></div>
+      <div class="note">ADULTS 18+ ONLY</div>
+    </div>
+  </section>
+</div>
+<script>
+// The address shown at the end of the video; render.mjs passes it in the page URL (?url=...).
+document.getElementById("url").textContent = new URLSearchParams(location.search).get("url") || "pikeconnection.netlify.app";
+
+const scenes = [ // [id, start, end] in seconds
+  ["s1", 0, 5], ["s2", 5, 10], ["s3", 10, 16], ["s4", 16, 22], ["s5", 22, 26], ["s6", 26, 30]
+];
+const FADE = 0.6;
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const ease = x => 1 - Math.pow(1 - clamp(x), 3);
+
+// Deterministic floating hearts and gold sparkles (same frames on every render).
+const particles = document.getElementById("particles");
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const floaters = Array.from({ length: 22 }, (_, i) => {
+  const heart = i % 2 === 0;
+  const node = document.createElement("div");
+  node.className = heart ? "heart" : "spark";
+  if (heart) { node.textContent = "❤"; node.style.fontSize = (18 + rnd() * 34) + "px"; }
+  particles.append(node);
+  return { node, x: rnd() * 720, y: rnd() * 1280, speed: 18 + rnd() * 40, sway: 10 + rnd() * 30, phase: rnd() * 6.28 };
+});
+
+window.renderAt = t => {
+  for (const [id, start, end] of scenes) {
+    const node = document.getElementById(id);
+    const opacity = Math.min(clamp((t - start) / FADE), clamp((end - t) / FADE + (end === 30 ? 1 : 0)));
+    node.style.opacity = opacity;
+    node.style.visibility = opacity > 0 ? "visible" : "hidden";
+    const local = t - start, length = end - start;
+    const img = node.querySelector(".card img");
+    if (img) img.style.transform = `scale(${1.04 + 0.1 * (local / length)}) translateY(${-8 * (local / length)}px)`;
+    const caption = node.querySelector(".caption, .cta, .brand, .flags");
+    if (caption) {
+      const k = ease((local - 0.25) / 0.8);
+      caption.style.transform = `translateY(${(1 - k) * 40}px)`;
+      caption.style.opacity = k;
+    }
+  }
+  // Sunset warmth for the romantic scene.
+  document.getElementById("bg-sunset").style.opacity = Math.min(clamp((t - 15.6) / 1.2), clamp((22.4 - t) / 1.2)) * 0.9;
+  // Brand logo stays small on top except during the big brand and call-to-action scenes.
+  document.getElementById("logo").style.opacity = 1 - clamp((t - 21.6) / 0.6);
+  // Join button pulse.
+  const pulse = 1 + 0.045 * Math.sin((t - 26) * 5.2);
+  document.getElementById("join").style.transform = `scale(${t > 26 ? pulse : 1})`;
+  for (const f of floaters) {
+    const y = ((f.y - f.speed * t) % 1340 + 1340) % 1340 - 30;
+    const x = f.x + Math.sin(t * 0.9 + f.phase) * f.sway;
+    f.node.style.transform = `translate(${x}px, ${y}px)`;
+  }
+};
+window.renderAt(0);
+</script>
+</body>
+</html>

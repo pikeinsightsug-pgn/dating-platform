@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 24" width="900" height="600" role="img" aria-label="Flag of Botswana">
+  <!-- Proportions 2:3; stripes 9 light blue, 1 white, 4 black, 1 white, 9 light blue (of 24). -->
+  <rect width="36" height="24" fill="#75AADB"/>
+  <rect y="9" width="36" height="6" fill="#FFFFFF"/>
+  <rect y="10" width="36" height="4" fill="#000000"/>
+</svg>
