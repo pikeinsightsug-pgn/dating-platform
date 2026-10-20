@@ -14,7 +14,7 @@ Help the owner grow a genuine 18+ dating community, organize registration data, 
 - Keep the public website free of private member records and admin credentials.
 
 ## Current launch goal
-Reach the first 100 genuine members through the free founding-member launch.
+Reach the first 100 genuine, approved members during the testing pilot. No payment is requested during testing.
 
 ## Agent modules
 1. Registration Monitor

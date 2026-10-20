@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Log in | Find Your Person</title>
+<meta name="description" content="Log in to Find Your Person with your email address and password.">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="index.html">Find<span>Your</span>Person ❤️</a>
+  <div class="header-actions"><a class="btn small" href="account.html">Join now</a></div>
+</div></header>
+<main class="form-page">
+  <section class="card" id="login-view" aria-labelledby="login-title">
+    <h1 id="login-title">Welcome back</h1>
+    <p class="muted">Log in with the email address and password you registered with.</p>
+    <p id="signed-out" class="notice ok hidden" role="status">You have been logged out safely.</p>
+    <p id="password-updated" class="notice ok hidden" role="status">Your password has been updated. Log in with your new password.</p>
+    <form id="login-form" class="form-grid" novalidate>
+      <div class="field"><label for="login-email">Email address</label><input id="login-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email"><p class="error" id="login-email-error"></p></div>
+      <div class="field"><label for="login-password">Password</label><input id="login-password" name="password" type="password" required autocomplete="current-password"><p class="error" id="login-password-error"></p></div>
+      <button class="btn" type="submit">Log in</button>
+    </form>
+    <p id="status" class="status notice" role="status" aria-live="polite"></p>
+    <button id="resend-confirmation" class="btn secondary hidden" type="button">Resend confirmation email</button>
+    <p style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:18px">
+      <button class="link-button" type="button" data-view="forgot">Forgot your password?</button>
+      <a href="account.html" style="font-weight:700">New here? Create an account</a>
+    </p>
+  </section>
+
+  <section class="card hidden" id="forgot-view" aria-labelledby="forgot-title">
+    <h1 id="forgot-title">Reset your password</h1>
+    <p class="muted">Enter your email address. If an account matches it, we will email you a link to choose a new password.</p>
+    <form id="forgot-form" class="form-grid" novalidate>
+      <div class="field"><label for="forgot-email">Email address</label><input id="forgot-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email"><p class="error" id="forgot-email-error"></p></div>
+      <button class="btn" type="submit">Send reset link</button>
+    </form>
+    <p id="forgot-status" class="status notice" role="status" aria-live="polite"></p>
+    <p><button class="link-button" type="button" data-view="login">← Back to log in</button></p>
+  </section>
+  <p class="help" style="margin-top:20px">Need help? Email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a> · <a href="privacy.html">Privacy notice</a></p>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="assets/member-core.js"></script>
+<script>
+(() => {
+  const status = document.getElementById("status");
+  const forgotStatus = document.getElementById("forgot-status");
+  const resend = document.getElementById("resend-confirmation");
+  const db = window.FYP && window.FYP.createClient();
+  if (!db) { status.textContent = "The login service could not load. Check your connection and refresh the page."; return; }
+  let busy = false;
+  const say = (node, message) => { node.textContent = message; };
+  function show(view) {
+    document.getElementById("login-view").classList.toggle("hidden", view !== "login");
+    document.getElementById("forgot-view").classList.toggle("hidden", view !== "forgot");
+    say(status, ""); say(forgotStatus, "");
+    const focus = document.querySelector("#" + view + "-view input");
+    if (focus) focus.focus();
+  }
+  function setBusy(value) {
+    busy = value;
+    document.querySelectorAll("form button[type=submit], #resend-confirmation").forEach(button => { button.disabled = value; });
+  }
+  function fieldError(input, message) {
+    input.setAttribute("aria-invalid", message ? "true" : "false");
+    const target = document.getElementById(input.id + "-error");
+    if (target) target.textContent = message || "";
+    return !message;
+  }
+  function validEmail(input) {
+    const value = input.value.trim();
+    return fieldError(input, !value ? "Enter your email address." : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value) ? "Enter a valid email address, like name@example.com." : "");
+  }
+  function callbackUrl(mode) {
+    const url = new URL("account.html", window.location.href);
+    if (mode) url.search = "?mode=" + encodeURIComponent(mode);
+    return url.toString();
+  }
+  async function goToMemberArea(user) {
+    say(status, "Signed in. Loading your profile…");
+    // Reuses the linked profile (or creates the pending one from this person's own signup
+    // details). Never guesses a legacy registration, never sends an existing member back
+    // to the registration form.
+    const profile = await window.FYP.ensureOwnProfile(db, user);
+    window.location.replace(window.FYP.destinationFor(profile));
+  }
+
+  document.querySelectorAll("[data-view]").forEach(button => button.addEventListener("click", () => {
+    if (button.dataset.view === "forgot") document.getElementById("forgot-email").value = document.getElementById("login-email").value;
+    show(button.dataset.view);
+  }));
+
+  document.getElementById("login-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (busy) return;
+    const email = document.getElementById("login-email");
+    const password = document.getElementById("login-password");
+    const ok = [validEmail(email), fieldError(password, password.value ? "" : "Enter your password.")].every(Boolean);
+    if (!ok) { say(status, ""); return; }
+    setBusy(true); say(status, "Signing in…");
+    try {
+      const { data, error } = await db.auth.signInWithPassword({ email: email.value.trim(), password: password.value });
+      if (error) throw error;
+      resend.classList.add("hidden");
+      await goToMemberArea(data.user);
+    } catch (error) {
+      const message = error && error.cause ? error.message : window.FYP.authErrorMessage(error, "login");
+      resend.classList.toggle("hidden", !/confirm your email/i.test(message));
+      say(status, message);
+    } finally { setBusy(false); }
+  });
+
+  resend.addEventListener("click", async () => {
+    const email = document.getElementById("login-email");
+    if (busy || !validEmail(email)) return;
+    setBusy(true); say(status, "Sending a new confirmation email…");
+    try {
+      const { error } = await db.auth.resend({ type: "signup", email: email.value.trim(), options: { emailRedirectTo: callbackUrl("") } });
+      if (error) throw error;
+      say(status, "If this email has an unconfirmed account, a new confirmation link has been sent. Check your inbox and spam folder.");
+    } catch (error) { say(status, window.FYP.authErrorMessage(error, "login")); }
+    finally { setBusy(false); }
+  });
+
+  document.getElementById("forgot-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const forgotForm = event.currentTarget; // currentTarget is cleared once the handler awaits
+    const email = document.getElementById("forgot-email");
+    if (busy || !validEmail(email)) return;
+    setBusy(true); say(forgotStatus, "Sending reset instructions…");
+    try {
+      const { error } = await db.auth.resetPasswordForEmail(email.value.trim(), { redirectTo: callbackUrl("recovery") });
+      if (error) throw error;
+      // Same answer whether or not the email is registered, so accounts cannot be discovered.
+      say(forgotStatus, "If an account matches that email, we have sent a link to choose a new password. It may take a few minutes; check your spam folder too.");
+      forgotForm.reset();
+    } catch (error) {
+      say(forgotStatus, /rate|too many/i.test(String(error && error.message)) ? "Too many requests. Please wait a few minutes and try again." : "We could not send reset instructions right now. Please try again later.");
+    } finally { setBusy(false); }
+  });
+
+  (async () => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("signedout")) document.getElementById("signed-out").classList.remove("hidden");
+    if (params.get("reset")) document.getElementById("password-updated").classList.remove("hidden");
+    if (location.hash === "#forgot") show("forgot");
+    const { data, error } = await db.auth.getSession();
+    if (error) { say(status, "Could not restore your session. Please log in again."); return; }
+    // Already signed in on this device: go straight to the member area.
+    if (data.session && data.session.user && !params.get("signedout")) await goToMemberArea(data.session.user);
+  })().catch(error => say(status, (error && error.message) || "The login service is temporarily unavailable. Refresh and try again."));
+})();
+</script>
+</body>
+</html>

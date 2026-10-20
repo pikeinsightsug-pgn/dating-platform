@@ -17,35 +17,40 @@ input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #e7
 button,.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:13px 19px;font:inherit;font-weight:800;cursor:pointer;background:#b32663;color:#fff;text-decoration:none}
 button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}
 .notice{padding:13px 15px;background:#fde8f0;border-radius:12px;color:#8f1e51;line-height:1.5}
+.help{font-size:14px;color:#75666e;line-height:1.5}.help a,#recovery-panel a{color:#a21f59;font-weight:700;overflow-wrap:anywhere}
 #status{white-space:pre-wrap;overflow-wrap:anywhere;min-height:1.4em}.hidden{display:none!important}
 @media(max-width:480px){.panel{padding:18px}.top button{width:100%}.wrap{padding:16px 14px 40px}}
 
 .photo-preview{width:min(100%,340px);aspect-ratio:4/3;object-fit:cover;border-radius:16px;background:#fde8f0;display:block;margin:12px 0}
 .photo-actions{display:grid;gap:9px;margin:18px 0;padding:18px;border:1px solid #f0dfe7;border-radius:16px;background:#fffafd}
-.photo-actions input[type=file]{margin-top:5px}.photo-note{font-size:13px;color:#75666e;margin:0}
+.photo-actions input[type=file]{margin-top:5px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}.photo-note{font-size:13px;color:#75666e;margin:0}
+.signed-in{margin:10px 0 0;font-size:14px;color:#75666e;font-weight:600}
 </style>
 </head>
 <body>
 <main class="wrap">
   <header class="top">
     <div class="brand">Find<span>Your</span>Person ❤️</div>
-    <nav class="member-nav" aria-label="Member dashboard"><a id="discover-nav" class="btn" href="discover.html">Discover Members</a><a id="profile-nav" class="btn secondary" href="#profile-panel">My Profile</a><a id="preferences-nav" class="btn secondary" href="#preferences">Preferences</a><button id="signout" class="secondary" type="button">Log out</button></nav>
+    <nav class="member-nav" aria-label="Member dashboard"><a id="discover-nav" class="btn" href="discover.html">Discover Members</a><a id="messages-nav" class="btn secondary" href="messages.html">Messages</a><a id="profile-nav" class="btn secondary" href="#profile-panel">My Profile</a><a id="preferences-nav" class="btn secondary" href="#preferences">Preferences</a><button id="signout" class="secondary" type="button">Log out</button></nav>
   </header>
+  <p id="signed-in" class="signed-in hidden" role="status"></p>
   <section id="profile-panel" class="panel hidden">
-    <div class="notice" id="approval-guidance"><strong>How approval works:</strong> The platform owner reviews member profiles and linked accounts manually. Until your profile is approved, it stays private and you cannot browse other members. Approval is never automatic. Messaging is not currently enabled.</div>
+    <div class="notice" id="approval-guidance"><strong>How approval works:</strong> The platform owner reviews member profiles and linked accounts manually. Until your profile is approved, it stays private and you cannot browse or message other members. Approval is never automatic. No payment is requested.</div>
     <h1>My profile</h1>
     <p id="approval-status" role="status" aria-live="polite"></p>
-    <section class="photo-actions" aria-labelledby="photo-title"><h2 id="photo-title">Profile photo</h2><p class="photo-note">Choose a JPEG, PNG or WebP photo up to 5 MB. Photos are private and shown only to approved members.</p><img id="photo-preview" class="photo-preview hidden" alt="Preview of your profile photo"><p id="photo-empty" class="photo-note">No profile photo uploaded yet.</p><label for="photo-file">Upload or replace photo<input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp"></label><button id="upload-photo" type="button" disabled>Upload photo</button><p id="photo-status" class="photo-note" role="status" aria-live="polite"></p></section>
+    <section class="photo-actions" aria-labelledby="photo-title"><h2 id="photo-title">Profile photo</h2><p class="photo-note">Choose a clear photo of yourself, then zoom and position it in the frame. JPEG, PNG and WebP photos from phones and computers are accepted and resized automatically. Photos are private and shown only to approved members.</p><img id="photo-preview" class="photo-preview hidden" alt="Preview of your profile photo"><p id="photo-empty" class="photo-note">No profile photo uploaded yet.</p><label for="photo-file">Upload or replace photo<input id="photo-file" type="file" accept="image/*"></label><button id="upload-photo" type="button" disabled>Upload photo</button><p id="photo-status" class="photo-note" role="status" aria-live="polite"></p></section>
     <p id="status" role="status" aria-live="polite"></p>
     <form id="profile-form" class="grid">
-      <label>First name<input name="first_name" required maxlength="80" autocomplete="given-name"></label>
+      <label>First name or display name<input name="first_name" required maxlength="80" autocomplete="given-name"></label>
       <label>Age<input name="age" type="number" required min="18" max="120" inputmode="numeric"></label>
       <label>Gender<select name="gender" required><option value="">Choose one</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option></select></label>
       <label>Country<select name="location" required><option value="">Choose country</option><option>Uganda</option><option>Botswana</option></select></label>
       <label>City or town<input name="city" required maxlength="100" autocomplete="address-level2"></label>
       <h2 id="preferences">Your preferences</h2>
-      <p class="photo-note">Your relationship goal and interests may appear to approved members. Partner preferences remain private.</p>
-      <label>Relationship goal<select name="relationship_goal" required><option value="">Choose one</option><option>Serious relationship</option><option>Marriage</option><option>Friendship</option><option>Exploring connections</option></select></label>
+      <p class="photo-note">Your relationship goal, biography and interests may appear to approved members. Who you want to meet, your preferred age range and partner qualities stay private and are used to suggest people to you.</p>
+      <label>I would like to meet<select name="seeking_gender"><option value="">Not set</option><option>Men</option><option>Women</option><option>Everyone</option></select></label>
+      <label>Relationship goal<select name="relationship_goal" required><option value="">Choose one</option><option value="Serious relationship">Serious relationship</option><option value="Marriage">Marriage-oriented relationship</option><option value="Friendship">Friendship</option><option value="Exploring connections">Still exploring</option></select></label>
+      <div class="pair"><label>Preferred partner age from<input name="preferred_age_min" type="number" min="18" max="120" inputmode="numeric"></label><label>to<input name="preferred_age_max" type="number" min="18" max="120" inputmode="numeric"></label></div>
       <label>Short biography<textarea name="bio" rows="4" required maxlength="500"></textarea></label>
       <label>Interests<input name="interests" maxlength="300" placeholder="Music, travel, cooking…"></label>
       <label>What qualities do you value in a partner?<textarea name="partner_preference" rows="3" maxlength="500"></textarea></label>
@@ -55,62 +60,31 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   <section id="recovery-panel" class="panel hidden" role="status" aria-live="polite">
     <h1>Account recovery needed</h1>
     <p id="recovery-message">You are signed in, but this account does not have a linked member profile. We have not created a profile or linked an existing registration automatically.</p>
-    <p>If you already registered, contact the platform owner to verify your original registration and account ownership. Do not register again while this is being checked.</p>
+    <p id="recovery-account"></p>
+    <p>If you registered through our earlier Google Form, email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a> with the email address shown above. We will verify your original registration and link it to this account. Do not register again while this is being checked.</p>
   </section>
   <p id="loading" role="status" aria-live="polite">Checking your private account…</p>
+  <p class="help">Need help? Email us at <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a></p>
   <p><a class="btn secondary" href="index.html">Back to homepage</a></p>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="assets/member-core.js"></script>
+<script src="assets/photo-cropper.js"></script>
 <script>
 (() => {
-  const SUPABASE_URL = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_vzGFbhe7X3CpobiHZAk9Lw_2V3O-F3V";
   const panel = document.getElementById("profile-panel");
   const loading = document.getElementById("loading");
   const status = document.getElementById("status");
   const form = document.getElementById("profile-form");
   const save = document.getElementById("save-profile");
   const signout = document.getElementById("signout");
-  if (!window.supabase) { loading.textContent = "Account service could not load. Refresh and try again."; return; }
-  const PHOTO_REQUEST_TIMEOUT_MS = 60000;
-  function photoRequestFetch(input, init = {}) {
-    // Bound all Supabase HTTP requests so an Auth token refresh cannot leave photo
-    // uploads waiting indefinitely before the Storage request begins.
-    const requestUrl = typeof input === "string" ? input : input.url;
-    const url = new URL(requestUrl, SUPABASE_URL);
-    if (url.origin !== SUPABASE_URL) return fetch(input, init);
-
-    const controller = new AbortController();
-    const requestSignal = init.signal ||
-      (typeof Request !== "undefined" && input instanceof Request ? input.signal : null);
-    const abortFromCaller = () => controller.abort();
-    if (requestSignal) {
-      if (requestSignal.aborted) controller.abort();
-      else requestSignal.addEventListener("abort", abortFromCaller, { once: true });
-    }
-    const timeout = setTimeout(() => controller.abort(), PHOTO_REQUEST_TIMEOUT_MS);
-    return fetch(input, { ...init, signal: controller.signal })
-      .catch(error => {
-        if (controller.signal.aborted && !(requestSignal && requestSignal.aborted)) {
-          const timeoutError = new Error("The Supabase request timed out.");
-          timeoutError.code = "PHOTO_REQUEST_TIMEOUT";
-          throw timeoutError;
-        }
-        throw error;
-      })
-      .finally(() => {
-        clearTimeout(timeout);
-        if (requestSignal) requestSignal.removeEventListener("abort", abortFromCaller);
-      });
-  }
-  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    global: { fetch: photoRequestFetch }
-  });
+  const db = window.FYP && window.FYP.createClient();
+  if (!db) { loading.textContent = "Account service could not load. Refresh and try again."; return; }
   let user = null;
   let memberProfile = null;
   function setStatus(message) { status.textContent = message; }
   function valuesFor(row) {
-    ["first_name","age","gender","location","city","relationship_goal","bio","interests","partner_preference"].forEach(name => {
+    ["first_name","age","gender","location","city","relationship_goal","bio","interests","partner_preference","seeking_gender","preferred_age_min","preferred_age_max"].forEach(name => {
       const field = form.elements.namedItem(name);
       if (field) field.value = row && row[name] != null ? String(row[name]) : "";
     });
@@ -127,84 +101,72 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       relationship_goal: String(values.get("relationship_goal")),
       bio: String(values.get("bio")).trim(),
       interests: String(values.get("interests") || "").trim(),
-      partner_preference: String(values.get("partner_preference") || "").trim()
+      partner_preference: String(values.get("partner_preference") || "").trim(),
+      seeking_gender: String(values.get("seeking_gender") || "") || null,
+      preferred_age_min: values.get("preferred_age_min") ? Number(values.get("preferred_age_min")) : null,
+      preferred_age_max: values.get("preferred_age_max") ? Number(values.get("preferred_age_max")) : null
     };
   }
   function validPayload(p) {
     return p.first_name && Number.isInteger(p.age) && p.age >= 18 && p.age <= 120 &&
-      ["Woman","Man","Non-binary","Prefer not to say"].includes(p.gender) &&
-      ["Uganda","Botswana"].includes(p.location) && p.city &&
-      ["Serious relationship","Marriage","Friendship","Exploring connections"].includes(p.relationship_goal) &&
-      p.bio && p.bio.length <= 500 && p.interests.length <= 300 && p.partner_preference.length <= 500;
+      window.FYP.GENDERS.includes(p.gender) && window.FYP.COUNTRIES.includes(p.location) && p.city &&
+      window.FYP.GOALS.includes(p.relationship_goal) &&
+      p.bio && p.bio.length <= 500 && p.interests.length <= 300 && p.partner_preference.length <= 500 &&
+      (p.preferred_age_min == null) === (p.preferred_age_max == null) &&
+      (p.preferred_age_min == null || (Number.isInteger(p.preferred_age_min) && Number.isInteger(p.preferred_age_max) &&
+        p.preferred_age_min >= 18 && p.preferred_age_max <= 120 && p.preferred_age_min <= p.preferred_age_max));
   }
-  function profileFromMetadata(meta) {
-    if (!meta) return null;
-    return {
-      first_name: meta.first_name || "",
-      age: meta.age || "",
-      gender: meta.gender || "",
-      location: meta.location || "",
-      city: meta.city || "",
-      relationship_goal: meta.relationship_goal || "",
-      bio: meta.bio || "",
-      interests: meta.interests || "",
-      partner_preference: meta.partner_preference || ""
-    };
-  }
-  async function loadProfile() {
-    const { data, error } = await db.from("members")
-      .select("id,user_id,first_name,age,gender,location,city,relationship_goal,bio,interests,partner_preference,profile_photo_url,approved")
-      .eq("user_id", user.id).limit(1);
-    if (error) throw new Error("Your private profile could not be loaded. The administrator may need to finish the Supabase setup.");
-    if (data && data.length) return data[0];
-    return null;
+  function showApproval(profile) {
+    document.getElementById("approval-status").textContent = profile.approved
+      ? "Your profile is approved. Use Discover Members above to browse other approved members and send private messages."
+      : "Your profile is awaiting manual review by the platform owner. It stays private until approved; Discover Members and Messages open after approval.";
   }
   async function initialize() {
     const { data, error } = await db.auth.getSession();
     if (error) throw new Error("Your session could not be restored. Please sign in again.");
     user = data.session && data.session.user;
-    if (!user) { window.location.replace("account.html?mode=login"); return; }
-    const profile = await loadProfile();
-    if (profile) {
-      memberProfile = profile;
-      valuesFor(profile);
-      loadPhotoPreview(profile.profile_photo_url);
-      document.getElementById("approval-status").textContent = profile.approved
-        ? "Your profile is approved. Use Discover Members above to browse other approved members."
-        : "Your profile is awaiting manual review by the platform owner. It stays private until approved; Discover Members opens after approval.";
-      save.textContent = "Save profile";
-    } else {
+    if (!user) { window.location.replace("login.html"); return; }
+    const profile = await window.FYP.ensureOwnProfile(db, user);
+    if (!profile) {
       loading.classList.add("hidden");
       panel.classList.add("hidden");
       document.getElementById("recovery-panel").classList.remove("hidden");
-      document.getElementById("discover-nav").classList.add("hidden");
-      document.getElementById("profile-nav").classList.add("hidden");
-      document.getElementById("preferences-nav").classList.add("hidden");
+      document.getElementById("recovery-account").textContent = "Signed in as: " + (user.email || "your account");
+      ["discover-nav", "messages-nav", "profile-nav", "preferences-nav"].forEach(id => document.getElementById(id).classList.add("hidden"));
       return;
     }
+    memberProfile = profile;
+    valuesFor(profile);
+    showApproval(profile);
+    window.FYP.showSignedIn(profile, user);
+    loadPhotoPreview(profile.profile_photo_url);
+    try {
+      if (sessionStorage.getItem("fyp_photo_notice")) {
+        sessionStorage.removeItem("fyp_photo_notice");
+        document.getElementById("photo-status").textContent = "The photo you chose during registration could not be saved. Please choose it again below.";
+      }
+    } catch (error) { /* storage unavailable: nothing to show */ }
     loading.classList.add("hidden");
     panel.classList.remove("hidden");
+    if (location.hash) { const target = document.querySelector(location.hash); if (target) target.scrollIntoView(); }
   }
   form.addEventListener("submit", async event => {
     event.preventDefault();
     if (!user || !memberProfile || save.disabled || !form.reportValidity()) return;
     const payload = profilePayload();
-    if (!validPayload(payload)) { setStatus("Check the required fields and confirm that you are at least 18."); return; }
+    if (!validPayload(payload)) { setStatus("Check the required fields, confirm that you are at least 18, and give both ends of the preferred age range (lowest first)."); return; }
     save.disabled = true; save.textContent = "Saving…"; setStatus("Saving your private profile…");
     try {
-      const result = await db.from("members")
-        .update(payload).eq("user_id", user.id).select("id").maybeSingle();
+      const result = await window.FYP.saveOwnProfile(db, user, payload);
       if (result.error) throw result.error;
       if (!result.data) throw new Error("No profile was changed.");
       setStatus("Your private profile has been saved. Approval status can only be changed by an administrator.");
-      const refreshed = await loadProfile();
-      if (refreshed) { memberProfile = refreshed;
-        document.getElementById("approval-status").textContent = refreshed.approved
-          ? "Your profile is approved. Use Discover Members above to browse other approved members."
-          : "Your profile is awaiting manual review by the platform owner. It stays private until approved; Discover Members opens after approval.";
-      }
+      const refreshed = await window.FYP.readOwnProfile(db, user);
+      if (refreshed) { memberProfile = refreshed; showApproval(refreshed); }
     } catch (error) {
-      setStatus("Could not save your profile. Check your connection and try again. If the problem continues, contact support.");
+      setStatus(error && error.code === "REQUEST_TIMEOUT"
+        ? "Saving took too long. Check your connection and try again."
+        : "Could not save your profile. Check your connection and try again. If the problem continues, email pikeinsightsug@gmail.com.");
     } finally { save.disabled = false; save.textContent = "Save profile"; }
   });
 
@@ -221,38 +183,55 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     if (!path || !user || !path.startsWith(user.id + "/")) {
       image.classList.add("hidden"); empty.classList.remove("hidden"); return;
     }
-    const { data, error } = await db.storage.from("profile-photos").createSignedUrl(path, 300);
-    if (error || !data || !data.signedUrl) { image.classList.add("hidden"); empty.classList.remove("hidden"); return; }
-    image.src = data.signedUrl; image.classList.remove("hidden"); empty.classList.add("hidden");
+    const urls = await window.FYP.signedPhotoUrls(db, [path]);
+    if (!urls.get(path)) { image.classList.add("hidden"); empty.classList.remove("hidden"); return; }
+    image.src = urls.get(path); image.classList.remove("hidden"); empty.classList.add("hidden");
   }
-  photoInput.addEventListener("change", () => {
+  // The member crops the chosen photo first; the upload sends that cropped JPEG.
+  let croppedPhoto = null;
+  function photoReady() { return Boolean(croppedPhoto || (photoInput.files && photoInput.files[0])); }
+  photoInput.addEventListener("change", async () => {
     const file = photoInput.files && photoInput.files[0];
-    photoButton.disabled = photoUploading || !file || !memberProfile;
+    croppedPhoto = null;
+    photoButton.disabled = true;
     photoMessage(file && !memberProfile ? "Save your profile before uploading a photo." : "");
-    if (!file) return;
-    if (!["image/jpeg","image/png","image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
-      photoInput.value = ""; photoButton.disabled = true;
-      photoMessage("Choose a JPEG, PNG or WebP image no larger than 5 MB."); return;
+    if (!file || !memberProfile) return;
+    if (!window.FYP.photoTypeOf(file).startsWith("image/")) {
+      photoInput.value = "";
+      photoMessage("Choose a photo in JPEG, PNG or WebP format."); return;
+    }
+    if (typeof window.FYP.openPhotoCropper === "function") {
+      photoMessage("Opening your photo…");
+      try { croppedPhoto = await window.FYP.openPhotoCropper(file); }
+      catch (error) { photoInput.value = ""; photoMessage((error && error.message) || "This photo could not be opened. Choose a different photo."); return; }
+      if (!croppedPhoto) { photoInput.value = ""; photoMessage("Photo not changed."); return; }
     }
     if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
-    previewObjectUrl = URL.createObjectURL(file);
+    previewObjectUrl = URL.createObjectURL(croppedPhoto ? croppedPhoto.blob : file);
     const image = document.getElementById("photo-preview");
     image.src = previewObjectUrl; image.classList.remove("hidden");
     document.getElementById("photo-empty").classList.add("hidden");
+    photoButton.disabled = photoUploading;
+    photoMessage("This is your new photo. Press “Upload photo” to save it, or choose another photo.");
   });
   photoButton.addEventListener("click", async () => {
     const file = photoInput.files && photoInput.files[0];
-    if (!file || !memberProfile || photoButton.disabled || photoUploading) return;
+    if (!photoReady() || !memberProfile || photoButton.disabled || photoUploading) return;
     photoUploading = true; photoInput.disabled = true;
     photoButton.disabled = true; photoButton.textContent = "Uploading…";
     photoButton.setAttribute("aria-busy", "true");
-    photoMessage("Uploading your private photo…");
-    const extension = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
-    const path = user.id + "/" + crypto.randomUUID() + "." + extension;
-    let stage = "upload";
-    try {
+    let stage = "prepare";
+    // Every request is already limited to 60 seconds; this caps the whole sequence (including
+    // supabase-js sign-in bookkeeping, which is not a request) so the button always resets.
+    const PHOTO_OPERATION_TIMEOUT_MS = window.FYP_PHOTO_TIMEOUT_MS || 120000;
+    const save = async () => {
+      photoMessage("Preparing your photo…");
+      const prepared = croppedPhoto || await window.FYP.preparePhoto(file);
+      stage = "upload";
+      photoMessage("Uploading your private photo…");
+      const path = user.id + "/" + window.FYP.randomId() + "." + prepared.extension;
       const { error: uploadError } = await db.storage.from("profile-photos")
-        .upload(path, file, { upsert: false, contentType: file.type });
+        .upload(path, prepared.blob, { upsert: false, contentType: prepared.type });
       if (uploadError) throw uploadError;
       stage = "profile";
       const { data, error: saveError } = await db.from("members")
@@ -263,18 +242,25 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       }
       const oldPath = memberProfile.profile_photo_url;
       memberProfile.profile_photo_url = path;
-      photoInput.value = "";
+      photoInput.value = ""; croppedPhoto = null;
       stage = "preview";
       await loadPhotoPreview(path);
       if (oldPath && oldPath !== path && oldPath.startsWith(user.id + "/"))
         await db.storage.from("profile-photos").remove([oldPath]);
       photoMessage("Your profile photo has been saved.");
+    };
+    try {
+      await window.FYP.withTimeout(save(), PHOTO_OPERATION_TIMEOUT_MS);
     } catch (error) {
       console.error("Profile photo request failed during " + stage + ":", error);
-      if (error && error.code === "PHOTO_REQUEST_TIMEOUT") {
+      if (error && error.code === "OPERATION_TIMEOUT") {
+        photoMessage("Saving your photo is taking too long. Check your connection, reload the page to see whether it was saved, and try again if needed.");
+      } else if (error && error.code === "REQUEST_TIMEOUT") {
         photoMessage("The photo request took longer than 60 seconds. Check your connection and try again.");
+      } else if (stage === "prepare") {
+        photoMessage((error && error.message) || "This photo could not be prepared. Choose a different photo.");
       } else if (stage === "profile") {
-        photoMessage("The photo uploaded, but we could not link it to your profile. Please try again or contact support.");
+        photoMessage("The photo uploaded, but we could not link it to your profile. Please try again or email pikeinsightsug@gmail.com.");
       } else if (stage === "preview") {
         photoMessage("Your photo was saved, but its preview could not be refreshed. Reload the page to check it.");
       } else {
@@ -283,41 +269,45 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
         if (statusCode === 401 || detail.includes("jwt") || detail.includes("unauthorized")) {
           photoMessage("Your sign-in may have expired. Log in again, then retry the photo upload.");
         } else if (statusCode === 403 || detail.includes("row-level security") || detail.includes("permission denied")) {
-          photoMessage("Supabase denied this photo upload. Please contact support so the Storage permissions can be checked.");
+          photoMessage("Supabase denied this photo upload. Please email pikeinsightsug@gmail.com so the photo storage settings can be checked.");
         } else if (statusCode === 413 || detail.includes("too large") || detail.includes("exceeded the maximum")) {
           photoMessage("This photo is too large. Choose an image no larger than 5 MB.");
+        } else if (detail.includes("mime") || detail.includes("invalid_mime_type")) {
+          photoMessage("This photo format is not accepted. Choose a JPEG, PNG or WebP photo.");
         } else if (detail.includes("bucket not found") || detail.includes("not found")) {
-          photoMessage("The profile photo storage is unavailable. Please contact support.");
+          photoMessage("The profile photo storage is unavailable. Please email pikeinsightsug@gmail.com.");
         } else if (detail.includes("failed to fetch") || detail.includes("network")) {
           photoMessage("Could not reach photo storage. Check your connection and try again.");
         } else {
-          photoMessage("Photo upload failed. Please try again. If it continues, contact support.");
+          photoMessage("Photo upload failed. Please try again. If it continues, email pikeinsightsug@gmail.com.");
         }
       }
     } finally {
       photoUploading = false; photoInput.disabled = false;
       photoButton.removeAttribute("aria-busy");
       photoButton.textContent = "Upload photo";
-      photoButton.disabled = !(photoInput.files && photoInput.files[0] && memberProfile);
+      photoButton.disabled = !(photoReady() && memberProfile);
     }
   });
   photoInput.addEventListener("input", () => {
-    photoButton.disabled = photoUploading || !(photoInput.files && photoInput.files[0] && memberProfile);
+    photoButton.disabled = photoUploading || !(photoReady() && memberProfile);
   });
 
+  let signingOut = false;
   signout.addEventListener("click", async () => {
-    signout.disabled = true;
+    signout.disabled = true; signingOut = true;
     try {
       const { error } = await db.auth.signOut();
       if (error) throw error;
-      window.location.replace("account.html?mode=login");
+      window.location.replace("login.html?signedout=1");
     } catch (error) {
-      signout.disabled = false;
+      signout.disabled = false; signingOut = false;
       setStatus("Could not log out right now. Please try again.");
     }
   });
   db.auth.onAuthStateChange((event, session) => {
-    if (event === "SIGNED_OUT" || !session) window.location.replace("account.html?mode=login");
+    // Signed out in another tab or by an expired refresh token.
+    if (event === "SIGNED_OUT" && !signingOut) window.location.replace("login.html");
   });
   initialize().catch(error => { loading.textContent = (error && error.message) || "Could not load your account. Please sign in again."; });
 })();

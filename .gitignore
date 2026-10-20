@@ -1,0 +1,10 @@
+node_modules/
+reconciliation-output/
+test-results/
+*.local.csv
+# Registration exports and reconciliation outputs contain private member data.
+responses*.csv
+*-responses.csv
+members*.csv
+auth*.csv
+reconciliation-*/

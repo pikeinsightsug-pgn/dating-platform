@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Taking you home | Find Your Person</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:radial-gradient(120% 90% at 50% 0%,#6b1a55 0%,#2a0f3d 60%,#16071f 100%);color:#fff;text-align:center}
+.box{max-width:420px}
+.brand{font-weight:900;font-size:24px}.brand span{color:#e24a86}
+h1{font-size:26px;margin:22px 0 10px}
+p{color:#f3d6e4;line-height:1.5}
+a.btn{display:inline-block;margin-top:18px;padding:14px 28px;border-radius:999px;background:linear-gradient(135deg,#ff5f9c,#7a1037);color:#fff;font-weight:800;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="brand">Find<span>Your</span>Person ❤️</div>
+  <h1>Taking you to the homepage…</h1>
+  <p>That link is out of date or incomplete. If nothing happens, tap the button below.</p>
+  <a class="btn" id="home" href="./">Go to the homepage</a>
+</div>
+<script>
+// Any missing page sends visitors to the site's homepage instead of a dead end. The site lives
+// at /dating-platform/ on GitHub Pages and at / on Netlify; member data is never touched.
+(function () {
+  var base = location.pathname.indexOf("/dating-platform/") === 0 || location.pathname === "/dating-platform"
+    ? "/dating-platform/" : "/";
+  document.getElementById("home").href = base;
+  setTimeout(function () { location.replace(base); }, 1200);
+})();
+</script>
+</body>
+</html>

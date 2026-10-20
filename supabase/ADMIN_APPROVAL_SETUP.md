@@ -2,7 +2,7 @@
 
 The website is static on GitHub Pages and uses the existing Supabase Auth project. Registration creates an Auth user first. The database trigger writes the private `members` row with the trusted Auth user ID when the email is confirmed (or immediately if confirmation is disabled). The profile remains unapproved until an owner reviews it. After confirmation, the member signs in to the private dashboard.
 
-The setup is additive. It does not remove, truncate, relink, approve, or overwrite existing member records. The Auth trigger runs only for signups marked by the website as member registrations; it does not create profiles for owner accounts. Payments, automatic charging, referral commissions, member discovery, and unrestricted messaging remain disabled.
+The setup is additive. It does not remove, truncate, relink, approve, or overwrite existing member records. The Auth trigger runs only for signups marked by the website as member registrations; it does not create profiles for owner accounts. Payments, automatic charging, referral commissions and paid features remain disabled. Discovery and private messaging are limited to signed-in members whose profiles the owner has approved.
 
 ## Before enabling registration
 
@@ -30,14 +30,15 @@ Keep the project's email confirmation setting as intended. The page explains whe
 ## Owner approval console
 
 1. Create an owner account in Supabase Authentication using an email you control and confirm that email.
-2. From the repository root, deploy the existing function with:
-   `supabase login`
-   `supabase functions deploy admin-members --project-ref cyvkpcwjkeifpvegwhpt`
+2. Deploy the function. Either way deploys code only; it never runs SQL or changes member data.
+   - **Recommended — GitHub Actions** (deploys exactly what is in the repository): in Supabase open your avatar → **Account → Access Tokens → Generate new token**; in GitHub open the repository → **Settings → Secrets and variables → Actions → New repository secret**, name `SUPABASE_ACCESS_TOKEN`, paste the token there (never in chat or code). The workflow `.github/workflows/deploy-admin-function.yml` then deploys on every push that changes the function; to deploy now, open **Actions → Deploy admin-members Edge Function** and re-run the latest run (or **Run workflow** once it is on `main`).
+   - **Manually from a laptop** (use a fresh download of the reviewed branch, not an old folder): `npx supabase login`, then `npx supabase functions deploy admin-members --project-ref cyvkpcwjkeifpvegwhpt --use-api`.
    The function name is `admin-members`; its entry point is `supabase/functions/admin-members/index.ts`. Do not pass `--no-verify-jwt`.
+   **Check what is live:** sign in to `/admin/`. The page states "Owner function admin-members is up to date (version …)" or that an older version is deployed. The version is `FUNCTION_VERSION` in `index.ts`; bump it together with `EXPECTED_FUNCTION_VERSION` in `admin/index.html` whenever the function changes.
 3. Set only this custom Edge Function secret in the Supabase Dashboard under **Edge Functions → Secrets**:
    - `ADMIN_EMAIL`: the exact confirmed owner email address, in lowercase.
    Supabase provides `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to the function runtime. Do not try to add or override these reserved `SUPABASE_` variables as custom secrets. Never put the service-role key in HTML, GitHub Pages, or browser code.
-4. This repository has no `supabase/config.toml`; Supabase's default `verify_jwt` setting is `true`. Keep JWT verification enabled. The function also validates the bearer token with Auth and checks that its confirmed email exactly matches `ADMIN_EMAIL` before using the server-side service-role key.
+4. `supabase/config.toml` sets `verify_jwt = true` for `admin-members`, so Supabase rejects requests without a valid signed-in token before the function runs. Keep it enabled; the deploy workflow refuses to run if it is turned off. The function also validates the bearer token with Auth and checks that its confirmed email exactly matches `ADMIN_EMAIL` before using the server-side service-role key.
 5. Publish the repository's `admin/` directory with GitHub Pages and open `/admin/`. The console stores only the project URL and public key in that browser's local storage.
 
 ## Verify the approval service
@@ -69,3 +70,86 @@ The Google Form remains separate and unchanged. Its responses and uploaded files
 imported or linked by this migration. Do not create duplicate profiles by importing its
 responses automatically; first reconcile the form's response data with the live member
 table and Auth accounts.
+
+
+## Pilot launch: apply order and checks (October 2026)
+
+First run `supabase/diagnostics_readonly.sql` in the SQL Editor. It is read-only and
+reports counts only. It shows which of the files below are already live, and whether the
+older discovery function is still blocking. Then apply, in this order, only the files
+it reports as missing. Each one is additive and safe to rerun:
+
+1. `supabase/registration_setup.sql`
+2. `supabase/launch_features_secure.sql`
+3. `supabase/member_discovery_photos.sql`. **Required for discovery.** The version of
+   `browse_approved_profiles()` in step 2 fails on every call ("column reference age is
+   ambiguous") and would also refuse to run below 100 approved members. This file replaces it.
+4. `supabase/discovery_messaging_safety.sql`: filters, paging, profile details, private
+   messaging, blocking and reporting. It also makes the signup trigger skip invalid
+   metadata instead of failing the Auth request.
+5. `supabase/legacy_registrations.sql`: a private archive table for the original form records.
+
+Then redeploy the owner function (`supabase functions deploy admin-members --project-ref cyvkpcwjkeifpvegwhpt`)
+so `/admin/` gains verified account linking and the report queue. Re-run the diagnostics and
+check that line 6 is `false` and line 7 is `true`.
+
+Every migration is exercised locally by `npm run test:db` (66 RLS assertions) and
+`npm run test:e2e` (browser journeys). Both use a throwaway local Postgres, never this project.
+
+## Deployment order for the pilot
+
+1. Run `supabase/diagnostics_readonly.sql` (read-only) and keep the result.
+2. Apply the missing SQL files in the order above.
+3. Redeploy `admin-members`. The owner console now keeps working with an older
+   deployment, but linking, test accounts, original registrations and reports need the
+   new one.
+4. Only then merge the pull request (GitHub Pages publishes `main`).
+5. Authentication → URL Configuration: keep **Site URL** as
+   `https://pikeinsightsug-pgn.github.io/dating-platform/` and make sure **Redirect URLs**
+   include `https://pikeinsightsug-pgn.github.io/dating-platform/account.html` and
+   `https://pikeinsightsug-pgn.github.io/dating-platform/account.html?mode=recovery`.
+   Invitation and confirmation links that land on the homepage are forwarded to
+   `account.html`, where invited people choose their password.
+
+## Owner test accounts
+
+In `/admin/`, use **Mark as my test account** on each of your own test profiles. Test accounts
+see and message only other test accounts, genuine members never see them, and they do not
+count as genuine members. Members cannot change this flag themselves.
+
+## Restoring the original Google Form registrations
+
+Nothing here creates, merges, links or approves a profile automatically.
+
+1. **Export (read-only).**
+   - `members.csv`: Table Editor → `members` → Export → Export table as CSV.
+   - `auth.csv`: SQL Editor → `select id, email, phone, email_confirmed_at, created_at from auth.users;`
+     → Download CSV.
+2. **Compare.** On your own computer:
+   `node tools/reconcile-registrations.mjs --form responses.csv --members members.csv --auth auth.csv`
+   Output in `reconciliation-output/` is counts plus a per-row status with no names, contacts or
+   photo links. Add `--include-contacts` only when you need a private follow-up sheet. Matches
+   use email or phone only. Shared contacts and name resemblances are flagged for review,
+   never merged.
+3. **Archive the originals.** Apply `supabase/legacy_registrations.sql`, run the tool again with
+   `--archive-sql`, and run `reconciliation-output/archive-original-registrations.sql` in the SQL
+   Editor. Every original answer, including photo links, referral codes and dates, is kept in
+   the private `legacy_registrations` table. Rerunning skips rows already archived.
+4. **Help each person activate.** Contact them on the WhatsApp/phone number they gave.
+   - **No profile in the app** (most of the original 47): send them
+     `https://pikeinsightsug-pgn.github.io/dating-platform/account.html` to register with their
+     own email. Ask which email they used.
+   - **An old profile exists without an account:** Authentication → Users → **Invite user** with
+     their email. The invitation creates no profile, so there is no duplicate. They choose a
+     password from the link. Then use **Link verified account** on their old profile in `/admin/`.
+5. **Link the original.** In `/admin/` → Original registrations, choose the person's member profile,
+   confirm you verified them, and **Link to profile**. This records the match only.
+6. **Approve** each verified, eligible adult separately with **Approve**. The genuine approved
+   count excludes your test accounts.
+
+Photos from the form remain in your Google Drive. Ask each person to upload their photo in
+the app (or for consent before you add it); do not copy them automatically.
+
+Approved members see only approved, linked, 18+ profiles. Pending members see their own profile
+and an explanation. Accounts without a profile see a recovery screen that shows the email
+address to give the owner.
