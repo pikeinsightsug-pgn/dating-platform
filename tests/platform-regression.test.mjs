@@ -299,11 +299,11 @@ test("the owner console expects exactly the admin-members version in the reposit
   assert.equal(page[1], fn[1], "bump both together when admin-members changes");
 });
 
-test("every public and member page is branded PikeConnection", async () => {
-  for (const page of ["index.html", "account.html", "login.html", "dashboard.html", "discover.html", "messages.html", "privacy.html", "admin/index.html"]) {
+test("every public and member page keeps the website name Find Your Person", async () => {
+  for (const page of ["index.html", "account.html", "login.html", "dashboard.html", "discover.html", "messages.html", "privacy.html", "admin/index.html", "404.html"]) {
     const html = await read(page);
-    assert.match(html, /<title>[^<]*PikeConnection[^<]*<\/title>/, page + " tab title");
-    assert.doesNotMatch(html, /Find ?(<span>)?Your(<\/span>)? ?Person/i, page + " still shows the old name");
+    assert.match(html, /<title>[^<]*Find Your Person[^<]*<\/title>/, page + " tab title");
+    assert.doesNotMatch(html, /PikeConnection|Pike<span>/i, page + " must not be renamed");
   }
 });
 
