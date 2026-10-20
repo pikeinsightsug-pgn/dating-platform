@@ -107,6 +107,10 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
   const linkError = linkParams.get("error_description") || linkParams.get("error");
   // An owner invitation signs the person in without a password; they must choose one first.
   let activatingInvite = linkType === "invite" && !linkError;
+  // Some email templates link straight to the website with a one-time token_hash instead of
+  // going through Supabase first; the page must then confirm it itself.
+  const linkTokenHash = !linkError && linkParams.get("token_hash");
+  let confirmingLink = Boolean(linkTokenHash);
   const db = window.FYP && window.FYP.createClient();
   if (!db) { status.textContent = "The account service could not load. Check your connection and refresh the page."; return; }
   const form = document.getElementById("register-form");
@@ -303,13 +307,25 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
 
   db.auth.onAuthStateChange((event, session) => {
     if (event === "PASSWORD_RECOVERY") { show("recovery"); recoveryStatus.textContent = "Choose a new password for your account."; }
-    else if (event === "SIGNED_IN" && session && !busy && !registering && !activatingInvite && !new URLSearchParams(location.search).has("mode")) {
+    else if (event === "SIGNED_IN" && session && !busy && !registering && !activatingInvite && !confirmingLink && !new URLSearchParams(location.search).has("mode")) {
       // Email-confirmation links land here already signed in.
       setTimeout(() => finishSignIn(session.user), 0);
     }
   });
 
   (async () => {
+    if (linkTokenHash) {
+      say("Confirming your email…");
+      const { error } = await db.auth.verifyOtp({ token_hash: linkTokenHash, type: linkType || "email" });
+      history.replaceState(null, "", callbackUrl(linkType === "recovery" && !error ? "recovery" : ""));
+      confirmingLink = false;
+      if (error) {
+        show("register");
+        say("This email link has expired or was already used. Log in, or use “Resend confirmation email” on the log-in page to get a fresh link.");
+        return;
+      }
+      say("");
+    }
     const mode = new URLSearchParams(location.search).get("mode");
     if (linkError) {
       show("register");

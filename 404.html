@@ -28,8 +28,10 @@ a.btn{display:inline-block;margin-top:18px;padding:14px 28px;border-radius:999px
 (function () {
   var base = location.pathname.indexOf("/dating-platform/") === 0 || location.pathname === "/dating-platform"
     ? "/dating-platform/" : "/";
-  document.getElementById("home").href = base;
-  setTimeout(function () { location.replace(base); }, 1200);
+  // Keep any email-link details (?token_hash=…, #access_token=…) so the homepage can finish them.
+  var target = base + location.search + location.hash;
+  document.getElementById("home").href = target;
+  setTimeout(function () { location.replace(target); }, location.search || location.hash ? 0 : 1200);
 })();
 </script>
 </body>
