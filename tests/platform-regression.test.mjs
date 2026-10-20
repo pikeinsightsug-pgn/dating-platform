@@ -315,7 +315,8 @@ test("customer-facing pages no longer describe the site as a test or preview", a
 
 test("a missing page sends visitors to the homepage instead of a dead end", async () => {
   const html = await read("404.html");
-  assert.match(html, /location\.replace\(base\)/);
+  assert.match(html, /var target = base \+ location\.search \+ location\.hash;/, "email-link details are kept");
+  assert.match(html, /location\.replace\(target\)/);
   assert.match(html, /"\/dating-platform\/" : "\/"/, "works on GitHub Pages and Netlify");
   assert.match(html, /<a class="btn" id="home" href="\.\/">/, "a manual link if scripts are blocked");
 });

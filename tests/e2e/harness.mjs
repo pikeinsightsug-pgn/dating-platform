@@ -37,7 +37,10 @@ function staticServer() {
     try {
       const body = await readFile(join(repo, path));
       res.writeHead(200, { "content-type": TYPES[extname(path)] || "application/octet-stream" }); res.end(body);
-    } catch { res.writeHead(404); res.end("not found"); }
+    } catch {
+      // Like GitHub Pages: a missing page serves the site's 404.html.
+      res.writeHead(404, { "content-type": "text/html" }); res.end(await readFile(join(repo, "404.html")));
+    }
   });
   return new Promise(resolve => server.listen(0, "127.0.0.1", () => resolve(server)));
 }
@@ -55,7 +58,7 @@ export async function setup(name, files = ALL) {
     await context.route(SUPABASE + "/**", async route => {
       const request = route.request();
       const target = gateway.url + request.url().slice(SUPABASE.length);
-      const response = await fetch(target, { method: request.method(), headers: request.headers(), body: request.postDataBuffer() || undefined });
+      const response = await fetch(target, { method: request.method(), headers: request.headers(), body: request.postDataBuffer() || undefined, redirect: "manual" });
       await route.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body: Buffer.from(await response.arrayBuffer()) });
     });
     const page = await context.newPage();

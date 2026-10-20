@@ -16,6 +16,21 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
   const pool = new pg.Pool({ database, host, port: pgPort, user, max: 6 });
   const passwords = new Map();
   const objects = new Map();
+  // Signup confirmation emails: one-time token -> { email, redirect }. Like Supabase, a new
+  // signup email or a resend replaces the earlier link for that address.
+  const confirmations = new Map();
+  function issueConfirmation(email, redirect) {
+    for (const [key, value] of confirmations) if (value.email === email) confirmations.delete(key);
+    const value = randomUUID().replace(/-/g, "");
+    confirmations.set(value, { email, redirect });
+    return value;
+  }
+  async function confirm(value) {
+    const entry = confirmations.get(String(value || ""));
+    if (!entry) return null;
+    confirmations.delete(value);
+    return (await pool.query("update auth.users set email_confirmed_at = now() where email = $1 returning *", [entry.email])).rows[0];
+  }
   const options = { requireEmailConfirmation: true, failUploads: null, adminFunction: null, adminFunctionOnly: null };
 
   function token(userRow) {
@@ -236,6 +251,7 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
         "insert into auth.users (email, email_confirmed_at, raw_user_meta_data) values ($1, $2, $3) returning *",
         [email, options.requireEmailConfirmation ? null : new Date(), body.data || {}])).rows[0];
       passwords.set(email, body.password);
+      if (options.requireEmailConfirmation) issueConfirmation(email, url.searchParams.get("redirect_to"));
       return send(res, 200, options.requireEmailConfirmation ? userJson(row) : session(row));
     }
     if (route === "token" && url.searchParams.get("grant_type") === "password") {
@@ -273,7 +289,25 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
       const rows = (await pool.query("select * from auth.users order by created_at")).rows;
       return send(res, 200, { users: rows.map(userJson), aud: "authenticated" });
     }
+    // The confirmation link in Supabase's default email: confirm, then return to the site
+    // with the session (or the error) in the address fragment.
+    if (route === "verify" && req.method === "GET") {
+      const target = url.searchParams.get("redirect_to") || "about:blank";
+      const row = await confirm(url.searchParams.get("token"));
+      const fragment = row
+        ? new URLSearchParams({ ...session(row), user: "", type: "signup" })
+        : new URLSearchParams({ error: "access_denied", error_code: "otp_expired", error_description: "Email link is invalid or has expired" });
+      fragment.delete("user");
+      res.writeHead(303, { location: target.split("#")[0] + "#" + fragment, "access-control-allow-origin": "*" });
+      return res.end();
+    }
+    // A template that links straight to the site with token_hash; the page calls verifyOtp.
+    if (route === "verify" && req.method === "POST") {
+      const row = await confirm(body.token_hash);
+      return row ? send(res, 200, session(row)) : authError(403, "otp_expired", "Email link is invalid or has expired");
+    }
     if (route === "logout") return send(res, 204);
+    if (route === "resend" && body.email) issueConfirmation(String(body.email).toLowerCase(), url.searchParams.get("redirect_to"));
     if (route === "resend" || route === "recover") return send(res, 200, {});
     authError(404, "not_found", "unsupported in test gateway");
   }
@@ -316,6 +350,11 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
     url: `http://127.0.0.1:${server.address().port}`,
     pool, passwords, options,
     // A signed-in session for an existing user, as an email link would provide.
+    // The link a member would find in their latest signup confirmation email.
+    confirmationEmail(email) {
+      for (const [value, entry] of confirmations) if (entry.email === email) return { token: value, redirect: entry.redirect };
+      return null;
+    },
     async sessionFor(email) { return session((await pool.query("select * from auth.users where email = $1", [email])).rows[0]); },
     async close() { await new Promise(r => server.close(r)); await pool.end(); }
   };
