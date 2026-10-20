@@ -14,7 +14,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <body><main class="wrap">
 <header><div>OWNER ONLY • 18+ COMMUNITY</div><h1>❤️ Find Your Person — Member Approval</h1><p>Review real registrations. Approve only genuine profiles after review. Payments remain disabled.</p></header>
 <section class="panel" id="config"><h2>Connect owner access</h2>
-<p class="muted">This page requires the public Supabase project URL/key and a deployed admin-members Edge Function. The owner account email must match the ADMIN_EMAIL secret configured for that function. Never enter a service-role key here.</p>
+<p class="muted">The project address and public key below are filled in for you. Enter your owner email and password, then sign in. Never enter a service-role key here.</p>
 <label>Supabase project URL<input id="project" placeholder="https://your-project.supabase.co" autocomplete="url"></label>
 <label>Supabase publishable/anon key<input id="anon" placeholder="Public publishable key only" autocomplete="off"></label>
 <label>Owner email<input id="email" type="email" autocomplete="username"></label>
@@ -40,16 +40,15 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
   let client = null, session = null, profiles = [];
   const say = text => { $("status").textContent = text; };
   const el = (tag, text, className) => { const node = document.createElement(tag); if (text != null) node.textContent = text; if (className) node.className = className; return node; };
-  try {
-    $("project").value = localStorage.getItem("fy_admin_project") || "";
-    $("anon").value = localStorage.getItem("fy_admin_anon") || "";
-  } catch (error) { /* storage blocked: the owner types the values */ }
+  // This site's own Supabase project and public publishable key (the same ones every member
+  // page uses; not secret). Owner access still requires the owner's email and password.
+  $("project").value = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
+  $("anon").value = "sb_publishable_vzGFbhe7X3CpobiHZAk9Lw_2V3O-F3V";
 
   function setup() {
     const url = $("project").value.trim().replace(/\/$/, "");
     const key = $("anon").value.trim();
     if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url) || !key) throw Error("Enter the correct Supabase project URL and public publishable/anon key.");
-    try { localStorage.setItem("fy_admin_project", url); localStorage.setItem("fy_admin_anon", key); } catch (error) { /* optional */ }
     client = window.supabase.createClient(url, key);
     return url;
   }

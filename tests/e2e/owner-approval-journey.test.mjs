@@ -46,6 +46,8 @@ test("Daniel: pending until the owner approves, then discovery, photo and two-wa
   // 3. Owner approves Daniel in the owner console (no SQL), marking him as a test account.
   const owner = await env.newPage();
   await owner.goto(env.base + "admin/");
+  assert.equal(await owner.inputValue("#project"), SUPABASE, "the project address is filled in");
+  assert.match(await owner.inputValue("#anon"), /^sb_publishable_/, "the public key is filled in");
   await owner.fill("#project", SUPABASE); await owner.fill("#anon", "sb_publishable_test");
   await owner.fill("#email", OWNER); await owner.fill("#password", "Owner-pass-123");
   await owner.click("#signin");
