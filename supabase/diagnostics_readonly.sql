@@ -45,6 +45,8 @@ select * from (
     coalesce((select bool_or(def like '%opens after 100 approved%') from fn where proname = 'browse_approved_profiles'), false)::text
   union all select 7, 'migrations', 'discovery_messaging_safety.sql applied (filtered discovery exists)',
     exists (select 1 from fn where proname = 'browse_member_profiles')::text
+  union all select 37, 'migrations', 'test_account_viewing.sql applied (your test accounts can view genuine members)',
+    exists (select 1 from fn where proname = 'can_message_member')::text
   union all select 8, 'migrations', 'supabase_migrations history rows',
     case when to_regclass('supabase_migrations.schema_migrations') is null then 'no CLI migration history table (SQL Editor setup)'
          else (xpath('/row/c/text()', query_to_xml('select count(*) as c from supabase_migrations.schema_migrations', false, true, '')))[1]::text end

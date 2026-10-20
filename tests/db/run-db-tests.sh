@@ -17,8 +17,9 @@ for file in \
   supabase/launch_features_secure.sql \
   supabase/member_discovery_photos.sql \
   supabase/discovery_messaging_safety.sql \
-  supabase/discovery_messaging_safety.sql \
-  supabase/legacy_registrations.sql; do
+  supabase/legacy_registrations.sql \
+  supabase/test_account_viewing.sql \
+  supabase/test_account_viewing.sql; do
   # The newest migration runs twice to prove it is safe to rerun.
   PGOPTIONS="-c client_min_messages=warning" psql_q -d "$DB" -f "$file"
 done

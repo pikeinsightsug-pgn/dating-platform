@@ -189,11 +189,15 @@ begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-00000
 select t_assert((select array_agg(first_name order by first_name) = array['TestB'] from browse_member_profiles()), 'a genuine member never sees test accounts in discovery');
 select t_assert((select array_agg(first_name order by first_name) = array['TestB'] from browse_approved_profiles()), 'the older discovery function also hides test accounts');
 select t_assert((select count(*) = 0 from get_member_profile(:'t2_id')), 'a genuine member cannot open a test profile');
+select t_assert(not can_message_member(:'t2_id') and can_message_member(:'b_id'), 'the page is told a genuine member may message genuine members only');
 select t_denied(format('select * from public.send_member_message(%L, %L)', :'t2_id', 'hi'), 'a genuine member cannot message a test account');
 select t_denied('update public.members set is_test_account = true where user_id = auth.uid()', 'members cannot mark themselves as test accounts');
 commit;
 begin; select set_config('request.jwt.claim.sub', '13131313-0000-4000-8000-000000000013', true); set local role authenticated;
-select t_assert((select array_agg(first_name order by first_name) = array['TestE'] from browse_member_profiles()), 'test accounts see only other test accounts');
+select t_assert((select count(*) filter (where id = :'e_id') = 1 and count(*) filter (where id = :'a_id') = 1 from browse_member_profiles()),
+  'test accounts see other test accounts and genuine approved members');
+select t_assert((select count(*) = 1 from get_member_profile(:'a_id')), 'a test account can open a genuine approved profile');
+select t_assert(not can_message_member(:'a_id') and can_message_member(:'e_id'), 'the page is told a test account may message only test accounts');
 select t_denied(format('select * from public.send_member_message(%L, %L)', :'a_id', 'hi'), 'a test account cannot message a genuine member');
 select t_assert((select count(*) = 1 from send_member_message(:'e_id', 'test to test')), 'two test accounts can message each other');
 select t_assert((select count(*) = 0 from list_my_conversations() where other_member_id = :'a_id'), 'no genuine conversations are visible to a test account');

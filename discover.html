@@ -99,6 +99,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   let current = null;
   const shown = new Map();
   let ownId = null;
+  let ownIsTest = false;
 
   function addText(parent, tag, value, className) {
     const node = document.createElement(tag); node.textContent = value || "";
@@ -148,7 +149,19 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     document.getElementById("dialog-report-toggle").classList.toggle("hidden", legacyMode);
     document.getElementById("dialog-message").classList.toggle("hidden", legacyMode);
     dialogStatus.textContent = legacyMode ? "Messaging, blocking and reporting open once the administrator finishes the latest database setup." : "";
+    if (ownIsTest && !legacyMode) checkMessaging(current.id);
     if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
+  }
+  // The owner's test accounts can view genuine members but not message them; ask the server
+  // which applies. If the check is unavailable, keep the button (sending is checked again).
+  async function checkMessaging(id) {
+    const button = document.getElementById("dialog-message");
+    button.classList.add("hidden");
+    const { data, error } = await db.rpc("can_message_member", { p_member_id: id });
+    if (!current || current.id !== id) return;
+    const allowed = error || data !== false;
+    button.classList.toggle("hidden", !allowed);
+    if (!allowed) dialogStatus.textContent = "You are signed in with a test account. You can view genuine members, but test accounts cannot message them.";
   }
   function closeDialog() { if (typeof dialog.close === "function") dialog.close(); else dialog.removeAttribute("open"); }
   document.getElementById("dialog-close").addEventListener("click", closeDialog);
@@ -259,6 +272,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     const profile = await window.FYP.readOwnProfile(db, data.session.user);
     if (!profile) { window.location.replace("dashboard.html?profile=recovery"); return; }
     ownId = profile.id;
+    ownIsTest = profile.is_test_account === true;
     window.FYP.showSignedIn(profile, data.session.user);
     // Start from the member's own preferences; they can widen the filters at any time.
     const wanted = { Men: "Man", Women: "Woman" }[profile.seeking_gender];
