@@ -2,6 +2,7 @@
 -- Apply after registration_setup.sql, launch_features_secure.sql and member_discovery_photos.sql.
 -- Additive only: no table, column or member row is dropped, deleted, approved or overwritten.
 -- Payments, paid messaging and referral commissions are not introduced.
+-- If you rerun this file, rerun supabase/test_account_viewing.sql afterwards.
 begin;
 
 do $preflight$

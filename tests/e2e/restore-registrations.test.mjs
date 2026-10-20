@@ -137,7 +137,7 @@ test("restoring original registrations: archive, activate, link, approve, then m
     assert.equal(await page.textContent("#approved"), "2", "genuine approved count excludes test accounts");
   });
 
-  await t.test("restored members see each other; test accounts stay out of their view", async () => {
+  await t.test("restored members see each other, never the test accounts", async () => {
     const restora = await env.newPage({ mobile: true });
     await env.login(restora, "restora@test.invalid", "Restora-pass-1");
     await restora.waitForURL(/discover\.html$/);
@@ -154,7 +154,8 @@ test("restoring original registrations: archive, activate, link, approve, then m
     await env.login(tester, "tester-one@test.invalid");
     await tester.waitForURL(/discover\.html$/);
     await tester.waitForSelector("#profiles .card");
-    assert.deepEqual(await tester.locator("#profiles .card h2").allTextContents(), ["TesterTwo, 30"], "test accounts only see each other");
+    assert.deepEqual((await tester.locator("#profiles .card h2").allTextContents()).sort(), ["Restora, 27", "Revivo, 37", "TesterTwo, 30"],
+      "test accounts see each other and, read-only, the genuine members");
 
     const originals = await env.sql("select count(*)::int as n from public.legacy_registrations");
     assert.equal(originals.rows[0].n, 2, "original registrations are all still archived");

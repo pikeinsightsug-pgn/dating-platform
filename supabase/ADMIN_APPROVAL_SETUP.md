@@ -88,6 +88,9 @@ it reports as missing. Each one is additive and safe to rerun:
    messaging, blocking and reporting. It also makes the signup trigger skip invalid
    metadata instead of failing the Auth request.
 5. `supabase/legacy_registrations.sql`: a private archive table for the original form records.
+6. `supabase/test_account_viewing.sql`: lets your owner test accounts view genuine approved
+   members in Discover (read-only; they still cannot message them), while genuine members never
+   see test accounts. Functions only; no data changes. Rerun it if you ever rerun step 4.
 
 Then redeploy the owner function (`supabase functions deploy admin-members --project-ref cyvkpcwjkeifpvegwhpt`)
 so `/admin/` gains verified account linking and the report queue. Re-run the diagnostics and

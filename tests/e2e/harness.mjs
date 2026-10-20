@@ -12,7 +12,7 @@ const repo = fileURLToPath(new URL("../../", import.meta.url));
 const PG = { host: process.env.PGHOST || "/var/run/postgresql", port: Number(process.env.PGPORT || 5432), user: process.env.PGUSER || "postgres" };
 export const SUPABASE = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
 const CDN = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";
-export const ALL = ["supabase/registration_setup.sql", "supabase/launch_features_secure.sql", "supabase/member_discovery_photos.sql", "supabase/discovery_messaging_safety.sql", "supabase/legacy_registrations.sql"];
+export const ALL = ["supabase/registration_setup.sql", "supabase/launch_features_secure.sql", "supabase/member_discovery_photos.sql", "supabase/discovery_messaging_safety.sql", "supabase/legacy_registrations.sql", "supabase/test_account_viewing.sql"];
 export const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
 
 async function freshDatabase(name, files) {

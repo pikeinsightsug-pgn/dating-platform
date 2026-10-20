@@ -220,7 +220,11 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
       if (!name) {
         const { data: found, error: lookupError } = await db.rpc("get_member_profile", { p_member_id: requested });
         if (lookupError || !found || !found.length) { say("This member is not available for messaging."); }
-        else name = found[0].first_name;
+        else {
+          const { data: allowed } = await db.rpc("can_message_member", { p_member_id: requested });
+          if (allowed === false) say("This member is not available for messaging.");
+          else name = found[0].first_name;
+        }
       }
       if (name) await openThread({ id: requested, first_name: name });
     }
