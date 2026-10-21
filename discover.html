@@ -29,6 +29,11 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
 .help{font-size:14px;color:#75666e;text-align:center}.help a{color:#a21f59;font-weight:700;overflow-wrap:anywhere}
 .hidden{display:none!important}@media(max-width:480px){.wrap{padding:16px 14px 40px}.top .btn,.top button{flex:1 1 auto}.filters{grid-template-columns:1fr 1fr}}
 .signed-in{margin:10px 0 0;font-size:14px;color:#75666e;font-weight:600}
+.gallery{position:relative;touch-action:pan-y}.gallery .nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;min-height:0;padding:0;border-radius:50%;
+ border:0;background:#ffffffd9;color:#a21f59;font-size:24px;line-height:1;box-shadow:0 4px 14px #0003}.gallery .prev{left:10px}.gallery .next{right:10px}
+.gallery .count{position:absolute;bottom:10px;right:12px;background:#241b23b3;color:#fff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px}
+.thumbs{display:flex;gap:8px;overflow-x:auto;padding:10px 12px 0}.thumbs button{all:unset;cursor:pointer;flex:0 0 64px;height:48px;border-radius:8px;overflow:hidden;outline:2px solid transparent}
+.thumbs button[aria-current=true]{outline-color:#b32663}.thumbs img{width:100%;height:100%;object-fit:cover;display:block}.thumbs button:focus-visible{outline-color:#241b23}
 </style>
 </head>
 <body>
@@ -57,7 +62,11 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   <p class="help">Need help? Email us at <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a></p>
 </main>
 <dialog id="profile-dialog" aria-labelledby="dialog-name">
-  <div id="dialog-photo"></div>
+  <div class="gallery"><div id="dialog-photo"></div>
+    <button id="photo-prev" class="nav prev hidden" type="button" aria-label="Previous photo">‹</button>
+    <button id="photo-next" class="nav next hidden" type="button" aria-label="Next photo">›</button>
+    <span id="photo-count" class="count hidden"></span></div>
+  <div id="dialog-thumbs" class="thumbs hidden" aria-label="More photos"></div>
   <div class="dialog-body">
     <h2 id="dialog-name"></h2>
     <p id="dialog-details" class="details"></p>
@@ -135,7 +144,9 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   function openProfile(id) {
     const entry = shown.get(id); if (!entry) return;
     current = entry.profile;
-    const photo = document.getElementById("dialog-photo"); photo.replaceChildren(photoNode(current, entry.url));
+    gallery = entry.url ? [entry.url] : [];
+    showGalleryPhoto(0);
+    loadMorePhotos(current);
     document.getElementById("dialog-name").textContent = current.first_name + ", " + current.age;
     document.getElementById("dialog-details").textContent = detailsLine(current);
     const text = document.getElementById("dialog-text"); text.replaceChildren();
@@ -150,6 +161,50 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     dialogStatus.textContent = legacyMode ? "Messaging, blocking and reporting open once the administrator finishes the latest database setup." : "";
     if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
   }
+  // Profile photo plus the member's extra photos: tap the arrows or thumbnails, or swipe.
+  let gallery = [];
+  let galleryIndex = 0;
+  function showGalleryPhoto(index) {
+    galleryIndex = Math.max(0, Math.min(index, gallery.length - 1));
+    const url = gallery[galleryIndex] || null;
+    const node = photoNode(current, url);
+    if (url && galleryIndex > 0) node.alt = "Photo " + (galleryIndex + 1) + " of " + current.first_name;
+    document.getElementById("dialog-photo").replaceChildren(node);
+    const many = gallery.length > 1;
+    document.getElementById("photo-prev").classList.toggle("hidden", !many || galleryIndex === 0);
+    document.getElementById("photo-next").classList.toggle("hidden", !many || galleryIndex === gallery.length - 1);
+    const count = document.getElementById("photo-count");
+    count.classList.toggle("hidden", !many); count.textContent = (galleryIndex + 1) + " / " + gallery.length;
+    const thumbs = document.getElementById("dialog-thumbs");
+    thumbs.classList.toggle("hidden", !many);
+    thumbs.querySelectorAll("button").forEach((button, i) => button.setAttribute("aria-current", String(i === galleryIndex)));
+  }
+  async function loadMorePhotos(profile) {
+    const thumbs = document.getElementById("dialog-thumbs"); thumbs.replaceChildren();
+    const { data, error } = await db.rpc("get_member_photos", { p_member_id: profile.id });
+    if (error || !data || !data.length || current !== profile) return; // none, or not installed yet
+    const urls = await window.FYP.signedPhotoUrls(db, data.map(photo => photo.storage_path));
+    if (current !== profile) return;
+    gallery = gallery.concat(data.map(photo => urls.get(photo.storage_path)).filter(Boolean));
+    thumbs.replaceChildren(...gallery.map((url, i) => {
+      const button = document.createElement("button"); button.type = "button";
+      button.setAttribute("aria-label", "Show photo " + (i + 1) + " of " + profile.first_name);
+      const image = document.createElement("img"); image.src = url; image.alt = ""; image.loading = "lazy";
+      button.append(image); button.addEventListener("click", () => showGalleryPhoto(i));
+      return button;
+    }));
+    showGalleryPhoto(galleryIndex);
+  }
+  document.getElementById("photo-prev").addEventListener("click", () => showGalleryPhoto(galleryIndex - 1));
+  document.getElementById("photo-next").addEventListener("click", () => showGalleryPhoto(galleryIndex + 1));
+  let swipeStart = null;
+  const galleryBox = document.querySelector(".gallery");
+  galleryBox.addEventListener("pointerdown", event => { swipeStart = event.clientX; });
+  galleryBox.addEventListener("pointerup", event => {
+    if (swipeStart === null || gallery.length < 2) return;
+    const moved = event.clientX - swipeStart; swipeStart = null;
+    if (Math.abs(moved) > 40) showGalleryPhoto(galleryIndex + (moved < 0 ? 1 : -1));
+  });
   function closeDialog() { if (typeof dialog.close === "function") dialog.close(); else dialog.removeAttribute("open"); }
   document.getElementById("dialog-close").addEventListener("click", closeDialog);
   dialog.addEventListener("click", event => { if (event.target === dialog) closeDialog(); });

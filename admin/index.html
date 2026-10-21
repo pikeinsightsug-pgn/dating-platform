@@ -8,6 +8,8 @@
 header,.panel,.member{background:#fff;border:1px solid #efdce5;border-radius:18px;padding:22px;margin-bottom:16px}header{background:#2b1723;color:white}
 h1{margin:0 0 8px}p{line-height:1.5}.warning{color:#8f1e51;background:#fde8f0;border-radius:10px;padding:10px 12px;font-weight:650}.muted{color:#766772}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{background:#fff;border:1px solid #efdce5;border-radius:15px;padding:18px}.num{font-size:30px;font-weight:900;color:#b32663}
 input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;width:100%;margin:5px 0 12px}button{border:0;border-radius:999px;padding:11px 16px;font:inherit;font-weight:750;cursor:pointer;background:#b32663;color:white;margin:4px}button.secondary{background:white;color:#b32663;border:1px solid #e5cbd7}button.danger{background:#6e293c}#status{white-space:pre-wrap;color:#8f1e51}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.actions{display:flex;gap:5px;flex-wrap:wrap}.member h3{margin:0 0 6px}.badge{display:inline-block;border-radius:999px;background:#fff0f6;padding:5px 10px;font-size:13px}.bio{white-space:pre-wrap;overflow-wrap:anywhere}
+.extra-photos{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px}.extra-photos figure{margin:0;display:grid;gap:6px;width:150px}
+.extra-photos img{width:150px;height:112px;object-fit:cover;border-radius:10px;background:#fde8f0}.extra-photos button{padding:8px 10px;font-size:13px}
 .admin-photo{display:block;width:min(100%,360px);max-height:320px;object-fit:cover;border-radius:14px;margin:12px 0;background:#fde8f0}.hidden{display:none!important}@media(max-width:650px){.grid{grid-template-columns:1fr}.wrap{padding:14px}}
 </style>
 </head>
@@ -66,7 +68,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     return data;
   }
   // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
-  const EXPECTED_FUNCTION_VERSION = "2026-10-19";
+  const EXPECTED_FUNCTION_VERSION = "2026-10-21";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
@@ -125,6 +127,17 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
   function profileCard(m, accounts) {
     const card = el("article", null, "member");
     if (m.admin_photo_signed_url) { const photo = el("img", null, "admin-photo"); photo.src = m.admin_photo_signed_url; photo.alt = "Private profile photo for " + (m.first_name || "member"); photo.loading = "lazy"; card.append(photo); }
+    if (m.extra_photos && m.extra_photos.length) {
+      const extras = el("div", null, "extra-photos");
+      m.extra_photos.forEach((photo, i) => {
+        const item = el("figure");
+        if (photo.url) { const image = el("img"); image.src = photo.url; image.alt = "Extra photo " + (i + 1) + " for " + (m.first_name || "member"); image.loading = "lazy"; item.append(image); }
+        const remove = el("button", "Remove photo", "danger");
+        remove.onclick = () => removePhoto(m, photo.id);
+        item.append(remove); extras.append(item);
+      });
+      card.append(extras);
+    }
     card.append(el("h3", (m.first_name || "Unnamed member") + " · " + (m.age ?? "Age unknown")));
     card.append(el("span", m.approved ? "Approved" : "Pending review", "badge"));
     if (m.is_test_account) card.append(el("span", " TEST ACCOUNT — hidden from genuine members", "badge"));
@@ -171,6 +184,15 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
       await load();
       say("Profile linked. It remains pending until you review and approve it separately.");
     } catch (e) { say(e.message || "Could not link profile. Refresh and verify before trying again."); }
+  }
+  async function removePhoto(m, photoId) {
+    try {
+      if (!confirm("Remove this photo from " + (m.first_name || "this member") + "'s profile? The file is deleted and cannot be restored.")) return;
+      say("Removing photo…");
+      await invoke("remove_photo", null, { photo_id: photoId });
+      await load();
+      say("Photo removed.");
+    } catch (e) { say(notDeployed(e)); }
   }
   async function setTest(m, isTest) {
     try {

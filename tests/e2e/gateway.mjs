@@ -171,6 +171,12 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
         const rows = await asRole(sub, c => c.query(`update public.${table} set ${keys.map((k, i) => `${k} = $${i + 1}`).join(", ")}${shifted}${returning}`, [...keys.map(k => payload[k]), ...values]).then(r => r.rows));
         return wantRows ? respondRows(req, res, rows) : send(res, 204);
       }
+      if (req.method === "DELETE") {
+        const { where, values } = filters(url);
+        if (!where) throw Object.assign(new Error("DELETE requires a filter"), { code: "21000" });
+        const rows = await asRole(sub, c => c.query(`delete from public.${table}${where}${returning}`, values).then(r => r.rows));
+        return wantRows ? respondRows(req, res, rows) : send(res, 204);
+      }
     } catch (error) { return pgError(res, error, sub); }
     send(res, 405, { message: "method not allowed" });
   }

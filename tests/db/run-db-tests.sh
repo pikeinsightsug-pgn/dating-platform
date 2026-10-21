@@ -18,7 +18,9 @@ for file in \
   supabase/member_discovery_photos.sql \
   supabase/discovery_messaging_safety.sql \
   supabase/discovery_messaging_safety.sql \
-  supabase/legacy_registrations.sql; do
+  supabase/legacy_registrations.sql \
+  supabase/member_extra_photos.sql \
+  supabase/member_extra_photos.sql; do
   # The newest migration runs twice to prove it is safe to rerun.
   PGOPTIONS="-c client_min_messages=warning" psql_q -d "$DB" -f "$file"
 done
