@@ -215,3 +215,37 @@ commit;
 begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', true); set local role authenticated;
 select t_assert((select count(*) = 0 from members where seeking_gender is not null), 'other members cannot read anyone''s preferences directly');
 commit;
+
+-- ===== Extra profile photos =====
+\set pa 'aaaaaaaa-0000-4000-8000-000000000001/11111111-1111-4111-8111-11111111111'
+begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', true); set local role authenticated;
+insert into storage.objects (bucket_id, name) select 'profile-photos', :'pa' || n || '.jpg' from generate_series(1, 7) n;
+select t_assert((select count(*) = 6 from (select add_member_photo(:'pa' || n || '.jpg') from generate_series(1, 6) n) x), 'a member can add up to 6 extra photos from their own folder');
+select t_denied(format('select public.add_member_photo(%L)', :'pa' || '7.jpg'), 'a 7th extra photo is refused');
+select t_denied('select public.add_member_photo(''bbbbbbbb-0000-4000-8000-000000000002/22222222-2222-4222-8222-222222222222.jpg'')', 'a photo from someone else''s folder is refused');
+select t_denied('select public.add_member_photo(''aaaaaaaa-0000-4000-8000-000000000001/33333333-3333-4333-8333-333333333333.jpg'')', 'a file that was never uploaded is refused');
+select t_assert((select count(*) = 6 from list_my_photos()), 'the member sees their own extra photos');
+select t_denied('select * from public.member_photos', 'members cannot read the photo table directly');
+commit;
+select id as photo_id from member_photos order by created_at limit 1 \gset
+begin; select set_config('request.jwt.claim.sub', 'bbbbbbbb-0000-4000-8000-000000000002', true); set local role authenticated;
+select t_assert((select count(*) = 1 from get_member_profile(:'a_id')), 'approved B can open approved A''s profile');
+select t_assert((select count(*) = 6 from get_member_photos(:'a_id')), 'approved B sees A''s 6 extra photos');
+select t_assert((select count(*) = 6 from storage.objects where name like 'aaaaaaaa-0000-4000-8000-000000000001/11111111-%'),
+  'B can open exactly A''s 6 extra photo files, not A''s other unlisted file');
+select t_assert(remove_member_photo(:'photo_id') is null, 'a member cannot remove someone else''s photo');
+select t_denied('select public.add_member_photo(''aaaaaaaa-0000-4000-8000-000000000001/11111111-1111-4111-8111-111111111117.jpg'')', 'a member cannot add someone else''s file to their own profile');
+commit;
+begin; select set_config('request.jwt.claim.sub', 'cccccccc-0000-4000-8000-000000000003', true); set local role authenticated;
+select t_denied(format('select * from public.get_member_photos(%L)', :'a_id'), 'a pending member cannot list anyone''s extra photos');
+select t_assert((select count(*) = 0 from storage.objects where name like 'aaaaaaaa-%'), 'a pending member cannot open extra photo files');
+commit;
+begin; set local role anon;
+select t_denied(format('select * from public.get_member_photos(%L)', :'a_id'), 'visitors cannot list extra photos');
+select t_assert((select count(*) = 0 from storage.objects), 'visitors cannot open extra photo files');
+commit;
+begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', true); set local role authenticated;
+select t_assert(remove_member_photo(:'photo_id') like 'aaaaaaaa-0000-4000-8000-000000000001/%', 'a member can remove their own extra photo');
+select t_assert((select count(*) = 5 from list_my_photos()), 'the removed photo is gone');
+commit;
+select t_assert((select count(*) = 5 from member_photos), 'no other photo rows changed');

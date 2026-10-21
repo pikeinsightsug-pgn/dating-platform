@@ -3,7 +3,7 @@ import { isMemberPhotoPathOwnedByUser } from "../_shared/member-photo-path.js";
 
 // Bump when this function changes; the owner console compares it with the version it expects,
 // so the owner can see whether the deployed function is current without opening Supabase.
-const FUNCTION_VERSION = "2026-10-19";
+const FUNCTION_VERSION = "2026-10-21";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,7 +43,7 @@ Deno.serve(async (req: Request) => {
 
   let body: {
     action?: string; member_id?: string; user_id?: string; identity_verified?: boolean;
-    status?: string; legacy_id?: string; is_test_account?: boolean; notes?: string;
+    status?: string; legacy_id?: string; is_test_account?: boolean; notes?: string; photo_id?: string;
   };
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON." }, 400); }
 
@@ -74,6 +74,27 @@ Deno.serve(async (req: Request) => {
       for (const authUser of authPage.users) authUsers.set(authUser.id, { email: authUser.email ?? null });
       if (authPage.users.length < 1000) break;
     }
+    // Members' extra photos, so the owner can remove an inappropriate one. Skipped quietly
+    // until supabase/member_extra_photos.sql is applied.
+    const extraByMember = new Map<string, Array<{ id: string; url: string | null }>>();
+    const { data: extraRows, error: extraError } = await db.from("member_photos")
+      .select("id, member_id, storage_path").order("created_at").limit(3000);
+    if (!extraError && extraRows?.length) {
+      const owners = new Map(rows.map((m) => [m.id, m.user_id]));
+      const owned = extraRows.filter((p) => isMemberPhotoPathOwnedByUser(owners.get(p.member_id), p.storage_path));
+      const urls = new Map<string, string>();
+      try {
+        const { data: signed } = await db.storage.from("profile-photos").createSignedUrls(owned.map((p) => p.storage_path), 300);
+        (signed || []).forEach((item) => { if (item?.path && item.signedUrl && !item.error) urls.set(item.path, item.signedUrl); });
+      } catch {
+        // Previews are optional; the owner can still remove photos.
+      }
+      for (const p of owned) {
+        const list = extraByMember.get(p.member_id) || [];
+        list.push({ id: p.id, url: urls.get(p.storage_path) ?? null });
+        extraByMember.set(p.member_id, list);
+      }
+    }
     const identifiedRows = await Promise.all(rows.map(async (member) => {
       let admin_photo_signed_url: string | null = null;
       const photoPath = member.profile_photo_url;
@@ -91,6 +112,7 @@ Deno.serve(async (req: Request) => {
         ...member,
         account_email: member.user_id ? authUsers.get(member.user_id)?.email ?? null : null,
         admin_photo_signed_url,
+        extra_photos: extraByMember.get(member.id) || [],
       };
     }));
     return json({
@@ -110,6 +132,18 @@ Deno.serve(async (req: Request) => {
   }
 
   const uuid = /^[0-9a-f-]{36}$/i;
+
+  // Removes one member's extra photo (for example an inappropriate picture): the record and
+  // the file. Never touches the member's profile, main photo or approval.
+  if (body.action === "remove_photo") {
+    if (typeof body.photo_id !== "string" || !uuid.test(body.photo_id)) return json({ error: "A valid photo ID is required." }, 400);
+    const { data, error } = await db.from("member_photos").delete().eq("id", body.photo_id)
+      .select("id, storage_path").maybeSingle();
+    if (error) return json({ error: "Could not remove the photo.", detail: error.message }, 500);
+    if (!data) return json({ error: "Photo not found. Refresh the list." }, 404);
+    const { error: fileError } = await db.storage.from("profile-photos").remove([data.storage_path]);
+    return json({ removed: data.id, file_removed: !fileError });
+  }
 
   if (body.action === "set_test_account") {
     if (typeof body.member_id !== "string" || !uuid.test(body.member_id) || typeof body.is_test_account !== "boolean") {
