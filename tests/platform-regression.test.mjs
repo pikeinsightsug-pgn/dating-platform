@@ -320,3 +320,20 @@ test("a missing page sends visitors to the homepage instead of a dead end", asyn
   assert.match(html, /"\/dating-platform\/" : "\/"/, "works on GitHub Pages and Netlify");
   assert.match(html, /<a class="btn" id="home" href="\.\/">/, "a manual link if scripts are blocked");
 });
+
+test("every table a setup file creates states its Data API permissions explicitly", async () => {
+  // From 30 October 2026 Supabase stops granting Data API permissions on new public tables
+  // automatically, so each new table must say who may use it (or revoke everyone).
+  const { readdir } = await import("node:fs/promises");
+  const files = (await readdir(new URL("../supabase/", import.meta.url))).filter(f => f.endsWith(".sql") && f !== "launch_features.sql");
+  const missing = [];
+  for (const file of files) {
+    const sql = await read("supabase/" + file);
+    for (const [, table] of sql.matchAll(/create table if not exists (public\.\w+)/gi)) {
+      const pattern = new RegExp(`(grant|revoke)[^;]*\\b${table.replace(".", "\\.")}\\b`, "i");
+      const listed = new RegExp(`revoke all on [^;]*\\b${table.replace(".", "\\.")}\\b`, "i");
+      if (!pattern.test(sql) && !listed.test(sql)) missing.push(`${file}: ${table}`);
+    }
+  }
+  assert.deepEqual(missing, []);
+});

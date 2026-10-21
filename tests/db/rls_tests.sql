@@ -215,3 +215,48 @@ commit;
 begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', true); set local role authenticated;
 select t_assert((select count(*) = 0 from members where seeking_gender is not null), 'other members cannot read anyone''s preferences directly');
 commit;
+
+-- ===== Data API permissions (Supabase, 30 October 2026: no automatic grants on new tables) =====
+-- The test database never grants anything by default, like Supabase after the change, so
+-- these prove every permission the platform needs is granted explicitly, and no more.
+select t_assert(not has_table_privilege('anon', 'public.members', 'select')
+  and not has_table_privilege('anon', 'public.member_messages', 'select')
+  and not has_table_privilege('anon', 'public.member_messages', 'insert')
+  and not has_table_privilege('anon', 'public.member_blocks', 'select')
+  and not has_table_privilege('anon', 'public.member_reports', 'select')
+  and not has_table_privilege('anon', 'public.legacy_registrations', 'select'),
+  'visitors cannot read members, messages, blocks, reports or original registrations');
+select t_assert(has_table_privilege('authenticated', 'public.members', 'select')
+  and has_table_privilege('authenticated', 'public.member_messages', 'select')
+  and not has_table_privilege('authenticated', 'public.member_messages', 'insert')
+  and not has_table_privilege('authenticated', 'public.member_messages', 'update')
+  and not has_table_privilege('authenticated', 'public.member_messages', 'delete')
+  and not has_table_privilege('authenticated', 'public.members', 'delete')
+  and not has_column_privilege('authenticated', 'public.members', 'approved', 'update')
+  and not has_column_privilege('authenticated', 'public.members', 'is_test_account', 'update')
+  and not has_table_privilege('authenticated', 'public.member_blocks', 'select')
+  and not has_table_privilege('authenticated', 'public.member_reports', 'select')
+  and not has_table_privilege('authenticated', 'public.legacy_registrations', 'select'),
+  'members read only through RLS; they cannot write messages directly, delete profiles, approve themselves or see reports and archives');
+select t_assert(has_table_privilege('service_role', 'public.members', 'select')
+  and has_table_privilege('service_role', 'public.members', 'update')
+  and has_table_privilege('service_role', 'public.member_reports', 'select')
+  and has_table_privilege('service_role', 'public.member_reports', 'update')
+  and has_table_privilege('service_role', 'public.legacy_registrations', 'select')
+  and has_table_privilege('service_role', 'public.legacy_registrations', 'update'),
+  'the owner console function has the explicit access it needs');
+select t_assert(not has_table_privilege('service_role', 'public.members', 'delete')
+  and not has_table_privilege('service_role', 'public.member_messages', 'select')
+  and not has_table_privilege('service_role', 'public.member_blocks', 'select')
+  and not has_table_privilege('service_role', 'public.legacy_registrations', 'delete'),
+  'the owner console function is not granted anything it does not use');
+select t_assert((select bool_and(has_function_privilege('authenticated', f, 'execute') and not has_function_privilege('anon', f, 'execute'))
+  from unnest(array['public.browse_member_profiles(text, integer, integer, text, text, integer, integer)', 'public.browse_approved_profiles()',
+    'public.get_member_profile(uuid)', 'public.send_member_message(uuid, text)', 'public.list_my_conversations()',
+    'public.get_conversation(uuid, integer)', 'public.mark_conversation_read(uuid)', 'public.block_member(uuid)',
+    'public.unblock_member(uuid)', 'public.report_member(uuid, text, text)', 'public.can_read_member_photo(text)',
+    'public.current_approved_member_id()', 'public.is_approved_member_profile(uuid)']::regprocedure[]) f),
+  'every member function is explicitly callable by signed-in members only, never by visitors');
+select t_assert((select count(*) = 0 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity),
+  'Row Level Security is on for every public table');

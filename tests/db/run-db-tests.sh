@@ -18,7 +18,9 @@ for file in \
   supabase/member_discovery_photos.sql \
   supabase/discovery_messaging_safety.sql \
   supabase/discovery_messaging_safety.sql \
-  supabase/legacy_registrations.sql; do
+  supabase/legacy_registrations.sql \
+  supabase/data_api_grants.sql \
+  supabase/data_api_grants.sql; do
   # The newest migration runs twice to prove it is safe to rerun.
   PGOPTIONS="-c client_min_messages=warning" psql_q -d "$DB" -f "$file"
 done
@@ -30,9 +32,11 @@ status=${PIPESTATUS[0]}
 # The read-only diagnostics must run on the fully migrated database and on one where
 # none of the setup files were applied.
 psql_q -d "$DB" -f supabase/diagnostics_readonly.sql > /dev/null && echo "PASS: diagnostics run on the migrated database" || status=1
+psql_q -d "$DB" -f supabase/data_api_audit_readonly.sql > /dev/null && echo "PASS: Data API permissions audit runs on the migrated database" || status=1
 psql_q -d postgres -c "drop database if exists ${DB}_bare" -c "create database ${DB}_bare"
 psql_q -d "${DB}_bare" -c "set client_min_messages = warning" -f tests/db/supabase_stub.sql
 psql_q -d "${DB}_bare" -f supabase/diagnostics_readonly.sql > /dev/null && echo "PASS: diagnostics run before any setup file is applied" || status=1
+psql_q -d "${DB}_bare" -f supabase/data_api_grants.sql > /dev/null && echo "PASS: the Data API grants file is harmless before the tables exist" || status=1
 psql_q -d postgres -c "drop database if exists ${DB}_bare"
 psql_q -d postgres -c "drop database if exists $DB"
 exit "$status"

@@ -29,5 +29,10 @@ create index if not exists legacy_registrations_phone_idx on public.legacy_regis
 -- in the Supabase Table Editor / SQL Editor, which use privileged roles.
 alter table public.legacy_registrations enable row level security;
 revoke all on public.legacy_registrations from public, anon, authenticated;
+-- The owner console's server-side function (service_role) lists these records and records
+-- the owner's review. Granted explicitly: from 30 October 2026 Supabase no longer gives new
+-- public tables Data API permissions automatically. No insert or delete: rows are loaded and
+-- kept through the SQL Editor only.
+grant select, update on public.legacy_registrations to service_role;
 
 commit;

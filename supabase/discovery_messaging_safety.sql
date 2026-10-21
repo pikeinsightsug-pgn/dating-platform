@@ -160,6 +160,10 @@ create index if not exists member_reports_status_idx on public.member_reports(st
 alter table public.member_blocks enable row level security;
 alter table public.member_reports enable row level security;
 revoke all on public.member_blocks, public.member_reports from public, anon, authenticated;
+-- The owner console's server-side function (service_role) reads reports and marks them
+-- reviewed. Granted explicitly because new tables no longer get Data API permissions
+-- automatically (Supabase, 30 October 2026). member_blocks needs no Data API access at all.
+grant select, update on public.member_reports to service_role;
 -- Messages are written only through send_member_message, which enforces blocks and rate limits.
 revoke insert, update, delete on public.member_messages from public, anon, authenticated;
 

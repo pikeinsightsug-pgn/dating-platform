@@ -153,3 +153,18 @@ the app (or for consent before you add it); do not copy them automatically.
 Approved members see only approved, linked, 18+ profiles. Pending members see their own profile
 and an explanation. Accounts without a profile see a recovery screen that shows the email
 address to give the owner.
+
+## Data API permissions (Supabase change, 30 October 2026)
+
+From 30 October 2026 Supabase no longer grants Data API permissions automatically on new
+tables in the `public` schema. Tables that already exist keep their current permissions.
+
+- `supabase/data_api_audit_readonly.sql` (read-only): shows, for every public table and
+  function, whether Row Level Security is on and what `anon`, `authenticated` and
+  `service_role` may do. It reads no member data.
+- `supabase/data_api_grants.sql` (GRANT statements only, safe to rerun): writes down the
+  minimum access the owner console's `admin-members` function needs (`service_role`: select
+  and update on `members`, `member_reports` and, once created, `legacy_registrations`).
+  It gives visitors and members nothing new and revokes nothing.
+- Every setup file that creates a table must also grant (or revoke) its permissions in the
+  same file. `npm test` fails if a new table does not.

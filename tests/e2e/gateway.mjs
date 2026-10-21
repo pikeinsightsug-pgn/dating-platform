@@ -60,8 +60,10 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
     const client = await pool.connect();
     try {
       await client.query("begin");
-      // The service role bypasses RLS, like Supabase's service_role.
-      if (sub !== SERVICE) {
+      // Like Supabase: the service key runs as service_role (bypasses RLS, but still needs
+      // table privileges), members as authenticated, visitors as anon.
+      if (sub === SERVICE) await client.query("set local role service_role");
+      else {
         await client.query(sub ? "set local role authenticated" : "set local role anon");
         await client.query("select set_config('request.jwt.claim.sub', $1, true)", [sub || ""]);
       }
