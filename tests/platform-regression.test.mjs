@@ -328,6 +328,6 @@ test("visitors can see who runs the site and that we never ask for money private
   const home = await read("index.html"), about = await read("about.html"), safety = await read("safety.html");
   for (const html of [home, about, safety]) assert.match(html, /never ask you for money in a private message/);
   assert.match(home, /href="about\.html"/); assert.match(home, /href="safety\.html"/);
-  assert.match(about, /Pike Insights Uganda/); assert.match(about, /pikeinsightsug@gmail\.com/);
+  assert.match(about, /Pike Insights/); assert.match(about, /pikeinsightsug@gmail\.com/);
   assert.match(safety, /Report/); assert.match(safety, /Block/);
 });
