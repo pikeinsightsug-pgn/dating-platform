@@ -17,8 +17,9 @@ img{max-width:100%;display:block}
 /* Header */
 .site-header{position:sticky;top:0;z-index:5;background:#fff8fbf2;backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid var(--line)}
 .site-header .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px}
-.brand{font-weight:900;font-size:21px;letter-spacing:-.3px;color:var(--ink);text-decoration:none;white-space:nowrap}
-.brand span{color:var(--rose)}
+.brand{display:inline-flex;flex-direction:column;line-height:1.05;font-weight:900;font-size:21px;letter-spacing:-.3px;color:var(--ink);text-decoration:none;white-space:nowrap}
+.brand .brand-main span{color:var(--rose)}
+.brand .brand-sub{font-size:12px;font-weight:700;letter-spacing:.4px;color:var(--muted);margin-top:2px}
 .nav-links{display:flex;gap:18px;align-items:center}
 .nav-links a{color:var(--muted);text-decoration:none;font-weight:650;font-size:15px}
 .nav-links a:hover{color:var(--rose)}
