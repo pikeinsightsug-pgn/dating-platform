@@ -299,16 +299,19 @@ test("the owner console expects exactly the admin-members version in the reposit
   assert.equal(page[1], fn[1], "bump both together when admin-members changes");
 });
 
-test("every public and member page keeps the website name Find Your Person", async () => {
-  for (const page of ["index.html", "account.html", "login.html", "dashboard.html", "discover.html", "messages.html", "privacy.html", "admin/index.html", "404.html"]) {
+test("every page uses the one name P.K CONNECT – Find Your Person", async () => {
+  for (const page of ["index.html", "account.html", "login.html", "dashboard.html", "discover.html", "messages.html", "privacy.html", "about.html", "safety.html", "admin/index.html", "404.html"]) {
     const html = await read(page);
-    assert.match(html, /<title>[^<]*Find Your Person[^<]*<\/title>/, page + " tab title");
+    assert.match(html, /<title>[^<]*P\.K CONNECT – Find Your Person[^<]*<\/title>/, page + " tab title");
+    // No leftover bare "Find Your Person" without the P.K CONNECT name in front of it.
+    assert.doesNotMatch(html.replace(/P\.K CONNECT – Find Your Person/g, "").replace(/class="brand-sub">Find Your Person</g, ""), /Find Your Person/, page + " uses the full name");
+    if (page !== "admin/index.html") assert.match(html, /class="brand-main">P\.K <span>CONNECT<\/span>/, page + " header logo");
     assert.doesNotMatch(html, /PikeConnection|Pike<span>/i, page + " must not be renamed");
   }
 });
 
 test("customer-facing pages no longer describe the site as a test or preview", async () => {
-  for (const page of ["index.html", "account.html", "login.html", "dashboard.html", "discover.html", "messages.html", "privacy.html"]) {
+  for (const page of ["index.html", "account.html", "login.html", "dashboard.html", "discover.html", "messages.html", "privacy.html", "about.html", "safety.html"]) {
     assert.doesNotMatch(await read(page), /testing phase|during testing|deploy preview|\bbeta\b/i, page);
   }
 });
@@ -319,4 +322,12 @@ test("a missing page sends visitors to the homepage instead of a dead end", asyn
   assert.match(html, /location\.replace\(target\)/);
   assert.match(html, /"\/dating-platform\/" : "\/"/, "works on GitHub Pages and Netlify");
   assert.match(html, /<a class="btn" id="home" href="\.\/">/, "a manual link if scripts are blocked");
+});
+
+test("visitors can see who runs the site and that we never ask for money privately", async () => {
+  const home = await read("index.html"), about = await read("about.html"), safety = await read("safety.html");
+  for (const html of [home, about, safety]) assert.match(html, /never ask you for money in a private message/);
+  assert.match(home, /href="about\.html"/); assert.match(home, /href="safety\.html"/);
+  assert.match(about, /Pike Insights/); assert.match(about, /pikeinsightsug@gmail\.com/);
+  assert.match(safety, /Report/); assert.match(safety, /Block/);
 });

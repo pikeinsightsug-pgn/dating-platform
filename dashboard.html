@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Member dashboard | Find Your Person</title>
-<meta name="description" content="View and update your private Find Your Person member profile.">
+<title>Member dashboard | P.K CONNECT – Find Your Person</title>
+<meta name="description" content="View and update your private P.K CONNECT – Find Your Person member profile.">
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fff8fb;color:#241b23;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 .wrap{max-width:820px;margin:0 auto;padding:24px 18px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.brand{font-weight:900;font-size:22px}.brand span{color:#b32663}
+.brand{display:inline-flex;flex-direction:column;line-height:1.05;font-weight:900;font-size:22px}.brand .brand-main span{color:#b32663}.brand .brand-sub{font-size:12px;font-weight:700;letter-spacing:.4px;color:#75666e;margin-top:2px}
 .member-nav{display:flex;gap:8px;flex-wrap:wrap}.member-nav .btn{white-space:nowrap}
 .panel{background:#fff;border:1px solid #f0dfe7;border-radius:22px;padding:24px;margin:16px 0;box-shadow:0 8px 30px #5c18300b}
 h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:12px 0}h2{margin-top:0}p{line-height:1.55;color:#6a5b64}
@@ -34,7 +34,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
 <body>
 <main class="wrap">
   <header class="top">
-    <div class="brand">Find<span>Your</span>Person ❤️</div>
+    <div class="brand"><span class="brand-main">P.K <span>CONNECT</span> ❤️</span><span class="brand-sub">Find Your Person</span></div>
     <nav class="member-nav" aria-label="Member dashboard"><a id="discover-nav" class="btn" href="discover.html">Discover Members</a><a id="messages-nav" class="btn secondary" href="messages.html">Messages</a><a id="profile-nav" class="btn secondary" href="#profile-panel">My Profile</a><a id="preferences-nav" class="btn secondary" href="#preferences">Preferences</a><button id="signout" class="secondary" type="button">Log out</button></nav>
   </header>
   <p id="signed-in" class="signed-in hidden" role="status"></p>

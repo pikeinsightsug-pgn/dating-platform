@@ -36,7 +36,7 @@ test("launch pages", async (t) => {
   await t.test("public pages fit a small Android screen (360px) without sideways scrolling", async () => {
     const page = await env.newPage({ mobile: true });
     await page.setViewportSize({ width: 360, height: 740 });
-    for (const path of ["", "account.html", "login.html", "privacy.html"]) {
+    for (const path of ["", "account.html", "login.html", "privacy.html", "about.html", "safety.html"]) {
       await page.goto(env.base + path);
       await page.waitForLoadState("load");
       assert.equal(await noHorizontalScroll(page), true, (path || "index.html") + " fits 360px");
