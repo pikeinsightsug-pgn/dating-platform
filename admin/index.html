@@ -10,6 +10,11 @@ h1{margin:0 0 8px}p{line-height:1.5}.warning{color:#8f1e51;background:#fde8f0;bo
 input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;width:100%;margin:5px 0 12px}button{border:0;border-radius:999px;padding:11px 16px;font:inherit;font-weight:750;cursor:pointer;background:#b32663;color:white;margin:4px}button.secondary{background:white;color:#b32663;border:1px solid #e5cbd7}button.danger{background:#6e293c}#status{white-space:pre-wrap;color:#8f1e51}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.actions{display:flex;gap:5px;flex-wrap:wrap}.member h3{margin:0 0 6px}.badge{display:inline-block;border-radius:999px;background:#fff0f6;padding:5px 10px;font-size:13px}.bio{white-space:pre-wrap;overflow-wrap:anywhere}
 .extra-photos{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px}.extra-photos figure{margin:0;display:grid;gap:6px;width:150px}
 .extra-photos img{width:150px;height:112px;object-fit:cover;border-radius:10px;background:#fde8f0}.extra-photos button{padding:8px 10px;font-size:13px}
+#add-member select,#add-member textarea{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;width:100%;margin:5px 0 12px;background:#fff}
+#add-member .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}#add-member label{font-weight:650;font-size:14px}
+#add-member .check{display:flex;gap:10px;align-items:flex-start;font-weight:600}#add-member .check input{width:auto;margin:4px 0}
+#add-status{white-space:pre-wrap;font-weight:650;color:#8f1e51}#add-status.ok{color:#1d6b3a}
+@media(max-width:650px){#add-member .pair{grid-template-columns:1fr}}
 .admin-photo{display:block;width:min(100%,360px);max-height:320px;object-fit:cover;border-radius:14px;margin:12px 0;background:#fde8f0}.hidden{display:none!important}@media(max-width:650px){.grid{grid-template-columns:1fr}.wrap{padding:14px}}
 </style>
 </head>
@@ -29,6 +34,21 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <div class="panel" id="recovery"><h2>Safely link a verified existing profile</h2>
 <p class="muted">Use only after independently verifying the person against their original registration information. Select an existing email-confirmed Auth account; linking changes only the profile's user ID. It does not approve the profile. Never match by name or an unverified email.</p>
 <div id="recovery-status" role="status" class="muted">Load registrations to see eligible unlinked accounts.</div></div>
+<div class="panel" id="add-member"><h2>Add or help a member</h2>
+<p class="muted"><strong>Someone stuck after registering</strong> (for example their confirmation email never came): enter just their email, tick the box and press the button. Their email is confirmed and they can log in with the password they chose.<br>
+<strong>Someone who could not register at all:</strong> also fill in their details. They receive an invitation email, choose their own password and are in. You never need their password. New profiles stay pending until you press Approve.</p>
+<form id="add-form" novalidate>
+<label>Their email address<input name="email" type="email" autocomplete="off" required></label>
+<div class="pair"><label>First name<input name="first_name" maxlength="80"></label><label>Age<input name="age" type="number" min="18" max="120"></label></div>
+<div class="pair"><label>Gender<select name="gender"><option value="">Choose…</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option></select></label>
+<label>Wants to meet<select name="seeking_gender"><option value="">Not given</option><option>Men</option><option>Women</option><option>Everyone</option></select></label></div>
+<div class="pair"><label>Country<select name="location"><option value="">Choose…</option><option>Uganda</option><option>Botswana</option></select></label><label>City or town<input name="city" maxlength="100"></label></div>
+<label>Looking for<select name="relationship_goal"><option value="">Choose…</option><option>Serious relationship</option><option>Marriage</option><option>Friendship</option><option>Exploring connections</option></select></label>
+<label>Short bio<textarea name="bio" rows="3" maxlength="500"></textarea></label>
+<label class="check"><input name="consent" type="checkbox"> This person asked me to register them and gave me these details.</label>
+<button type="submit" id="add-submit">Add member</button>
+</form>
+<p id="add-status" role="status"></p></div>
 <div class="panel"><div class="row"><h2>Original registrations (Google Form)</h2><button id="legacy-toggle" class="secondary" type="button">Show</button></div>
 <p class="muted">The archived original answers. Linking records which member profile belongs to the person; it never changes, merges or approves the profile. Verify the person first (for example on WhatsApp). Contact details here are private — never share this page.</p>
 <div id="legacy-summary" class="muted">Load registrations to see the archive.</div><div id="legacy" class="hidden"></div></div>
@@ -68,7 +88,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     return data;
   }
   // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
-  const EXPECTED_FUNCTION_VERSION = "2026-10-21";
+  const EXPECTED_FUNCTION_VERSION = "2026-10-22";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
@@ -91,6 +111,33 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     catch (e) { say(e.message); }
   };
   $("refresh").onclick = () => load().catch(e => say(e.message));
+
+  const ADD_MESSAGES = {
+    invited: e => "Invitation sent to " + e + ". Ask them to open the email (check Spam), click the link and choose a password. Their profile is pending: approve it in the list below once they have accepted.",
+    confirmed: e => "Done: " + e + " is confirmed. They can now log in with the password they chose when registering (or use “Forgot your password?”). Their profile is pending in the list below.",
+    profile_created: e => "Profile created for " + e + ". They can log in with their existing password. Their profile is pending in the list below.",
+    already_registered: e => e + " already has a confirmed account and profile. Find them in the list below; if they cannot log in, ask them to use “Forgot your password?”.",
+    confirmed_needs_profile: e => e + " is now confirmed, but their registration details were incomplete. Fill in their details above and press Add member again."
+  };
+  $("add-form").onsubmit = async event => {
+    event.preventDefault();
+    const form = $("add-form"), status = $("add-status"), button = $("add-submit");
+    const v = Object.fromEntries(new FormData(form));
+    status.className = ""; status.textContent = "";
+    if (!v.email || !form.elements.consent.checked) { status.textContent = "Enter their email and tick the box first."; return; }
+    button.disabled = true; button.textContent = "Working…";
+    try {
+      const { email, consent, ...profile } = v;
+      const data = await invoke("add_member", null, {
+        email, consent: true, profile, redirect_to: new URL("../account.html", location.href).toString()
+      });
+      status.className = data.outcome === "confirmed_needs_profile" ? "" : "ok";
+      status.textContent = (ADD_MESSAGES[data.outcome] || (() => "Done."))(data.email || email);
+      if (data.outcome !== "confirmed_needs_profile") form.reset();
+      await load();
+    } catch (e) { status.textContent = notDeployed(e); }
+    finally { button.disabled = false; button.textContent = "Add member"; }
+  };
   $("legacy-toggle").onclick = () => {
     const hidden = $("legacy").classList.toggle("hidden");
     $("legacy-toggle").textContent = hidden ? "Show" : "Hide";
@@ -141,6 +188,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     card.append(el("h3", (m.first_name || "Unnamed member") + " · " + (m.age ?? "Age unknown")));
     card.append(el("span", m.approved ? "Approved" : "Pending review", "badge"));
     if (m.is_test_account) card.append(el("span", " TEST ACCOUNT — hidden from genuine members", "badge"));
+    if (m.user_id && m.account_email && m.account_confirmed === false) card.append(el("span", " Waiting for them to accept the invitation or confirm their email", "badge"));
     card.append(el("p", "Registered email: " + (m.account_email || "No linked Auth email") + " · Supabase Auth ID: " + (m.user_id || "No linked Auth ID"), "bio"));
     card.append(el("p", [m.gender, m.location, m.city, m.relationship_goal, m.created_at ? new Date(m.created_at).toLocaleString() : null].filter(Boolean).join(" · "), "muted"));
     card.append(el("p", m.bio || "No bio provided.", "bio"));
@@ -162,7 +210,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
       actions.append(select, verifiedLabel, link);
     }
     const approve = el("button", "Approve");
-    approve.disabled = !!m.approved || !m.user_id || !m.account_email;
+    approve.disabled = !!m.approved || !m.user_id || !m.account_email || m.account_confirmed === false;
     if (approve.disabled && !m.approved) approve.title = "Cannot approve safely: this profile has no linked Auth email and ID.";
     approve.onclick = () => change(m.id, "approve");
     const reject = el("button", "Return to pending", "danger"); reject.disabled = !m.approved;

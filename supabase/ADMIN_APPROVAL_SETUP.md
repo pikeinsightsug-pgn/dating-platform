@@ -153,3 +153,16 @@ the app (or for consent before you add it); do not copy them automatically.
 Approved members see only approved, linked, 18+ profiles. Pending members see their own profile
 and an explanation. Accounts without a profile see a recovery screen that shows the email
 address to give the owner.
+
+## Adding or helping a member (owner console)
+
+"Add or help a member" in `/admin/` (admin-members `add_member`, version 2026-10-22):
+
+- **Registered but stuck** (no confirmation email): enter their email and tick the consent box.
+  Their email is confirmed; the database trigger creates their profile from their own signup
+  answers. They log in with the password they chose.
+- **Could not register at all**: also fill in their details. Supabase sends an invitation
+  email; they choose their own password on "Activate your account". Their profile is created
+  pending at once and can be approved after they accept.
+- The owner never sets or sees a password, nothing is approved automatically, and existing
+  profiles are never changed. Invitations count towards the Auth email rate limit.

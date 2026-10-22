@@ -3,7 +3,7 @@ import { isMemberPhotoPathOwnedByUser } from "../_shared/member-photo-path.js";
 
 // Bump when this function changes; the owner console compares it with the version it expects,
 // so the owner can see whether the deployed function is current without opening Supabase.
-const FUNCTION_VERSION = "2026-10-21";
+const FUNCTION_VERSION = "2026-10-22";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,6 +44,7 @@ Deno.serve(async (req: Request) => {
   let body: {
     action?: string; member_id?: string; user_id?: string; identity_verified?: boolean;
     status?: string; legacy_id?: string; is_test_account?: boolean; notes?: string; photo_id?: string;
+    email?: string; consent?: boolean; redirect_to?: string; profile?: Record<string, unknown>;
   };
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON." }, 400); }
 
@@ -67,11 +68,11 @@ Deno.serve(async (req: Request) => {
       seeking_gender: m.seeking_gender ?? null,
       preferred_age_min: m.preferred_age_min ?? null, preferred_age_max: m.preferred_age_max ?? null,
     }));
-    const authUsers = new Map<string, { email: string | null }>();
+    const authUsers = new Map<string, { email: string | null; confirmed: boolean }>();
     for (let page = 1; ; page++) {
       const { data: authPage, error: authListError } = await db.auth.admin.listUsers({ page, perPage: 1000 });
       if (authListError) return json({ error: "Could not load registered account identifiers.", detail: authListError.message }, 500);
-      for (const authUser of authPage.users) authUsers.set(authUser.id, { email: authUser.email ?? null });
+      for (const authUser of authPage.users) authUsers.set(authUser.id, { email: authUser.email ?? null, confirmed: !!authUser.email_confirmed_at });
       if (authPage.users.length < 1000) break;
     }
     // Members' extra photos, so the owner can remove an inappropriate one. Skipped quietly
@@ -111,6 +112,7 @@ Deno.serve(async (req: Request) => {
       return {
         ...member,
         account_email: member.user_id ? authUsers.get(member.user_id)?.email ?? null : null,
+        account_confirmed: member.user_id ? authUsers.get(member.user_id)?.confirmed ?? false : false,
         admin_photo_signed_url,
         extra_photos: extraByMember.get(member.id) || [],
       };
@@ -132,6 +134,64 @@ Deno.serve(async (req: Request) => {
   }
 
   const uuid = /^[0-9a-f-]{36}$/i;
+
+  // The owner registers someone who could not register themselves, or rescues someone who
+  // registered but is stuck (for example their confirmation email never arrived). The owner
+  // never sets or sees a password, and nobody is approved here: the owner still uses Approve.
+  if (body.action === "add_member") {
+    const email = String(body.email || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return json({ error: "Enter the person's email address." }, 400);
+    if (body.consent !== true) return json({ error: "Tick the box to confirm this person asked you to register them." }, 400);
+    const profile = memberProfileFrom(body.profile);
+
+    let account: { id: string; email?: string; email_confirmed_at?: string | null } | null = null;
+    for (let page = 1; !account; page++) {
+      const { data: authPage, error: authListError } = await db.auth.admin.listUsers({ page, perPage: 1000 });
+      if (authListError) return json({ error: "Could not check existing accounts.", detail: authListError.message }, 500);
+      account = authPage.users.find((u) => (u.email || "").toLowerCase() === email) ?? null;
+      if (authPage.users.length < 1000) break;
+    }
+
+    if (!account) {
+      if (typeof profile === "string") return json({ error: profile }, 400);
+      const redirectTo = typeof body.redirect_to === "string" && /^https?:\/\/[^\s]+$/.test(body.redirect_to) ? body.redirect_to : undefined;
+      const { data: invited, error: inviteError } = await db.auth.admin.inviteUserByEmail(email, {
+        data: { profile_type: "member_registration", ...profile },
+        redirectTo,
+      });
+      if (inviteError || !invited?.user) {
+        const limited = /rate limit|sending/i.test(inviteError?.message || "");
+        return json({ error: limited
+          ? "Supabase could not send the invitation email just now (email limit). Wait a few minutes and try again."
+          : "Could not create the invitation.", detail: inviteError?.message }, 502);
+      }
+      const { data: member, error: insertError } = await db.from("members")
+        .insert({ user_id: invited.user.id, ...profile, approved: false })
+        .select("id, first_name, approved").single();
+      if (insertError) return json({ error: "The invitation was sent, but the profile could not be saved.", detail: insertError.message }, 500);
+      return json({ outcome: "invited", email, member });
+    }
+
+    let outcome = "already_registered";
+    if (!account.email_confirmed_at) {
+      // Their profile is created from their own signup answers by the database trigger.
+      const { error: confirmError } = await db.auth.admin.updateUserById(account.id, { email_confirm: true });
+      if (confirmError) return json({ error: "Could not confirm the person's email.", detail: confirmError.message }, 500);
+      outcome = "confirmed";
+    }
+    const { data: existing, error: existingError } = await db.from("members")
+      .select("id, first_name, approved").eq("user_id", account.id).maybeSingle();
+    if (existingError) return json({ error: "Could not check the person's profile.", detail: existingError.message }, 500);
+    if (existing) return json({ outcome, email, member: existing });
+    if (typeof profile === "string") {
+      return json({ outcome: outcome === "confirmed" ? "confirmed_needs_profile" : "needs_profile", email, error: profile }, outcome === "confirmed" ? 200 : 400);
+    }
+    const { data: member, error: insertError } = await db.from("members")
+      .insert({ user_id: account.id, ...profile, approved: false })
+      .select("id, first_name, approved").single();
+    if (insertError) return json({ error: "Could not save the profile.", detail: insertError.message }, 500);
+    return json({ outcome: outcome === "confirmed" ? "confirmed" : "profile_created", email, member });
+  }
 
   // Removes one member's extra photo (for example an inappropriate picture): the record and
   // the file. Never touches the member's profile, main photo or approval.
@@ -328,3 +388,24 @@ Deno.serve(async (req: Request) => {
 
   return json({ error: "Unsupported action." }, 400);
 });
+
+// The same rules the signup form and database use. Returns the profile, or a message saying
+// what is missing.
+function memberProfileFrom(input: unknown): Record<string, string | number | null> | string {
+  const p = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
+  const text = (key: string) => String(p[key] ?? "").trim();
+  const age = Number(text("age"));
+  const profile = {
+    first_name: text("first_name"), age, gender: text("gender"), location: text("location"), city: text("city"),
+    relationship_goal: text("relationship_goal"), bio: text("bio"),
+    seeking_gender: ["Men", "Women", "Everyone"].includes(text("seeking_gender")) ? text("seeking_gender") : null,
+  };
+  if (!profile.first_name || profile.first_name.length > 80) return "Enter the person's first name.";
+  if (!Number.isInteger(age) || age < 18 || age > 120) return "Enter an age of 18 or over.";
+  if (!["Woman", "Man", "Non-binary", "Prefer not to say"].includes(profile.gender)) return "Choose the person's gender.";
+  if (!["Uganda", "Botswana"].includes(profile.location)) return "Choose Uganda or Botswana.";
+  if (!profile.city || profile.city.length > 100) return "Enter the person's city or town.";
+  if (!["Serious relationship", "Marriage", "Friendship", "Exploring connections"].includes(profile.relationship_goal)) return "Choose what the person is looking for.";
+  if (!profile.bio || profile.bio.length > 500) return "Write a short bio (up to 500 characters).";
+  return profile;
+}
