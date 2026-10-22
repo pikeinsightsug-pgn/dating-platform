@@ -320,3 +320,14 @@ test("a missing page sends visitors to the homepage instead of a dead end", asyn
   assert.match(html, /"\/dating-platform\/" : "\/"/, "works on GitHub Pages and Netlify");
   assert.match(html, /<a class="btn" id="home" href="\.\/">/, "a manual link if scripts are blocked");
 });
+
+test("the owner console comes filled in with this site's project address and public key", async () => {
+  const admin = await read("admin/index.html");
+  const core = await read("assets/member-core.js");
+  const url = core.match(/const SUPABASE_URL = "([^"]+)"/)[1];
+  const key = core.match(/const SUPABASE_PUBLISHABLE_KEY = "([^"]+)"/)[1];
+  assert.ok(admin.includes(`$("project").value = "${url}";`), "same project as the member pages");
+  assert.ok(admin.includes(`$("anon").value = "${key}";`), "same public key as the member pages");
+  assert.match(key, /^sb_publishable_/, "only the public publishable key, never a secret key");
+  assert.doesNotMatch(admin, /service_role|sb_secret_/i, "no secret keys in the page");
+});
