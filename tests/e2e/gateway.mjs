@@ -19,10 +19,10 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
   // Signup confirmation emails: one-time token -> { email, redirect }. Like Supabase, a new
   // signup email or a resend replaces the earlier link for that address.
   const confirmations = new Map();
-  function issueConfirmation(email, redirect) {
+  function issueConfirmation(email, redirect, type = "signup") {
     for (const [key, value] of confirmations) if (value.email === email) confirmations.delete(key);
     const value = randomUUID().replace(/-/g, "");
-    confirmations.set(value, { email, redirect });
+    confirmations.set(value, { email, redirect, type });
     return value;
   }
   async function confirm(value) {
@@ -285,6 +285,24 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
       }
       return send(res, 200, userJson(row));
     }
+    // Owner invitation (supabase-js auth.admin.inviteUserByEmail): an unconfirmed account with
+    // the given profile answers, and an invitation email.
+    if (route === "invite" && req.method === "POST") {
+      if (sub !== SERVICE) return authError(403, "not_admin", "User not allowed");
+      const email = String(body.email || "").toLowerCase();
+      if ((await pool.query("select 1 from auth.users where email = $1", [email])).rows.length) return authError(422, "email_exists", "A user with this email address has already been registered");
+      const row = (await pool.query("insert into auth.users (email, raw_user_meta_data) values ($1, $2) returning *", [email, body.data || {}])).rows[0];
+      issueConfirmation(email, url.searchParams.get("redirect_to"), "invite");
+      return send(res, 200, userJson(row));
+    }
+    if (route.startsWith("admin/users") && req.method === "PUT") {
+      if (sub !== SERVICE) return authError(403, "not_admin", "User not allowed");
+      const id = route.split("/")[2];
+      const row = body.email_confirm === true
+        ? (await pool.query("update auth.users set email_confirmed_at = coalesce(email_confirmed_at, now()) where id::text = $1 returning *", [id])).rows[0]
+        : (await pool.query("select * from auth.users where id::text = $1", [id])).rows[0];
+      return row ? send(res, 200, userJson(row)) : authError(404, "user_not_found", "User not found");
+    }
     if (route.startsWith("admin/users")) {
       if (sub !== SERVICE) return authError(403, "not_admin", "User not allowed");
       const id = route.split("/")[2];
@@ -301,7 +319,7 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
       const target = url.searchParams.get("redirect_to") || "about:blank";
       const row = await confirm(url.searchParams.get("token"));
       const fragment = row
-        ? new URLSearchParams({ ...session(row), user: "", type: "signup" })
+        ? new URLSearchParams({ ...session(row), user: "", type: url.searchParams.get("type") || "signup" })
         : new URLSearchParams({ error: "access_denied", error_code: "otp_expired", error_description: "Email link is invalid or has expired" });
       fragment.delete("user");
       res.writeHead(303, { location: target.split("#")[0] + "#" + fragment, "access-control-allow-origin": "*" });
@@ -358,7 +376,7 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
     // A signed-in session for an existing user, as an email link would provide.
     // The link a member would find in their latest signup confirmation email.
     confirmationEmail(email) {
-      for (const [value, entry] of confirmations) if (entry.email === email) return { token: value, redirect: entry.redirect };
+      for (const [value, entry] of confirmations) if (entry.email === email) return { token: value, redirect: entry.redirect, type: entry.type };
       return null;
     },
     async sessionFor(email) { return session((await pool.query("select * from auth.users where email = $1", [email])).rows[0]); },
