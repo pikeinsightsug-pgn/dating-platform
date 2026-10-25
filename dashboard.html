@@ -29,6 +29,8 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
 .extra-grid img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;background:#fde8f0}
 .extra-grid button{position:absolute;top:6px;right:6px;min-height:32px;padding:4px 10px;font-size:13px}
 @media(max-width:480px){.extra-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.official-box{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#e7f6ec;color:#1d6b3a;border-radius:14px;padding:14px 16px;margin:0 0 16px;font-weight:650}
+.official-box p{margin:0;color:#1d6b3a;line-height:1.5}
 </style>
 </head>
 <body>
@@ -42,6 +44,8 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     <div class="notice" id="approval-guidance"><strong>How approval works:</strong> The platform owner reviews member profiles and linked accounts manually. Until your profile is approved, it stays private and you cannot browse or message other members. Approval is never automatic. No payment is requested.</div>
     <h1>My profile</h1>
     <p id="approval-status" role="status" aria-live="polite"></p>
+    <div id="official-self" class="official-box hidden" role="note"><p>✅ This is the official P.K Connect account. Members see it pinned at the top of Discover with an Official badge, never as a dating profile. Keep the name and bio clearly official.</p></div>
+    <div id="official-contact" class="official-box hidden"><p id="official-contact-text">Questions, problems or ideas? Message our founder directly.</p><a id="official-contact-link" class="btn" href="messages.html">Message Pike ✅</a></div>
     <section class="photo-actions" aria-labelledby="photo-title"><h2 id="photo-title">Profile photo</h2><p class="photo-note">Choose a clear photo of yourself, then zoom and position it in the frame. JPEG, PNG and WebP photos from phones and computers are accepted and resized automatically. Photos are private and shown only to approved members.</p><img id="photo-preview" class="photo-preview hidden" alt="Preview of your profile photo"><p id="photo-empty" class="photo-note">No profile photo uploaded yet.</p><label for="photo-file">Upload or replace photo<input id="photo-file" type="file" accept="image/*"></label><button id="upload-photo" type="button" disabled>Upload photo</button><p id="photo-status" class="photo-note" role="status" aria-live="polite"></p></section>
     <section id="extra-photos" class="photo-actions hidden" aria-labelledby="extra-title"><h2 id="extra-title">More photos</h2><p class="photo-note">Add up to 6 more photos so members can get to know you. Like your profile photo, they are private and shown only to approved members.</p><div id="extra-grid" class="extra-grid"></div><label for="extra-file" id="extra-add">Add a photo<input id="extra-file" type="file" accept="image/*"></label><p id="extra-status" class="photo-note" role="status" aria-live="polite"></p></section>
     <p id="status" role="status" aria-live="polite"></p>
@@ -126,6 +130,19 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       ? "Your profile is approved. Use Discover Members above to browse other approved members and send private messages."
       : "Your profile is awaiting manual review by the platform owner. It stays private until approved; Discover Members and Messages open after approval.";
   }
+  // The official account sees a reminder; approved members get a direct link to message it.
+  async function showOfficial(profile) {
+    document.getElementById("official-self").classList.toggle("hidden", profile.is_official !== true);
+    if (profile.approved !== true || profile.is_official === true) return;
+    const accounts = await window.FYP.listOfficialAccounts(db);
+    if (!accounts.length) return;
+    const account = accounts[0];
+    document.getElementById("official-contact-text").textContent = "Questions, problems or ideas? Message " + account.first_name + ", the official P.K Connect account.";
+    const link = document.getElementById("official-contact-link");
+    link.href = "messages.html?member=" + encodeURIComponent(account.id);
+    link.textContent = "Message " + account.first_name.split(/\s/)[0] + " ✅";
+    document.getElementById("official-contact").classList.remove("hidden");
+  }
   async function initialize() {
     const { data, error } = await db.auth.getSession();
     if (error) throw new Error("Your session could not be restored. Please sign in again.");
@@ -143,6 +160,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     memberProfile = profile;
     valuesFor(profile);
     showApproval(profile);
+    showOfficial(profile);
     window.FYP.showSignedIn(profile, user);
     loadPhotoPreview(profile.profile_photo_url);
     loadExtraPhotos();
@@ -172,6 +190,8 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     } catch (error) {
       setStatus(error && error.code === "REQUEST_TIMEOUT"
         ? "Saving took too long. Check your connection and try again."
+        : /reserved for the official/i.test(String((error && error.message) || ""))
+        ? "That name is reserved for the official P.K Connect account. Please use your own first name."
         : "Could not save your profile. Check your connection and try again. If the problem continues, email pikeinsightsug@gmail.com.");
     } finally { save.disabled = false; save.textContent = "Save profile"; }
   });

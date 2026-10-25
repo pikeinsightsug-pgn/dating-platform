@@ -31,6 +31,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
 .empty{padding:22px;color:#75666e}.help{font-size:14px;color:#75666e;text-align:center;margin-top:18px}.help a{color:#a21f59;font-weight:700;overflow-wrap:anywhere}.hidden{display:none!important}
 @media(max-width:760px){.layout{grid-template-columns:1fr}.layout.thread-open .list-panel{display:none}.layout:not(.thread-open) .thread-panel{display:none}.back{display:inline-flex}.wrap{padding:16px 12px 30px}.messages{max-height:none}}
 .signed-in{margin:10px 0 0;font-size:14px;color:#75666e;font-weight:600}
+.official-badge{display:inline-block;background:#e7f6ec;color:#1d6b3a;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:800;margin-left:6px;white-space:nowrap;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -62,7 +63,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
       </form>
     </section>
   </div>
-  <p class="help">Need help? Email us at <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a></p>
+  <p class="help">Our only official account is <strong>Pike – Founder ✅</strong>. P.K Connect will never ask for your password, money or payment codes in chat — report anyone who does.<br>Need help? Email us at <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a></p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script src="assets/member-core.js"></script>
@@ -82,6 +83,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
   let active = null; // { id, first_name, ... }
   let pollTimer = null;
   let photoUrls = new Map();
+  let officialIds = new Set(); // the official P.K Connect account(s), shown with a ✅ badge
 
   function avatar(entry) {
     const url = entry.profile_photo_path && photoUrls.get(entry.profile_photo_path);
@@ -115,7 +117,9 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
       const button = document.createElement("button"); button.type = "button";
       button.setAttribute("aria-current", String(Boolean(active && active.id === entry.other_member_id)));
       const who = document.createElement("div"); who.className = "who";
-      const name = document.createElement("strong"); name.textContent = entry.first_name + (entry.age ? ", " + entry.age : "");
+      const name = document.createElement("strong");
+      if (officialIds.has(entry.other_member_id)) { name.textContent = entry.first_name; name.append(window.FYP.officialBadge()); }
+      else name.textContent = entry.first_name + (entry.age ? ", " + entry.age : "");
       const last = document.createElement("span"); last.textContent = (entry.last_from_me ? "You: " : "") + (entry.last_body || "") + " · " + when(entry.last_at);
       who.append(name, last);
       button.append(avatar(entry), who);
@@ -158,6 +162,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
     active = member;
     layout.classList.add("thread-open");
     document.getElementById("thread-name").textContent = member.first_name;
+    if (officialIds.has(member.id)) document.getElementById("thread-name").append(window.FYP.officialBadge());
     document.getElementById("block").classList.remove("hidden");
     compose.classList.remove("hidden");
     renderList();
@@ -210,6 +215,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
     if (!profile) { window.location.replace("dashboard.html?profile=recovery"); return; }
     window.FYP.showSignedIn(profile, data.session.user);
     if (!profile.approved) { say("Messaging opens once the platform owner approves your profile. Your profile stays private until then."); return; }
+    officialIds = new Set((await window.FYP.listOfficialAccounts(db)).map(account => account.id));
     try { await refreshList(); }
     catch (error) { say(failure(error)); return; }
     layout.classList.remove("hidden"); say("");

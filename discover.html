@@ -29,6 +29,12 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
 .help{font-size:14px;color:#75666e;text-align:center}.help a{color:#a21f59;font-weight:700;overflow-wrap:anywhere}
 .hidden{display:none!important}@media(max-width:480px){.wrap{padding:16px 14px 40px}.top .btn,.top button{flex:1 1 auto}.filters{grid-template-columns:1fr 1fr}}
 .signed-in{margin:10px 0 0;font-size:14px;color:#75666e;font-weight:600}
+.official{display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:#fff;border:2px solid #cdebd7;border-radius:22px;padding:16px 18px;margin:18px 0 0;box-shadow:0 8px 30px #1d6b3a0d}
+.official .avatar{flex:none;width:72px;height:72px;border-radius:50%;object-fit:cover;background:#fde8f0;display:grid;place-items:center;font-size:30px}
+.official .text{flex:1 1 220px;min-width:0}.official h2{margin:0;font-size:20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.official p{margin:4px 0 0;font-size:14px}.official .note{color:#1d6b3a;font-weight:700}
+.official-badge{display:inline-block;background:#e7f6ec;color:#1d6b3a;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:800;white-space:nowrap}
+.self-note{background:#e7f6ec;color:#1d6b3a;border-radius:13px;padding:12px 16px;font-weight:650}
 .gallery{position:relative;touch-action:pan-y}.gallery .nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;min-height:0;padding:0;border-radius:50%;
  border:0;background:#ffffffd9;color:#a21f59;font-size:24px;line-height:1;box-shadow:0 4px 14px #0003}.gallery .prev{left:10px}.gallery .next{right:10px}
 .gallery .count{position:absolute;bottom:10px;right:12px;background:#241b23b3;color:#fff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px}
@@ -56,6 +62,8 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     <label>Looking for<select name="goal"><option value="">Any goal</option><option>Serious relationship</option><option>Marriage</option><option>Friendship</option><option>Exploring connections</option></select></label>
     <button type="submit">Apply filters</button>
   </form>
+  <p id="official-self" class="self-note hidden" role="note">You are signed in as the official P.K Connect account ✅. Members see you pinned at the top of their Discover page, never as a dating profile. Open a member below and press Message to welcome them.</p>
+  <section id="official" class="official hidden" aria-label="Official P.K Connect account"></section>
   <p id="status" role="status" aria-live="polite">Checking your account…</p>
   <section id="profiles" class="grid" aria-label="Approved member profiles"></section>
   <div class="more"><button id="load-more" class="secondary hidden" type="button">Show more profiles</button></div>
@@ -274,6 +282,30 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     const f = filterValues();
     return Boolean(f.p_country || f.p_gender || f.p_relationship_goal || f.p_min_age !== 18 || f.p_max_age !== 120);
   }
+  // The official P.K Connect account, pinned above the member profiles. It is not a dating
+  // profile, so it never appears in the grid (the database leaves it out of discovery).
+  async function showOfficial() {
+    const box = document.getElementById("official");
+    const accounts = await window.FYP.listOfficialAccounts(db);
+    if (!accounts.length) return;
+    const account = accounts[0];
+    const urls = await window.FYP.signedPhotoUrls(db, [account.profile_photo_path]);
+    const url = urls.get(account.profile_photo_path);
+    let picture;
+    if (url) { picture = document.createElement("img"); picture.src = url; picture.alt = ""; }
+    else { picture = document.createElement("div"); picture.textContent = "❤️"; picture.setAttribute("aria-hidden", "true"); }
+    picture.className = "avatar";
+    const text = document.createElement("div"); text.className = "text";
+    const name = document.createElement("h2"); name.textContent = account.first_name; name.append(window.FYP.officialBadge());
+    const note = document.createElement("p"); note.className = "note";
+    note.textContent = "The official P.K Connect account — not a dating profile. Message us with questions, problems or ideas.";
+    text.append(name, note);
+    if (account.bio) { const bio = document.createElement("p"); bio.className = "bio clamp"; bio.textContent = account.bio; text.append(bio); }
+    const message = document.createElement("a"); message.className = "btn"; message.textContent = "Message " + account.first_name.split(/\s/)[0];
+    message.href = "messages.html?member=" + encodeURIComponent(account.id);
+    box.replaceChildren(picture, text, message);
+    box.classList.remove("hidden");
+  }
   filters.addEventListener("submit", event => { event.preventDefault(); loadPage(true); });
   loadMore.addEventListener("click", () => loadPage(false));
 
@@ -315,10 +347,13 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     if (!profile) { window.location.replace("dashboard.html?profile=recovery"); return; }
     ownId = profile.id;
     window.FYP.showSignedIn(profile, data.session.user);
+    document.getElementById("official-self").classList.toggle("hidden", profile.is_official !== true);
+    if (profile.approved === true && profile.is_official !== true) showOfficial();
     // Start from the member's own preferences; they can widen the filters at any time.
-    const wanted = { Men: "Man", Women: "Woman" }[profile.seeking_gender];
+    // The official account sees everyone, so it can welcome every new member.
+    const wanted = profile.is_official === true ? null : { Men: "Man", Women: "Woman" }[profile.seeking_gender];
     if (wanted) filters.elements.gender.value = wanted;
-    if (profile.preferred_age_min && profile.preferred_age_max) {
+    if (profile.is_official !== true && profile.preferred_age_min && profile.preferred_age_max) {
       filters.elements.min_age.value = profile.preferred_age_min;
       filters.elements.max_age.value = Math.min(120, profile.preferred_age_max);
     }

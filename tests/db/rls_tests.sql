@@ -249,3 +249,72 @@ select t_assert(remove_member_photo(:'photo_id') like 'aaaaaaaa-0000-4000-8000-0
 select t_assert((select count(*) = 5 from list_my_photos()), 'the removed photo is gone');
 commit;
 select t_assert((select count(*) = 5 from member_photos), 'no other photo rows changed');
+
+-- ===== Official founder account (supabase/official_account.sql) =====
+insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
+ ('16161616-0000-4000-8000-000000000016', 'founder@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Tiago","age":42,"gender":"Man","location":"Botswana","city":"Francistown","relationship_goal":"Friendship","bio":"owner"}'),
+ ('17171717-0000-4000-8000-000000000017', 'founder-test@test.invalid', now(), '{"profile_type":"member_registration","first_name":"FounderTest","age":40,"gender":"Man","location":"Uganda","city":"Gulu","relationship_goal":"Friendship","bio":"owner test official"}');
+select id as o_id from members where user_id = '16161616-0000-4000-8000-000000000016' \gset
+select id as ot_id from members where user_id = '17171717-0000-4000-8000-000000000017' \gset
+select t_assert((select bool_and(not is_official) from members), 'every existing profile starts as not official');
+-- What the owner console does: approve, mark official, and make sure it is not a test account.
+update members set approved = true, is_official = true, is_test_account = false where id = :'o_id';
+update members set approved = true, is_official = true, is_test_account = true where id = :'ot_id';
+
+begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', true); set local role authenticated;
+select t_assert((select count(*) = 0 from browse_member_profiles() where id = :'o_id'), 'the official account is not shown in Discover as a dating profile');
+select t_assert((select count(*) = 0 from browse_approved_profiles() where id = :'o_id'), 'the older discovery function also leaves the official account out');
+select t_assert((select array_agg(id) = array[:'o_id'::uuid] from list_official_accounts()), 'an approved member sees exactly the genuine official account');
+select t_assert((select first_name = 'Tiago' and city = 'Francistown' from list_official_accounts()), 'the official card shows its name and city');
+select t_assert((select count(*) = 1 from get_member_profile(:'o_id')), 'members can open the official profile from a message link');
+select t_assert((select count(*) = 1 from send_member_message(:'o_id', 'Thank you Pike')), 'members can reply to the official account');
+select t_denied('update public.members set is_official = true where user_id = auth.uid()', 'members cannot make themselves official');
+select t_denied('update public.members set first_name = ''Pike – Founder'' where user_id = auth.uid()', 'members cannot call themselves Founder');
+select t_denied('update public.members set first_name = ''P.K Connect Team'' where user_id = auth.uid()', 'members cannot use the platform name as their name');
+select t_denied('update public.members set first_name = ''Official'' where user_id = auth.uid()', 'members cannot call themselves Official');
+update public.members set bio = 'Synthetic test A' where user_id = auth.uid();
+select t_assert((select first_name = 'TestA' from members), 'members can still save their profile with their own name');
+update public.members set first_name = 'Supporter Ann' where user_id = auth.uid();
+select t_assert((select first_name = 'Supporter Ann' from members), 'ordinary names that only contain a reserved word are allowed');
+update public.members set first_name = 'TestA' where user_id = auth.uid();
+commit;
+
+begin; select set_config('request.jwt.claim.sub', '16161616-0000-4000-8000-000000000016', true); set local role authenticated;
+update public.members set first_name = 'Pike – Founder' where user_id = auth.uid();
+select t_assert((select first_name = 'Pike – Founder' and is_official from members), 'the official account can use the Founder name and sees its own flag');
+select t_assert((select count(*) = 0 from list_official_accounts()), 'the official account does not list itself');
+select t_assert((select count(*) >= 3 from browse_member_profiles()), 'the official account can browse genuine members to welcome them');
+select t_assert((select count(*) = 0 from browse_member_profiles() where id in (:'t2_id', :'ot_id')), 'the official account never sees test accounts');
+commit;
+-- 30 recent messages is the normal limit; the official account may keep welcoming members.
+insert into member_messages (sender_member_id, recipient_member_id, body)
+select :'o_id', :'b_id', 'welcome ' || n from generate_series(1, 30) n;
+begin; select set_config('request.jwt.claim.sub', '16161616-0000-4000-8000-000000000016', true); set local role authenticated;
+select t_assert((select count(*) = 1 from send_member_message(:'e_id', 'Welcome to P.K Connect!')), 'the official account can send more than 30 welcome messages in 10 minutes');
+commit;
+insert into member_messages (sender_member_id, recipient_member_id, body)
+select :'b_id', :'a_id', 'hello ' || n from generate_series(1, 30) n;
+begin; select set_config('request.jwt.claim.sub', 'bbbbbbbb-0000-4000-8000-000000000002', true); set local role authenticated;
+select t_denied(format('select * from public.send_member_message(%L, %L)', :'e_id', 'one more'), 'ordinary members keep the 30-message limit');
+commit;
+
+begin; select set_config('request.jwt.claim.sub', '13131313-0000-4000-8000-000000000013', true); set local role authenticated;
+select t_assert((select array_agg(id) = array[:'ot_id'::uuid] from list_official_accounts()), 'test accounts see only the test official account');
+commit;
+begin; select set_config('request.jwt.claim.sub', 'cccccccc-0000-4000-8000-000000000003', true); set local role authenticated;
+select t_denied('select * from public.list_official_accounts()', 'pending members cannot list the official account');
+commit;
+begin; set local role anon;
+select t_denied('select * from public.list_official_accounts()', 'visitors cannot list the official account');
+commit;
+begin; select set_config('request.jwt.claim.sub', 'eeeeeeee-0000-4000-8000-000000000005', true); set local role authenticated;
+select block_member(:'o_id');
+select t_assert((select count(*) = 0 from list_official_accounts()), 'a member who blocks the official account no longer sees it');
+select unblock_member(:'o_id');
+commit;
+-- The signup trigger and the owner are never blocked by the reserved-name rule.
+insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
+ ('18181818-0000-4000-8000-000000000018', 'admin-name@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Admin","age":30,"gender":"Woman","location":"Uganda","city":"Kampala","relationship_goal":"Marriage","bio":"x"}');
+select t_assert(exists (select 1 from members where user_id = '18181818-0000-4000-8000-000000000018' and not approved), 'a signup with a reserved name still succeeds (pending, for the owner to review)');
+update members set first_name = 'Owner Renamed Official' where id = :'ot_id';
+select t_assert((select first_name = 'Owner Renamed Official' from members where id = :'ot_id'), 'the owner can rename any profile');
