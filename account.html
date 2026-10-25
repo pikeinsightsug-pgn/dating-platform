@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cyvkpcwjkeifpvegwhpt.supabase.co; connect-src 'self' blob: data: https://cyvkpcwjkeifpvegwhpt.supabase.co wss://cyvkpcwjkeifpvegwhpt.supabase.co; font-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:">
+<meta name="referrer" content="same-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Join | P.K CONNECT – Find Your Person</title>
 <meta name="description" content="Create your P.K CONNECT – Find Your Person account. Adults 18+ in Uganda and Botswana. Free to join.">
@@ -94,7 +96,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
   </section>
   <p class="help" style="margin-top:20px">Need help? Email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a> · <a href="privacy.html">Privacy notice</a></p>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="assets/vendor/supabase-js-2.117.2.js"></script>
 <script src="assets/member-core.js"></script>
 <script>
 (() => {

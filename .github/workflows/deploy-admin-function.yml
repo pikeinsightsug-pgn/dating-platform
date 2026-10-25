@@ -10,7 +10,7 @@ name: Deploy admin-members Edge Function
 on:
   workflow_dispatch:
   push:
-    branches: [main, fix/launch-readiness]
+    branches: [main]
     paths:
       - "supabase/functions/**"
       - "supabase/config.toml"

@@ -1,0 +1,8 @@
+# Weekly checks that the GitHub Actions used to deploy the site and owner function are up to
+# date with security fixes. Dependabot only opens pull requests; nothing changes until merged.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

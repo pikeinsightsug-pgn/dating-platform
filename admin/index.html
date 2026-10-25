@@ -1,7 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' blob: data: https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:">
+<meta name="referrer" content="same-origin"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Owner Approval Console | P.K CONNECT – Find Your Person</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fff8fb;color:#241b23;font:16px system-ui,sans-serif}.wrap{max-width:1050px;margin:auto;padding:24px}
@@ -55,7 +57,11 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <div class="panel"><div class="row"><h2>Open member reports</h2></div><div id="reports" class="muted">Load registrations to see reports.</div></div>
 <div class="row"><h2>Member profiles</h2><button id="refresh" class="secondary">Refresh records</button></div><div id="members"></div>
 </section></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="../assets/vendor/supabase-js-2.117.2.js"></script>
+<script>
+// The owner console never runs inside another website's frame.
+if (window.top !== window.self) { try { window.top.location.replace(window.self.location.href); } catch (error) { document.documentElement.style.display = "none"; } }
+</script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);

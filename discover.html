@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cyvkpcwjkeifpvegwhpt.supabase.co; connect-src 'self' blob: data: https://cyvkpcwjkeifpvegwhpt.supabase.co wss://cyvkpcwjkeifpvegwhpt.supabase.co; font-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:">
+<meta name="referrer" content="same-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Discover members | P.K CONNECT – Find Your Person</title>
 <meta name="description" content="Browse approved adult member profiles in Uganda and Botswana.">
@@ -95,7 +97,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     <p id="dialog-status" role="status" aria-live="polite"></p>
   </div>
 </dialog>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="assets/vendor/supabase-js-2.117.2.js"></script>
 <script src="assets/member-core.js"></script>
 <script>
 (() => {

@@ -50,7 +50,7 @@ export async function setup(name, files = ALL) {
   const gateway = await startGateway({ database: name, ...PG });
   const site = await staticServer();
   const base = `http://127.0.0.1:${site.address().port}/dating-platform/`;
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   const supabaseJs = await readFile(join(repo, "node_modules/@supabase/supabase-js/dist/umd/supabase.js"));
   async function newPage({ mobile = false } = {}) {
     const context = await browser.newContext(mobile ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : {});
