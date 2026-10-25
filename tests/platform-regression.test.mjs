@@ -350,3 +350,21 @@ test("the official founder account is recognisable and cannot be imitated", asyn
   assert.match(sql, /m\.is_official = false/, "official accounts stay out of discovery");
   assert.doesNotMatch(sql, /grant update \(is_official\)/i, "members can never make themselves official");
 });
+
+test("pages load code only from this site and carry a security policy", async () => {
+  const { createHash } = await import("node:crypto");
+  const hash = (buf) => createHash("sha256").update(buf).digest("hex");
+  const vendored = await readFile(new URL("assets/vendor/supabase-js-2.117.2.js", repo));
+  const installed = await readFile(new URL("node_modules/@supabase/supabase-js/dist/umd/supabase.js", repo)).catch(() => null);
+  if (installed) assert.equal(hash(vendored), hash(installed), "the self-hosted library is the exact pinned release");
+  const pages = ["404.html", "about.html", "account.html", "dashboard.html", "discover.html", "index.html", "login.html",
+    "messages.html", "privacy.html", "safety.html", "admin/index.html", "agent/dashboard.html"];
+  for (const path of pages) {
+    const html = await read(path);
+    assert.match(html, /http-equiv="Content-Security-Policy"/, path + " has a security policy");
+    assert.match(html, /object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'/, path + " blocks plugins, base and form hijacking");
+    assert.doesNotMatch(html, /<script[^>]+src="https?:/i, path + " loads no script from another website");
+  }
+  const core = await read("assets/member-core.js"), admin = await read("admin/index.html");
+  for (const text of [core, admin]) assert.match(text, /window\.top !== window\.self/, "refuses to run inside another site's frame");
+});

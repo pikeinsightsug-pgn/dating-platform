@@ -1,6 +1,12 @@
 // Shared member-area helpers for account, dashboard, discovery and messages pages.
 // Only the public publishable key belongs here; never add a service-role key.
 (function (root) {
+  // Refuse to run inside another website's frame, so nobody can trick members into clicking
+  // buttons on a disguised copy of these pages (GitHub Pages cannot send a frame header).
+  if (typeof window !== "undefined" && window.top !== window.self) {
+    try { window.top.location.replace(window.self.location.href); }
+    catch (error) { document.documentElement.style.display = "none"; }
+  }
   "use strict";
 
   const SUPABASE_URL = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
