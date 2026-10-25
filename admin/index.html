@@ -7,7 +7,7 @@
 *{box-sizing:border-box}body{margin:0;background:#fff8fb;color:#241b23;font:16px system-ui,sans-serif}.wrap{max-width:1050px;margin:auto;padding:24px}
 header,.panel,.member{background:#fff;border:1px solid #efdce5;border-radius:18px;padding:22px;margin-bottom:16px}header{background:#2b1723;color:white}
 h1{margin:0 0 8px}p{line-height:1.5}.warning{color:#8f1e51;background:#fde8f0;border-radius:10px;padding:10px 12px;font-weight:650}.muted{color:#766772}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{background:#fff;border:1px solid #efdce5;border-radius:15px;padding:18px}.num{font-size:30px;font-weight:900;color:#b32663}
-input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;width:100%;margin:5px 0 12px}button{border:0;border-radius:999px;padding:11px 16px;font:inherit;font-weight:750;cursor:pointer;background:#b32663;color:white;margin:4px}button.secondary{background:white;color:#b32663;border:1px solid #e5cbd7}button.danger{background:#6e293c}#status{white-space:pre-wrap;color:#8f1e51}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.actions{display:flex;gap:5px;flex-wrap:wrap}.member h3{margin:0 0 6px}.badge{display:inline-block;border-radius:999px;background:#fff0f6;padding:5px 10px;font-size:13px}.bio{white-space:pre-wrap;overflow-wrap:anywhere}
+input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;width:100%;margin:5px 0 12px}button{border:0;border-radius:999px;padding:11px 16px;font:inherit;font-weight:750;cursor:pointer;background:#b32663;color:white;margin:4px}button.secondary{background:white;color:#b32663;border:1px solid #e5cbd7}button.danger{background:#6e293c}#status{white-space:pre-wrap;color:#8f1e51}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.actions{display:flex;gap:5px;flex-wrap:wrap}.member h3{margin:0 0 6px}.badge{display:inline-block;border-radius:999px;background:#fff0f6;padding:5px 10px;font-size:13px}.badge.official{background:#e7f6ec;color:#1d6b3a;font-weight:750}.bio{white-space:pre-wrap;overflow-wrap:anywhere}
 .extra-photos{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px}.extra-photos figure{margin:0;display:grid;gap:6px;width:150px}
 .extra-photos img{width:150px;height:112px;object-fit:cover;border-radius:10px;background:#fde8f0}.extra-photos button{padding:8px 10px;font-size:13px}
 #add-member select,#add-member textarea{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;width:100%;margin:5px 0 12px;background:#fff}
@@ -88,7 +88,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     return data;
   }
   // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
-  const EXPECTED_FUNCTION_VERSION = "2026-10-22";
+  const EXPECTED_FUNCTION_VERSION = "2026-10-25";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
@@ -152,7 +152,8 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     loadLegacy().catch(e => { $("legacy-summary").textContent = notDeployed(e); });
     const m = data.metrics;
     $("total").textContent = m.total;
-    $("test-count").textContent = m.test_accounts != null ? m.test_accounts + " marked as test accounts" : "";
+    $("test-count").textContent = [m.test_accounts != null ? m.test_accounts + " marked as test accounts" : "",
+      m.official_accounts != null ? m.official_accounts + " official account" + (m.official_accounts === 1 ? "" : "s") : ""].filter(Boolean).join(" · ");
     // An older function does not report genuine members separately; say so instead of counting test accounts.
     $("approved").textContent = m.genuine_approved != null ? m.genuine_approved : m.approved + " (incl. test accounts)";
     const current = data.function_version === EXPECTED_FUNCTION_VERSION;
@@ -187,7 +188,9 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     }
     card.append(el("h3", (m.first_name || "Unnamed member") + " · " + (m.age ?? "Age unknown")));
     card.append(el("span", m.approved ? "Approved" : "Pending review", "badge"));
+    if (m.is_official) card.append(el("span", " ✅ OFFICIAL P.K CONNECT ACCOUNT — shown to members as the official contact, not in Discover", "badge official"));
     if (m.is_test_account) card.append(el("span", " TEST ACCOUNT — hidden from genuine members", "badge"));
+    if (!m.is_official && RESERVED_NAME.test(m.first_name || "")) card.append(el("span", " ⚠️ Name looks official — check this is not someone posing as P.K Connect", "badge"));
     if (m.user_id && m.account_email && m.account_confirmed === false) card.append(el("span", " Waiting for them to accept the invitation or confirm their email", "badge"));
     card.append(el("p", "Registered email: " + (m.account_email || "No linked Auth email") + " · Supabase Auth ID: " + (m.user_id || "No linked Auth ID"), "bio"));
     card.append(el("p", [m.gender, m.location, m.city, m.relationship_goal, m.created_at ? new Date(m.created_at).toLocaleString() : null].filter(Boolean).join(" · "), "muted"));
@@ -217,7 +220,13 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
     reject.onclick = () => change(m.id, "reject");
     const test = el("button", m.is_test_account ? "Mark as genuine member" : "Mark as my test account", "secondary");
     test.onclick = () => setTest(m, !m.is_test_account);
-    actions.append(approve, reject, test);
+    test.disabled = !!m.is_official;
+    if (test.disabled) test.title = "Remove official status first.";
+    const official = el("button", m.is_official ? "Remove official status" : "Make official account ✅", "secondary");
+    official.disabled = !m.is_official && (!m.approved || !m.user_id);
+    if (official.disabled) official.title = "Approve this profile first.";
+    official.onclick = () => setOfficial(m, !m.is_official);
+    actions.append(approve, reject, test, official);
     card.append(actions);
     return card;
   }
@@ -240,6 +249,19 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
       await invoke("remove_photo", null, { photo_id: photoId });
       await load();
       say("Photo removed.");
+    } catch (e) { say(notDeployed(e)); }
+  }
+  // Names members cannot give themselves (supabase/official_account.sql). Older or owner-added
+  // profiles may still have one, so the console flags them for review.
+  const RESERVED_NAME = /\b(official|founder|admin|administrator|moderator|support)\b|p\W*k\W*connect/i;
+  async function setOfficial(m, isOfficial) {
+    try {
+      if (!confirm(isOfficial
+        ? "Make " + (m.first_name || "this profile") + " the official P.K Connect account? It gets a ✅ Official badge, members see it as the official contact, it is kept out of Discover, and it can send welcome messages to genuine members. It will no longer be a test account."
+        : "Remove official status from " + (m.first_name || "this profile") + "? It will appear in Discover like any other member.")) return;
+      await invoke("set_official_account", m.id, { is_official: isOfficial });
+      await load();
+      say(isOfficial ? (m.first_name || "The profile") + " is now the official P.K Connect account." : "Official status removed.");
     } catch (e) { say(notDeployed(e)); }
   }
   async function setTest(m, isTest) {

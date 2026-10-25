@@ -3,7 +3,7 @@ import { isMemberPhotoPathOwnedByUser } from "../_shared/member-photo-path.js";
 
 // Bump when this function changes; the owner console compares it with the version it expects,
 // so the owner can see whether the deployed function is current without opening Supabase.
-const FUNCTION_VERSION = "2026-10-22";
+const FUNCTION_VERSION = "2026-10-25";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,7 +43,7 @@ Deno.serve(async (req: Request) => {
 
   let body: {
     action?: string; member_id?: string; user_id?: string; identity_verified?: boolean;
-    status?: string; legacy_id?: string; is_test_account?: boolean; notes?: string; photo_id?: string;
+    status?: string; legacy_id?: string; is_test_account?: boolean; is_official?: boolean; notes?: string; photo_id?: string;
     email?: string; consent?: boolean; redirect_to?: string; profile?: Record<string, unknown>;
   };
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON." }, 400); }
@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
       location: m.location, city: m.city, relationship_goal: m.relationship_goal, bio: m.bio,
       interests: m.interests, partner_preference: m.partner_preference,
       profile_photo_url: m.profile_photo_url, approved: m.approved === true,
-      is_test_account: m.is_test_account === true, created_at: m.created_at,
+      is_test_account: m.is_test_account === true, is_official: m.is_official === true, created_at: m.created_at,
       seeking_gender: m.seeking_gender ?? null,
       preferred_age_min: m.preferred_age_min ?? null, preferred_age_max: m.preferred_age_max ?? null,
     }));
@@ -126,8 +126,9 @@ Deno.serve(async (req: Request) => {
         pending: rows.filter((m) => m.approved !== true).length,
         linked: rows.filter((m) => !!m.user_id).length,
         test_accounts: rows.filter((m) => m.is_test_account).length,
-        // Genuine members only: the owner's test accounts are excluded.
-        genuine_approved: rows.filter((m) => m.approved && !m.is_test_account && m.user_id && (m.age ?? 0) >= 18).length,
+        official_accounts: rows.filter((m) => m.is_official).length,
+        // Genuine members only: the owner's test accounts and the official account are excluded.
+        genuine_approved: rows.filter((m) => m.approved && !m.is_test_account && !m.is_official && m.user_id && (m.age ?? 0) >= 18).length,
         unlinked: rows.filter((m) => !m.user_id).length,
       },
     });
@@ -215,6 +216,34 @@ Deno.serve(async (req: Request) => {
       .select("id, is_test_account")
       .maybeSingle();
     if (error) return json({ error: "Could not update the test-account flag. Apply supabase/discovery_messaging_safety.sql first.", detail: error.message }, 500);
+    if (!data) return json({ error: "Member not found." }, 404);
+    return json({ member: data });
+  }
+
+  // Marks the owner's own profile as the official P.K Connect account (✅ badge, kept out of
+  // Discover as a dating profile, shown to members as the official contact). An official
+  // account must be approved and linked, and is never a test account, so genuine members see it.
+  if (body.action === "set_official_account") {
+    if (typeof body.member_id !== "string" || !uuid.test(body.member_id) || typeof body.is_official !== "boolean") {
+      return json({ error: "A valid member ID and official-account flag are required." }, 400);
+    }
+    if (body.is_official) {
+      const { data: member, error: memberError } = await db.from("members")
+        .select("id, user_id, approved").eq("id", body.member_id).maybeSingle();
+      if (memberError) return json({ error: "Could not verify the profile." }, 500);
+      if (!member) return json({ error: "Member not found." }, 404);
+      if (!member.user_id || member.approved !== true) {
+        return json({ error: "Approve this profile (with a linked, confirmed account) before making it the official account." }, 409);
+      }
+    }
+    const update: Record<string, boolean> = { is_official: body.is_official };
+    if (body.is_official) update.is_test_account = false;
+    const { data, error } = await db.from("members")
+      .update(update)
+      .eq("id", body.member_id)
+      .select("id, is_official, is_test_account")
+      .maybeSingle();
+    if (error) return json({ error: "Could not update the official-account flag. Apply supabase/official_account.sql first.", detail: error.message }, 500);
     if (!data) return json({ error: "Member not found." }, 404);
     return json({ member: data });
   }

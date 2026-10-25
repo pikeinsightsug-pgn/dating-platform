@@ -331,3 +331,22 @@ test("visitors can see who runs the site and that we never ask for money private
   assert.match(about, /Pike Insights/); assert.match(about, /pikeinsightsug@gmail\.com/);
   assert.match(safety, /Report/); assert.match(safety, /Block/);
 });
+
+test("the official founder account is recognisable and cannot be imitated", async () => {
+  for (const name of ["Pike – Founder", "P.K Connect Team", "PK CONNECT", "Official", "Site admin"]) {
+    assert.equal(core.isReservedName(name), true, name + " is reserved");
+  }
+  for (const name of ["Tiago", "Supporter Ann", "Pike", "Grace"]) assert.equal(core.isReservedName(name), false, name + " is allowed");
+  const failing = { rpc: async () => ({ data: null, error: { code: "PGRST202", message: "Could not find the function" } }) };
+  assert.deepEqual(await core.listOfficialAccounts(failing), [], "pages keep working before the database setup is applied");
+  const throwing = { rpc: async () => { throw new Error("offline"); } };
+  assert.deepEqual(await core.listOfficialAccounts(throwing), []);
+  const discover = await read("discover.html"), messages = await read("messages.html"), dashboard = await read("dashboard.html");
+  for (const html of [discover, messages, dashboard]) assert.match(html, /listOfficialAccounts\(db\)/);
+  assert.match(discover, /not a dating profile/);
+  const safety = await read("safety.html"), home = await read("index.html");
+  for (const html of [safety, home]) assert.match(html, /only official account/);
+  const sql = await read("supabase/official_account.sql");
+  assert.match(sql, /m\.is_official = false/, "official accounts stay out of discovery");
+  assert.doesNotMatch(sql, /grant update \(is_official\)/i, "members can never make themselves official");
+});

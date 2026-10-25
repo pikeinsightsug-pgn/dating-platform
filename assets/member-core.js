@@ -303,6 +303,30 @@
     const message = String((error && error.message) || "");
     return code === "PGRST202" || code === "42883" || /could not find the function/i.test(message);
   }
+  // The official P.K Connect account(s) the signed-in approved member can contact
+  // (supabase/official_account.sql). Never breaks a page: returns [] if the database setup is
+  // not applied yet, the member is not approved, or the request fails.
+  async function listOfficialAccounts(db) {
+    try {
+      const { data, error } = await db.rpc("list_official_accounts");
+      return error || !Array.isArray(data) ? [] : data;
+    } catch (error) {
+      return [];
+    }
+  }
+  // Names reserved for the official account; the database refuses them for members too.
+  function isReservedName(name) {
+    return /\b(official|founder|admin|administrator|moderator|support)\b|p\W*k\W*connect/i.test(String(name || ""));
+  }
+  const OFFICIAL_LABEL = "✅ Official";
+  // A small "✅ Official" badge for names shown in pages.
+  function officialBadge() {
+    const badge = document.createElement("span");
+    badge.className = "official-badge";
+    badge.textContent = OFFICIAL_LABEL;
+    badge.title = "The official P.K Connect account";
+    return badge;
+  }
   function isNotApproved(error) {
     return /only approved adult members/i.test(String((error && error.message) || ""));
   }
@@ -311,7 +335,8 @@
     SUPABASE_URL, CONTACT_EMAIL, SUPABASE_PUBLISHABLE_KEY, PHOTO_TYPES, PHOTO_MAX_BYTES, GENDERS, COUNTRIES, GOALS,
     GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
     saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor, showSignedIn,
-    authErrorMessage, photoTypeOf, preparePhoto, decodeImage, randomId, withTimeout, signedPhotoUrls, isMissingFunction, isNotApproved
+    authErrorMessage, photoTypeOf, preparePhoto, decodeImage, randomId, withTimeout, signedPhotoUrls, isMissingFunction, isNotApproved,
+    listOfficialAccounts, isReservedName, officialBadge, OFFICIAL_LABEL
   };
   root.FYP = api;
   if (typeof module === "object" && module.exports) module.exports = api;
