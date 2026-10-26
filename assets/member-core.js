@@ -17,7 +17,8 @@
   const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
   const GENDERS = ["Woman", "Man", "Non-binary", "Prefer not to say"];
-  const COUNTRIES = ["Uganda", "Botswana"];
+  // Full world list lives in assets/countries.js (load it before this file).
+  const COUNTRIES = root.PK_COUNTRIES || (typeof require === "function" ? require("./countries.js").COUNTRIES : []);
   const GOALS = ["Serious relationship", "Marriage", "Friendship", "Exploring connections"];
   // Stored values stay as above (the database checks them); these are the labels people see.
   const GOAL_LABELS = {

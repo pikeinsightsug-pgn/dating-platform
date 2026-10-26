@@ -6,7 +6,7 @@
 <meta name="referrer" content="same-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Join | P.K CONNECT – Find Your Person</title>
-<meta name="description" content="Create your P.K CONNECT – Find Your Person account. Adults 18+ in Uganda and Botswana. Free to join.">
+<meta name="description" content="Create your P.K CONNECT – Find Your Person account. Adults 18+ worldwide. Free to join.">
 <script>
 // The login form now has its own page; keep old links and bookmarks working.
 if (new URLSearchParams(location.search).get("mode") === "login") location.replace("login.html" + location.hash);
@@ -38,10 +38,8 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
         <div class="field"><label for="age">Your age</label><input id="age" name="age" type="number" required min="18" max="120" inputmode="numeric"><p class="error" id="age-error"></p></div>
         <div class="field"><label for="gender">Gender</label><select id="gender" name="gender" required><option value="">Choose…</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option></select><p class="error" id="gender-error"></p></div>
       </div>
-      <fieldset class="field" id="location-field"><legend>Country</legend>
-        <div class="chips"><label><input type="radio" name="location" value="Uganda" required><span>🇺🇬 Uganda</span></label><label><input type="radio" name="location" value="Botswana"><span>🇧🇼 Botswana</span></label></div>
-        <p class="error" id="location-error"></p></fieldset>
-      <div class="field"><label for="city">City or general area</label><input id="city" name="city" required maxlength="100" autocomplete="address-level2" placeholder="e.g. Kampala, Gaborone"><span class="hint">No street address, please.</span><p class="error" id="city-error"></p></div>
+      <div class="field" id="location-field"><label for="location">Country</label><select id="location" name="location" required data-countries><option value="">Choose country…</option><option>Uganda</option><option>Botswana</option></select><span class="hint">Members join from all over the world.</span><p class="error" id="location-error"></p></div>
+      <div class="field"><label for="city">City or general area</label><input id="city" name="city" required maxlength="100" autocomplete="address-level2" placeholder="e.g. Kampala, Nairobi, London"><span class="hint">No street address, please.</span><p class="error" id="city-error"></p></div>
 
       <p class="step-title">Who you'd like to meet</p>
       <fieldset class="field" id="seeking_gender-field"><legend>I would like to meet</legend>
@@ -97,6 +95,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
   <p class="help" style="margin-top:20px">Need help? Email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a> · <a href="privacy.html">Privacy notice</a></p>
 </main>
 <script src="assets/vendor/supabase-js-2.117.2.js"></script>
+<script src="assets/countries.js"></script>
 <script src="assets/member-core.js"></script>
 <script>
 (() => {
@@ -165,7 +164,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     const age = Number(v("age"));
     push("age", !v("age") ? "Enter your age." : !Number.isInteger(age) ? "Enter your age as a whole number." : age < 18 ? "You must be 18 or older to join." : age > 120 ? "Check your age." : "");
     push("gender", !v("gender") ? "Choose your gender." : "");
-    push("location", !v("location") ? "Choose Uganda or Botswana." : "");
+    push("location", !v("location") ? "Choose your country." : "");
     push("city", !v("city") ? "Enter your city or general area." : "");
     push("seeking_gender", !v("seeking_gender") ? "Choose who you would like to meet." : "");
     push("relationship_goal", !v("relationship_goal") ? "Choose what you are looking for." : "");

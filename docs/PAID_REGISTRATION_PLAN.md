@@ -41,6 +41,6 @@ could be bypassed by calling the database directly.
 ## What must happen before any of this is built
 
 - Owner decides prices, currency (UGX/BWP), what is paid for, and refund rules.
-- Choose a payment provider that supports Uganda and Botswana (mobile money matters).
+- Choose a payment provider that supports international cards as well as Uganda and Botswana mobile money (the platform is now worldwide).
 - Review and approve the migration above; apply it with the same diagnostics-first process.
 - Update the privacy notice and homepage wording before any payment is requested.

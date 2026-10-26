@@ -1,0 +1,247 @@
+// Countries members can choose. P.K CONNECT is open worldwide.
+// Keep this list identical to supabase/functions/_shared/countries.js and the
+// list inside public.is_supported_country() (supabase/worldwide_countries.sql);
+// tests/platform-regression.test.mjs checks that all three match.
+(function (root) {
+  "use strict";
+  const COUNTRIES = Object.freeze([
+  "Afghanistan",
+  "Albania",
+  "Algeria",
+  "Andorra",
+  "Angola",
+  "Antigua and Barbuda",
+  "Argentina",
+  "Armenia",
+  "Australia",
+  "Austria",
+  "Azerbaijan",
+  "Bahamas",
+  "Bahrain",
+  "Bangladesh",
+  "Barbados",
+  "Belarus",
+  "Belgium",
+  "Belize",
+  "Benin",
+  "Bhutan",
+  "Bolivia",
+  "Bosnia and Herzegovina",
+  "Botswana",
+  "Brazil",
+  "Brunei",
+  "Bulgaria",
+  "Burkina Faso",
+  "Burundi",
+  "Cabo Verde",
+  "Cambodia",
+  "Cameroon",
+  "Canada",
+  "Central African Republic",
+  "Chad",
+  "Chile",
+  "China",
+  "Colombia",
+  "Comoros",
+  "Congo (Brazzaville)",
+  "Congo (DRC)",
+  "Costa Rica",
+  "Côte d'Ivoire",
+  "Croatia",
+  "Cuba",
+  "Cyprus",
+  "Czechia",
+  "Denmark",
+  "Djibouti",
+  "Dominica",
+  "Dominican Republic",
+  "Ecuador",
+  "Egypt",
+  "El Salvador",
+  "Equatorial Guinea",
+  "Eritrea",
+  "Estonia",
+  "Eswatini",
+  "Ethiopia",
+  "Fiji",
+  "Finland",
+  "France",
+  "Gabon",
+  "Gambia",
+  "Georgia",
+  "Germany",
+  "Ghana",
+  "Greece",
+  "Grenada",
+  "Guatemala",
+  "Guinea",
+  "Guinea-Bissau",
+  "Guyana",
+  "Haiti",
+  "Honduras",
+  "Hong Kong",
+  "Hungary",
+  "Iceland",
+  "India",
+  "Indonesia",
+  "Iran",
+  "Iraq",
+  "Ireland",
+  "Israel",
+  "Italy",
+  "Jamaica",
+  "Japan",
+  "Jordan",
+  "Kazakhstan",
+  "Kenya",
+  "Kiribati",
+  "Kosovo",
+  "Kuwait",
+  "Kyrgyzstan",
+  "Laos",
+  "Latvia",
+  "Lebanon",
+  "Lesotho",
+  "Liberia",
+  "Libya",
+  "Liechtenstein",
+  "Lithuania",
+  "Luxembourg",
+  "Macau",
+  "Madagascar",
+  "Malawi",
+  "Malaysia",
+  "Maldives",
+  "Mali",
+  "Malta",
+  "Marshall Islands",
+  "Mauritania",
+  "Mauritius",
+  "Mexico",
+  "Micronesia",
+  "Moldova",
+  "Monaco",
+  "Mongolia",
+  "Montenegro",
+  "Morocco",
+  "Mozambique",
+  "Myanmar",
+  "Namibia",
+  "Nauru",
+  "Nepal",
+  "Netherlands",
+  "New Zealand",
+  "Nicaragua",
+  "Niger",
+  "Nigeria",
+  "North Korea",
+  "North Macedonia",
+  "Norway",
+  "Oman",
+  "Pakistan",
+  "Palau",
+  "Palestine",
+  "Panama",
+  "Papua New Guinea",
+  "Paraguay",
+  "Peru",
+  "Philippines",
+  "Poland",
+  "Portugal",
+  "Puerto Rico",
+  "Qatar",
+  "Romania",
+  "Russia",
+  "Rwanda",
+  "Saint Kitts and Nevis",
+  "Saint Lucia",
+  "Saint Vincent and the Grenadines",
+  "Samoa",
+  "San Marino",
+  "São Tomé and Príncipe",
+  "Saudi Arabia",
+  "Senegal",
+  "Serbia",
+  "Seychelles",
+  "Sierra Leone",
+  "Singapore",
+  "Slovakia",
+  "Slovenia",
+  "Solomon Islands",
+  "Somalia",
+  "South Africa",
+  "South Korea",
+  "South Sudan",
+  "Spain",
+  "Sri Lanka",
+  "Sudan",
+  "Suriname",
+  "Sweden",
+  "Switzerland",
+  "Syria",
+  "Taiwan",
+  "Tajikistan",
+  "Tanzania",
+  "Thailand",
+  "Timor-Leste",
+  "Togo",
+  "Tonga",
+  "Trinidad and Tobago",
+  "Tunisia",
+  "Turkey",
+  "Turkmenistan",
+  "Tuvalu",
+  "Uganda",
+  "Ukraine",
+  "United Arab Emirates",
+  "United Kingdom",
+  "United States",
+  "Uruguay",
+  "Uzbekistan",
+  "Vanuatu",
+  "Vatican City",
+  "Venezuela",
+  "Vietnam",
+  "Yemen",
+  "Zambia",
+  "Zimbabwe"
+]);
+  // Shown first in pickers because most current members live there.
+  const FEATURED = Object.freeze(["Uganda", "Botswana"]);
+
+  // Fills a <select> with every country; anyLabel adds a leading "any country" option.
+  function fillCountrySelect(select, options = {}) {
+    if (!select) return;
+    const keep = select.value;
+    select.textContent = "";
+    const add = (parent, value, label) => {
+      const option = document.createElement("option");
+      option.value = value; option.textContent = label || value;
+      parent.append(option);
+    };
+    add(select, "", options.anyLabel || "Choose country…");
+    const featured = document.createElement("optgroup");
+    featured.label = "Most members";
+    FEATURED.forEach(name => add(featured, name));
+    const all = document.createElement("optgroup");
+    all.label = "All countries";
+    COUNTRIES.forEach(name => add(all, name));
+    select.append(featured, all);
+    if (keep) select.value = keep;
+  }
+
+  // Every <select data-countries> on the page gets the full list as soon as it exists.
+  function fillAll() {
+    document.querySelectorAll("select[data-countries]").forEach(select =>
+      fillCountrySelect(select, { anyLabel: select.dataset.anyLabel }));
+  }
+  if (typeof document !== "undefined") {
+    fillAll(); // selects already above this script (pages load it at the end of <body>)
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fillAll);
+  }
+
+  root.PK_COUNTRIES = COUNTRIES;
+  root.PK_FEATURED_COUNTRIES = FEATURED;
+  root.PK_fillCountrySelect = fillCountrySelect;
+  if (typeof module === "object" && module.exports) module.exports = { COUNTRIES, FEATURED };
+})(typeof window !== "undefined" ? window : globalThis);

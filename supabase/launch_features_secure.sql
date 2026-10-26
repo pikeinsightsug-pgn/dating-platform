@@ -63,7 +63,7 @@ begin
   if profile_age < 18 or profile_age > 120
      or profile_first_name is null or length(profile_first_name) > 80
      or profile_gender not in ('Woman', 'Man', 'Non-binary', 'Prefer not to say')
-     or profile_location not in ('Uganda', 'Botswana')
+     or not public.is_supported_country(profile_location)
      or profile_city is null or length(profile_city) > 100
      or profile_goal not in ('Serious relationship', 'Marriage', 'Friendship', 'Exploring connections')
      or profile_bio is null or length(profile_bio) > 500
@@ -202,7 +202,7 @@ with check (
   age >= 18 and age <= 120
   and first_name is not null and length(trim(first_name)) between 1 and 80
   and gender in ('Woman', 'Man', 'Non-binary', 'Prefer not to say')
-  and location in ('Uganda', 'Botswana')
+  and public.is_supported_country(location)
   and city is not null and length(trim(city)) between 1 and 100
   and relationship_goal in ('Serious relationship', 'Marriage', 'Friendship', 'Exploring connections')
   and bio is not null and length(trim(bio)) between 1 and 500
@@ -219,7 +219,7 @@ with check (
   age >= 18 and age <= 120
   and first_name is not null and length(trim(first_name)) between 1 and 80
   and gender in ('Woman', 'Man', 'Non-binary', 'Prefer not to say')
-  and location in ('Uganda', 'Botswana')
+  and public.is_supported_country(location)
   and city is not null and length(trim(city)) between 1 and 100
   and relationship_goal in ('Serious relationship', 'Marriage', 'Friendship', 'Exploring connections')
   and bio is not null and length(trim(bio)) between 1 and 500
@@ -246,7 +246,7 @@ on public.members for update to authenticated
 using (user_id = auth.uid())
 with check (user_id = auth.uid() and age >= 18 and age <= 120
   and gender in ('Woman', 'Man', 'Non-binary', 'Prefer not to say')
-  and location in ('Uganda', 'Botswana')
+  and public.is_supported_country(location)
   and city is not null and length(trim(city)) between 1 and 100
   and relationship_goal in ('Serious relationship', 'Marriage', 'Friendship', 'Exploring connections')
   and bio is not null and length(trim(bio)) between 1 and 500
@@ -259,7 +259,7 @@ on public.members as restrictive for update to authenticated
 using (user_id = auth.uid())
 with check (user_id = auth.uid() and age >= 18 and age <= 120
   and gender in ('Woman', 'Man', 'Non-binary', 'Prefer not to say')
-  and location in ('Uganda', 'Botswana')
+  and public.is_supported_country(location)
   and city is not null and length(trim(city)) between 1 and 100
   and relationship_goal in ('Serious relationship', 'Marriage', 'Friendship', 'Exploring connections')
   and bio is not null and length(trim(bio)) between 1 and 500

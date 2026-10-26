@@ -1,6 +1,6 @@
 # Dating Platform Manager Agent
 
-This folder defines the operating layer for the Uganda 🇺🇬–Botswana 🇧🇼 dating platform.
+This folder defines the operating layer for the worldwide 🌍 P.K CONNECT dating platform (launched in Uganda 🇺🇬 and Botswana 🇧🇼).
 
 ## Mission
 Help the owner grow a genuine 18+ dating community, organize registration data, support members, suggest compatible matches, improve marketing, and provide clear owner reports.

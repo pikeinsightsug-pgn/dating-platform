@@ -6,7 +6,7 @@
 <meta name="referrer" content="same-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Discover members | P.K CONNECT – Find Your Person</title>
-<meta name="description" content="Browse approved adult member profiles in Uganda and Botswana.">
+<meta name="description" content="Browse approved adult member profiles from around the world.">
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fff8fb;color:#241b23;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 .wrap{max-width:1080px;margin:0 auto;padding:24px 18px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
@@ -57,7 +57,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   <h1>Discover members</h1>
   <p>Genuine adult profiles reviewed and approved by our team. Contact details are never shown — use private messages to get to know someone.</p>
   <form id="filters" class="filters hidden" aria-label="Filter profiles">
-    <label>Country<select name="country"><option value="">Uganda &amp; Botswana</option><option>Uganda</option><option>Botswana</option></select></label>
+    <label>Country<select name="country" data-countries data-any-label="All countries"><option value="">All countries</option><option>Uganda</option><option>Botswana</option></select></label>
     <label>Gender<select name="gender"><option value="">Any</option><option>Woman</option><option>Man</option><option>Non-binary</option></select></label>
     <label>Age from<input name="min_age" type="number" min="18" max="120" value="18" inputmode="numeric"></label>
     <label>Age to<input name="max_age" type="number" min="18" max="120" value="120" inputmode="numeric"></label>
@@ -98,6 +98,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   </div>
 </dialog>
 <script src="assets/vendor/supabase-js-2.117.2.js"></script>
+<script src="assets/countries.js"></script>
 <script src="assets/member-core.js"></script>
 <script>
 (() => {

@@ -44,7 +44,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <div class="pair"><label>First name<input name="first_name" maxlength="80"></label><label>Age<input name="age" type="number" min="18" max="120"></label></div>
 <div class="pair"><label>Gender<select name="gender"><option value="">Choose…</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option></select></label>
 <label>Wants to meet<select name="seeking_gender"><option value="">Not given</option><option>Men</option><option>Women</option><option>Everyone</option></select></label></div>
-<div class="pair"><label>Country<select name="location"><option value="">Choose…</option><option>Uganda</option><option>Botswana</option></select></label><label>City or town<input name="city" maxlength="100"></label></div>
+<div class="pair"><label>Country<select name="location" data-countries><option value="">Choose…</option><option>Uganda</option><option>Botswana</option></select></label><label>City or town<input name="city" maxlength="100"></label></div>
 <label>Looking for<select name="relationship_goal"><option value="">Choose…</option><option>Serious relationship</option><option>Marriage</option><option>Friendship</option><option>Exploring connections</option></select></label>
 <label>Short bio<textarea name="bio" rows="3" maxlength="500"></textarea></label>
 <label class="check"><input name="consent" type="checkbox"> This person asked me to register them and gave me these details.</label>
@@ -57,6 +57,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <div class="panel"><div class="row"><h2>Open member reports</h2></div><div id="reports" class="muted">Load registrations to see reports.</div></div>
 <div class="row"><h2>Member profiles</h2><button id="refresh" class="secondary">Refresh records</button></div><div id="members"></div>
 </section></main>
+<script src="../assets/countries.js"></script>
 <script src="../assets/vendor/supabase-js-2.117.2.js"></script>
 <script>
 // The owner console never runs inside another website's frame.
@@ -94,7 +95,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     return data;
   }
   // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
-  const EXPECTED_FUNCTION_VERSION = "2026-10-25";
+  const EXPECTED_FUNCTION_VERSION = "2026-10-26";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
