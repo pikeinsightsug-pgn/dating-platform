@@ -48,7 +48,7 @@ test("launch pages", async (t) => {
     await page.goto(env.base + "account.html");
     await page.click("#register-form button[type=submit]");
     const errors = await page.locator("#register-form .error:not(:empty)").allTextContents();
-    for (const expected of [/email address/, /8 characters/, /what to call you/, /your age/i, /gender/, /Uganda or Botswana/, /city/, /who you would like to meet/, /looking for/, /minimum and maximum age/, /20 characters/, /18 or older/, /privacy notice/]) {
+    for (const expected of [/email address/, /8 characters/, /what to call you/, /your age/i, /gender/, /your country/, /city/, /who you would like to meet/, /looking for/, /minimum and maximum age/, /20 characters/, /18 or older/, /privacy notice/]) {
       assert.ok(errors.some(e => expected.test(e)), "message for " + expected);
     }
     assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), "email", "focus moves to the first problem");

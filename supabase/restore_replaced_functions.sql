@@ -46,7 +46,7 @@ begin
   if profile_age < 18 or profile_age > 120
      or profile_first_name is null or length(profile_first_name) > 80
      or profile_gender not in ('Woman', 'Man', 'Non-binary', 'Prefer not to say')
-     or profile_location not in ('Uganda', 'Botswana')
+     or not public.is_supported_country(profile_location)
      or profile_city is null or length(profile_city) > 100
      or profile_goal not in ('Serious relationship', 'Marriage', 'Friendship', 'Exploring connections')
      or profile_bio is null or length(profile_bio) > 500

@@ -3,13 +3,13 @@
   "member": {
     "member_id": "unique internal identifier",
     "status": "registered|incomplete|approved|suspended|deleted",
-    "country": "Uganda|Botswana|other",
+    "country": "any country in assets/countries.js",
     "age": "number, 18+ only",
     "gender": "member-provided value if collected",
     "relationship_goal": "member-provided value",
     "preferred_age_min": "number|null",
     "preferred_age_max": "number|null",
-    "preferred_country": "Uganda|Botswana|either|null",
+    "preferred_country": "any country in assets/countries.js|any|null",
     "interests": ["member-provided interests"],
     "profile_text": "member-provided non-sensitive profile text",
     "contact_private": {

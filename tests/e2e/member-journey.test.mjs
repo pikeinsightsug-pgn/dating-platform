@@ -14,7 +14,7 @@ test("browser journeys on the full migration set", async (t) => {
 
   await t.test("MANDATORY 1: a new member registers, confirms, logs out and back in without recreating the profile", async () => {
     const page = await env.newPage({ mobile: true });
-    await env.fillRegistration(page, { name: "NewTester", email: "new-member@test.invalid", age: "27", location: "Botswana", city: "Gaborone" });
+    await env.fillRegistration(page, { name: "NewTester", email: "new-member@test.invalid", age: "27", location: "Kenya", city: "Nairobi" });
     await page.click("#register-form button[type=submit]");
     await page.waitForSelector("#success-view:not(.hidden)");
     assert.match(await page.textContent("#success-message"), /new-member@test\.invalid/);
@@ -32,7 +32,8 @@ test("browser journeys on the full migration set", async (t) => {
     await page.click("#login-form button[type=submit]");
     await page.waitForURL(/dashboard\.html$/);
     await page.waitForSelector("#profile-panel:not(.hidden)");
-    assert.equal(await page.inputValue("[name=city]"), "Gaborone");
+    assert.equal(await page.inputValue("[name=city]"), "Nairobi");
+    assert.equal(await page.inputValue("[name=location]"), "Kenya", "members from outside Uganda and Botswana can join");
     assert.match(await page.textContent("#approval-status"), /awaiting manual review/);
 
     await page.reload();

@@ -48,7 +48,7 @@ test("a confirmed signup without a profile gets exactly one pending profile from
 });
 
 test("accounts without signup data (owner invites, legacy members) are never given a guessed profile", async () => {
-  for (const user of [{ id: "auth-id", user_metadata: {} }, signupUser({ profile_type: undefined }), signupUser({ age: 16 }), signupUser({ location: "Kenya" })]) {
+  for (const user of [{ id: "auth-id", user_metadata: {} }, signupUser({ profile_type: undefined }), signupUser({ age: 16 }), signupUser({ location: "Atlantis" })]) {
     const db = fakeDb();
     assert.equal(await core.ensureOwnProfile(db, user), null);
     assert.equal(db.state.inserts.length, 0);
@@ -367,4 +367,31 @@ test("pages load code only from this site and carry a security policy", async ()
   }
   const core = await read("assets/member-core.js"), admin = await read("admin/index.html");
   for (const text of [core, admin]) assert.match(text, /window\.top !== window\.self/, "refuses to run inside another site's frame");
+});
+
+test("the platform is open worldwide and every country list matches", async () => {
+  const browser = (await import("../assets/countries.js")).default.COUNTRIES;
+  const server = (await import("../supabase/functions/_shared/countries.js")).COUNTRIES;
+  const sqlLists = ["supabase/worldwide_countries.sql", "supabase/registration_setup.sql"];
+  assert.ok(browser.length >= 195, "full world list");
+  assert.equal(new Set(browser).size, browser.length, "no duplicate countries");
+  for (const name of ["Uganda", "Botswana", "Kenya", "United Kingdom", "United States", "Côte d'Ivoire"]) assert.ok(browser.includes(name), name);
+  assert.deepEqual([...server], [...browser], "owner function list matches the website list");
+  for (const path of sqlLists) {
+    const body = (await read(path)).match(/function public\.is_supported_country[\s\S]*?array\[([\s\S]*?)\]::text\[\]/)[1];
+    const names = [...body.matchAll(/'((?:[^']|'')*)'/g)].map((m) => m[1].replace(/''/g, "'"));
+    assert.deepEqual(names, [...browser], path + " database list matches the website list");
+  }
+  assert.deepEqual([...core.COUNTRIES], [...browser], "member-core uses the shared list");
+  // No page, script or migration may lock members back to two countries.
+  for (const path of ["account.html", "dashboard.html", "discover.html", "admin/index.html", "index.html", "about.html", "privacy.html", "safety.html",
+    "supabase/functions/admin-members/index.ts", "supabase/registration_setup.sql", "supabase/launch_features_secure.sql",
+    "supabase/discovery_messaging_safety.sql", "supabase/restore_replaced_functions.sql"]) {
+    const text = await read(path);
+    assert.doesNotMatch(text, /\(\s*'Uganda',\s*'Botswana'\s*\)|\[\s*"Uganda",\s*"Botswana"\s*\]|Choose Uganda or Botswana|in Uganda and Botswana/, path);
+  }
+  for (const path of ["account.html", "dashboard.html", "discover.html", "messages.html", "login.html"]) {
+    const html = await read(path);
+    assert.ok(html.indexOf('src="assets/countries.js"') !== -1 && html.indexOf('src="assets/countries.js"') < html.indexOf('src="assets/member-core.js"'), path + " loads countries before member-core");
+  }
 });

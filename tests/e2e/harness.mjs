@@ -90,7 +90,7 @@ export async function setup(name, files = ALL) {
     await page.fill("#password_confirm", v.confirm ?? v.password);
     await page.fill("#age", v.age);
     await page.selectOption("#gender", v.gender);
-    await page.check(`input[name=location][value="${v.location}"]`);
+    await page.selectOption("select[name=location]", v.location);
     await page.fill("#city", v.city);
     await page.check(`input[name=seeking_gender][value="${v.seeking}"]`);
     await page.selectOption("#relationship_goal", v.goal);

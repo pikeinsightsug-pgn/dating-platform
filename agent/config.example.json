@@ -8,7 +8,7 @@
   "launch": {
     "founding_member_target": 100,
     "age_minimum": 18,
-    "countries": ["Uganda", "Botswana"]
+    "countries": "worldwide (see assets/countries.js)"
   },
   "agent_permissions": {
     "read_registration_metrics": true,

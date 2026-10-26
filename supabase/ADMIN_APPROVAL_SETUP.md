@@ -13,7 +13,7 @@ In the Supabase SQL Editor, review and apply these checked-in files in order:
 1. `supabase/registration_setup.sql`
 2. `supabase/launch_features_secure.sql`
 
-Both scripts are additive and safe to rerun. They preserve existing rows. The final RLS policy allows new adult profiles only for Uganda or Botswana, forces new rows to remain unapproved, and requires authenticated profiles to link to the current user's Auth ID. Members can read and update their own profile. Column grants prevent members from changing `user_id`, `approved`, or system-managed fields. Public visitors receive no member read access.
+Both scripts are additive and safe to rerun. They preserve existing rows. The final RLS policy allows new adult profiles from any country in the supported list (`public.is_supported_country`, kept in sync with `assets/countries.js`), forces new rows to remain unapproved, and requires authenticated profiles to link to the current user's Auth ID. Members can read and update their own profile. Column grants prevent members from changing `user_id`, `approved`, or system-managed fields. Public visitors receive no member read access.
 
 If the live `members` table differs from the listed core columns, stop before applying and reconcile the migration with the live schema; do not drop or recreate the table.
 

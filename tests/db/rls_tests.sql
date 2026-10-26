@@ -41,8 +41,17 @@ delete from members where user_id = 'ffffffff-0000-4000-8000-000000000006';
 insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
  ('99999999-0000-4000-8000-000000000009', 'bad-meta@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Bad","age":"abc"}'),
  ('99999999-0000-4000-8000-000000000010', 'minor@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Minor","age":16,"gender":"Woman","location":"Uganda","city":"Kampala","relationship_goal":"Friendship","bio":"x"}'),
- ('99999999-0000-4000-8000-000000000011', 'owner@test.invalid', now(), '{}');
-select t_assert(not exists (select 1 from members where user_id::text like '99999999-%'), 'invalid, under-18 and owner signups create no profile and do not fail');
+ ('99999999-0000-4000-8000-000000000011', 'owner@test.invalid', now(), '{}'),
+ ('99999999-0000-4000-8000-000000000012', 'atlantis@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Nowhere","age":30,"gender":"Woman","location":"Atlantis","city":"Deep","relationship_goal":"Friendship","bio":"x"}');
+select t_assert(not exists (select 1 from members where user_id::text like '99999999-%'), 'invalid, under-18, unknown-country and owner signups create no profile and do not fail');
+
+-- Worldwide: a member from any supported country can register.
+insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
+ ('77777777-0000-4000-8000-000000000001', 'kenya@test.invalid', now(), '{"profile_type":"member_registration","first_name":"TestKenya","age":28,"gender":"Woman","location":"Kenya","city":"Nairobi","relationship_goal":"Marriage","bio":"Synthetic worldwide member"}');
+select t_assert((select location = 'Kenya' and approved = false from members where user_id = '77777777-0000-4000-8000-000000000001'), 'a member from Kenya can register (pending approval)');
+delete from members where user_id = '77777777-0000-4000-8000-000000000001';
+delete from auth.users where id = '77777777-0000-4000-8000-000000000001';
+select t_assert(public.is_supported_country('United Kingdom') and public.is_supported_country('Côte d''Ivoire') and not public.is_supported_country('Atlantis') and not public.is_supported_country(null), 'country list accepts real countries only');
 
 -- Legacy (Google Form era) registrations: no Auth account, private contact data present.
 insert into members (first_name, age, gender, location, city, relationship_goal, bio, email, phone, approved)
@@ -81,6 +90,10 @@ select t_assert((select count(*) = 0 from get_member_profile(:'c_id')), 'A canno
 select t_assert((select count(*) = 0 from members where email is not null), 'MANDATORY 6: no private contact field of another member is visible to A');
 select t_denied('update public.members set approved = true where user_id = auth.uid()', 'A cannot change their own approval');
 select t_denied('update public.members set user_id = ''cccccccc-0000-4000-8000-000000000003'' where user_id = auth.uid()', 'A cannot relink their profile to another account');
+update public.members set location = 'Kenya' where user_id = auth.uid();
+select t_assert((select location = 'Kenya' from members where user_id = auth.uid()), 'A can change their country to Kenya');
+select t_denied('update public.members set location = ''Atlantis'' where user_id = auth.uid()', 'A cannot choose a country that is not on the list');
+update public.members set location = 'Uganda' where user_id = auth.uid();
 select t_assert((select count(*) = 1 from send_member_message(:'b_id', '  Hello B, this is a test.  ')), 'A sends B a private message');
 select t_denied(format('select * from public.send_member_message(%L, %L)', :'c_id', 'hi'), 'A cannot message a pending member');
 select t_denied(format('select * from public.send_member_message(%L, %L)', :'a_id', 'hi'), 'A cannot message themselves');
