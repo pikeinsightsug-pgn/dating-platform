@@ -1,9 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isMemberPhotoPathOwnedByUser } from "../_shared/member-photo-path.js";
+import { COUNTRIES } from "../_shared/countries.js";
 
 // Bump when this function changes; the owner console compares it with the version it expects,
 // so the owner can see whether the deployed function is current without opening Supabase.
-const FUNCTION_VERSION = "2026-10-25";
+const FUNCTION_VERSION = "2026-10-26";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -432,7 +433,7 @@ function memberProfileFrom(input: unknown): Record<string, string | number | nul
   if (!profile.first_name || profile.first_name.length > 80) return "Enter the person's first name.";
   if (!Number.isInteger(age) || age < 18 || age > 120) return "Enter an age of 18 or over.";
   if (!["Woman", "Man", "Non-binary", "Prefer not to say"].includes(profile.gender)) return "Choose the person's gender.";
-  if (!["Uganda", "Botswana"].includes(profile.location)) return "Choose Uganda or Botswana.";
+  if (!COUNTRIES.includes(profile.location)) return "Choose the country the person lives in.";
   if (!profile.city || profile.city.length > 100) return "Enter the person's city or town.";
   if (!["Serious relationship", "Marriage", "Friendship", "Exploring connections"].includes(profile.relationship_goal)) return "Choose what the person is looking for.";
   if (!profile.bio || profile.bio.length > 500) return "Write a short bio (up to 500 characters).";

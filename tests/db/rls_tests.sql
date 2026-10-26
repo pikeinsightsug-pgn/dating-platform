@@ -318,3 +318,39 @@ insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) value
 select t_assert(exists (select 1 from members where user_id = '18181818-0000-4000-8000-000000000018' and not approved), 'a signup with a reserved name still succeeds (pending, for the owner to review)');
 update members set first_name = 'Owner Renamed Official' where id = :'ot_id';
 select t_assert((select first_name = 'Owner Renamed Official' from members where id = :'ot_id'), 'the owner can rename any profile');
+
+-- ===== Worldwide membership (supabase/worldwide_members.sql) =====
+select t_assert(is_supported_country('Kenya') and is_supported_country('United Kingdom') and is_supported_country('Côte d''Ivoire')
+  and is_supported_country('Uganda') and is_supported_country('Botswana'), 'countries worldwide are supported, including Uganda and Botswana');
+select t_assert(not is_supported_country('Narnia') and not is_supported_country('') and not is_supported_country(null)
+  and not is_supported_country('kenya'), 'unknown, empty and misspelt countries are refused');
+insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
+ ('19191919-0000-4000-8000-000000000019', 'kenya@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Wanjiru","age":28,"gender":"Woman","location":"Kenya","city":"Nairobi","relationship_goal":"Marriage","bio":"Synthetic Kenya"}'),
+ ('20202020-0000-4000-8000-000000000020', 'uk@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Oliver","age":36,"gender":"Man","location":"United Kingdom","city":"London","relationship_goal":"Serious relationship","bio":"Synthetic UK"}'),
+ ('21212121-0000-4000-8000-000000000021', 'narnia@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Lucy","age":30,"gender":"Woman","location":"Narnia","city":"Cair","relationship_goal":"Marriage","bio":"x"}');
+select t_assert((select count(*) = 2 from members where user_id in ('19191919-0000-4000-8000-000000000019', '20202020-0000-4000-8000-000000000020') and not approved),
+  'signups from Kenya and the United Kingdom create pending profiles');
+select t_assert(not exists (select 1 from members where user_id = '21212121-0000-4000-8000-000000000021'), 'a signup with an unknown country creates no profile and does not fail');
+select id as k_id from members where user_id = '19191919-0000-4000-8000-000000000019' \gset
+update members set approved = true where id = :'k_id';
+
+begin; select set_config('request.jwt.claim.sub', '19191919-0000-4000-8000-000000000019', true); set local role authenticated;
+update public.members set location = 'South Africa', city = 'Cape Town' where user_id = auth.uid();
+select t_assert((select location = 'South Africa' from members), 'members can move their profile to another supported country');
+select t_denied('update public.members set location = ''Narnia'' where user_id = auth.uid()', 'members cannot save an unknown country');
+select t_assert((select count(*) >= 1 from browse_member_profiles(p_country => 'Uganda')), 'an international member can browse Ugandan members');
+commit;
+begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', true); set local role authenticated;
+select t_assert((select array_agg(first_name) = array['Wanjiru'] from browse_member_profiles(p_country => 'South Africa')), 'members can filter discovery by any country');
+select t_assert((select count(*) = 1 from browse_member_profiles() where id = :'k_id'), 'approved international members appear in discovery');
+commit;
+begin; select set_config('request.jwt.claim.sub', '18181818-0000-4000-8000-000000000018', true); set local role authenticated;
+select t_assert((select location = 'Uganda' from members), 'existing Uganda and Botswana profiles are unchanged');
+commit;
+insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values ('22222222-0000-4000-8000-000000000022', 'ghana@test.invalid', now(), '{}');
+begin; select set_config('request.jwt.claim.sub', '22222222-0000-4000-8000-000000000022', true); set local role authenticated;
+select t_denied('insert into public.members (user_id, first_name, age, gender, location, city, relationship_goal, bio, approved) values (auth.uid(), ''Ama'', 30, ''Woman'', ''Narnia'', ''Accra'', ''Marriage'', ''bio'', false)', 'the website fallback cannot create a profile with an unknown country');
+insert into public.members (user_id, first_name, age, gender, location, city, relationship_goal, bio, approved)
+values (auth.uid(), 'Ama', 30, 'Woman', 'Ghana', 'Accra', 'Marriage', 'Synthetic Ghana', false);
+select t_assert((select location = 'Ghana' and not approved from members), 'the website fallback creates a pending profile from Ghana');
+commit;

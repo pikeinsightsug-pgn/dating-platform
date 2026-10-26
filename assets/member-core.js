@@ -17,7 +17,45 @@
   const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
   const GENDERS = ["Woman", "Man", "Non-binary", "Prefer not to say"];
-  const COUNTRIES = ["Uganda", "Botswana"];
+  // Countries members can register from (stored values). Kept identical to
+  // supabase/functions/_shared/countries.js and is_supported_country() in
+  // supabase/worldwide_members.sql; a regression test checks this.
+  const COUNTRIES = [
+    "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia",
+    "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus",
+    "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil",
+    "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia", "Cameroon", "Canada",
+    "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo (Brazzaville)",
+    "Congo (DRC)", "Costa Rica", "Côte d'Ivoire", "Croatia", "Cuba", "Cyprus", "Czechia", "Denmark",
+    "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea",
+    "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia",
+    "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti",
+    "Honduras", "Hong Kong", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel",
+    "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kosovo", "Kuwait",
+    "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania",
+    "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands",
+    "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro",
+    "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand",
+    "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman", "Pakistan", "Palau",
+    "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+    "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia",
+    "Saint Vincent and the Grenadines", "Samoa", "San Marino", "São Tomé and Príncipe", "Saudi Arabia",
+    "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia",
+    "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka",
+    "Sudan", "Suriname", "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand",
+    "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Türkiye", "Turkmenistan", "Tuvalu",
+    "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan",
+    "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"
+  ];
+  // Fills a <select> with every country, keeping its first (placeholder) option.
+  function fillCountrySelect(select, selected) {
+    if (!select) return;
+    const keep = select.querySelector("option[value='']");
+    select.replaceChildren(...(keep ? [keep] : []), ...COUNTRIES.map(name => {
+      const option = document.createElement("option"); option.value = name; option.textContent = name; return option;
+    }));
+    if (selected) select.value = selected;
+  }
   const GOALS = ["Serious relationship", "Marriage", "Friendship", "Exploring connections"];
   // Stored values stay as above (the database checks them); these are the labels people see.
   const GOAL_LABELS = {
@@ -342,7 +380,7 @@
     GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
     saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor, showSignedIn,
     authErrorMessage, photoTypeOf, preparePhoto, decodeImage, randomId, withTimeout, signedPhotoUrls, isMissingFunction, isNotApproved,
-    listOfficialAccounts, isReservedName, officialBadge, OFFICIAL_LABEL
+    listOfficialAccounts, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect
   };
   root.FYP = api;
   if (typeof module === "object" && module.exports) module.exports = api;

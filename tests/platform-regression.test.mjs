@@ -48,7 +48,7 @@ test("a confirmed signup without a profile gets exactly one pending profile from
 });
 
 test("accounts without signup data (owner invites, legacy members) are never given a guessed profile", async () => {
-  for (const user of [{ id: "auth-id", user_metadata: {} }, signupUser({ profile_type: undefined }), signupUser({ age: 16 }), signupUser({ location: "Kenya" })]) {
+  for (const user of [{ id: "auth-id", user_metadata: {} }, signupUser({ profile_type: undefined }), signupUser({ age: 16 }), signupUser({ location: "Narnia" })]) {
     const db = fakeDb();
     assert.equal(await core.ensureOwnProfile(db, user), null);
     assert.equal(db.state.inserts.length, 0);
@@ -367,4 +367,21 @@ test("pages load code only from this site and carry a security policy", async ()
   }
   const core = await read("assets/member-core.js"), admin = await read("admin/index.html");
   for (const text of [core, admin]) assert.match(text, /window\.top !== window\.self/, "refuses to run inside another site's frame");
+});
+
+test("members can join from any country, and every part of the platform uses the same list", async () => {
+  const { COUNTRIES: shared } = await import("../supabase/functions/_shared/countries.js");
+  assert.deepEqual(core.COUNTRIES, shared, "website and owner function use the same countries");
+  const sql = await read("supabase/worldwide_members.sql");
+  const body = sql.slice(sql.indexOf("= any (array["), sql.indexOf("]::text[]"));
+  const fromSql = [...body.matchAll(/'((?:[^']|'')*)'/g)].map((m) => m[1].replace(/''/g, "'"));
+  assert.deepEqual(fromSql, shared, "the database accepts exactly the same countries");
+  assert.equal(new Set(shared).size, shared.length, "no duplicates");
+  for (const country of ["Uganda", "Botswana", "Kenya", "South Africa", "United Kingdom", "United States"]) assert.ok(shared.includes(country), country);
+  const signup = await read("account.html"), discover = await read("discover.html"), dashboard = await read("dashboard.html"), admin = await read("admin/index.html");
+  for (const html of [signup, discover, dashboard, admin]) {
+    assert.match(html, /fillCountrySelect\(/, "country choices come from the shared list");
+    assert.doesNotMatch(html, /<option>Uganda<\/option>/, "no page is limited to Uganda and Botswana");
+  }
+  assert.doesNotMatch(await read("supabase/functions/admin-members/index.ts"), /\["Uganda", "Botswana"\]/);
 });
