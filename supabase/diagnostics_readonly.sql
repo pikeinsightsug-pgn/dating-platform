@@ -49,6 +49,8 @@ select * from (
     exists (select 1 from fn where proname = 'list_official_accounts')::text
   union all select 38, 'members', 'marked as official account (should be 1 after setup)',
     (select count(*) from mm where coalesce((j->>'is_official')::boolean, false))::text
+  union all select 39, 'migrations', 'worldwide_members.sql applied (members can join from any country)',
+    exists (select 1 from fn where proname = 'is_supported_country')::text
   union all select 8, 'migrations', 'supabase_migrations history rows',
     case when to_regclass('supabase_migrations.schema_migrations') is null then 'no CLI migration history table (SQL Editor setup)'
          else (xpath('/row/c/text()', query_to_xml('select count(*) as c from supabase_migrations.schema_migrations', false, true, '')))[1]::text end

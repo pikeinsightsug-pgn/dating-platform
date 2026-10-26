@@ -166,3 +166,13 @@ address to give the owner.
   pending at once and can be approved after they accept.
 - The owner never sets or sees a password, nothing is approved automatically, and existing
   profiles are never changed. Invitations count towards the Auth email rate limit.
+
+
+## Worldwide membership (October 2026)
+
+Apply `supabase/worldwide_members.sql` in the SQL Editor after the files above (and
+`official_account.sql`), then merge the matching pull request. It lets people register from any
+country in the shared list (`supabase/functions/_shared/countries.js`, mirrored in
+`assets/member-core.js` and the SQL file; a test keeps the three identical). Existing members and
+every other rule (18+, owner approval, private profiles) are unchanged. Diagnostics line 39 shows
+whether it is applied. The owner function (version 2026-10-26) redeploys automatically on merge.

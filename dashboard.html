@@ -55,7 +55,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       <label>First name or display name<input name="first_name" required maxlength="80" autocomplete="given-name"></label>
       <label>Age<input name="age" type="number" required min="18" max="120" inputmode="numeric"></label>
       <label>Gender<select name="gender" required><option value="">Choose one</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option></select></label>
-      <label>Country<select name="location" required><option value="">Choose country</option><option>Uganda</option><option>Botswana</option></select></label>
+      <label>Country<select name="location" required autocomplete="country-name"><option value="">Choose country</option></select></label>
       <label>City or town<input name="city" required maxlength="100" autocomplete="address-level2"></label>
       <h2 id="preferences">Your preferences</h2>
       <p class="photo-note">Your relationship goal, biography and interests may appear to approved members. Who you want to meet, your preferred age range and partner qualities stay private and are used to suggest people to you.</p>
@@ -145,6 +145,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     link.textContent = "Message " + account.first_name.split(/\s/)[0] + " ✅";
     document.getElementById("official-contact").classList.remove("hidden");
   }
+  window.FYP.fillCountrySelect(form.elements.location);
   async function initialize() {
     const { data, error } = await db.auth.getSession();
     if (error) throw new Error("Your session could not be restored. Please sign in again.");
