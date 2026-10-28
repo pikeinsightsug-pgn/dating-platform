@@ -67,7 +67,8 @@
   const SEEKING = ["Men", "Women", "Everyone"];
   // Columns added by supabase/discovery_messaging_safety.sql. Until that file is applied,
   // writes are retried without them so registration and profile saving keep working.
-  const PREFERENCE_COLUMNS = ["seeking_gender", "preferred_age_min", "preferred_age_max"];
+  // Optional columns added by later setup files; writes still succeed before they exist.
+  const PREFERENCE_COLUMNS = ["seeking_gender", "preferred_age_min", "preferred_age_max", "profession"];
 
   // Bound every Supabase request so a stalled token refresh or upload can never
   // leave a button spinning forever.
@@ -128,6 +129,8 @@
       partner_preference: text(meta.partner_preference),
       approved: false
     };
+    const profession = text(meta.profession);
+    if (profession && profession.length <= 80) profile.profession = profession;
     const seeking = text(meta.seeking_gender);
     const ageMin = Number(meta.preferred_age_min), ageMax = Number(meta.preferred_age_max);
     if (SEEKING.includes(seeking)) profile.seeking_gender = seeking;
@@ -162,7 +165,7 @@
   // where it did not run). Never links or guesses a legacy registration.
   async function ensureOwnProfile(db, user) {
     const existing = await readOwnProfile(db, user);
-    if (existing) return existing;
+    if (existing) return withProfessionFromSignup(db, user, existing);
     const profile = profileFromMetadata(user);
     if (!profile) return null;
     const { error } = await withoutMissingColumns(profile, row => db.from("members").insert(row));
@@ -177,6 +180,22 @@
     return readOwnProfile(db, user);
   }
 
+  // The database creates the profile itself when an account is confirmed, without the
+  // optional profession; copy it from the person's own signup answers the first time.
+  async function withProfessionFromSignup(db, user, profile) {
+    const wanted = (profileFromMetadata(user) || {}).profession;
+    if (!wanted || profile.profession || !("profession" in profile)) return profile;
+    const { error } = await db.from("members").update({ profession: wanted }).eq("user_id", user.id);
+    return error ? profile : { ...profile, profession: wanted };
+  }
+
+  // Used when a new member leaves "A little about you" empty; they can change it later.
+  function starterBio(firstName, city) {
+    const name = String(firstName || "").trim().slice(0, 40);
+    const place = String(city || "").trim().slice(0, 60);
+    return (name ? "Hello! I'm " + name : "Hello!") + (place ? " from " + place : "") + ". I'm new on P.K CONNECT. Say hi 👋";
+  }
+
   // PGRST204: the column is not in the database yet (migration not applied).
   function isMissingColumn(error) {
     return Boolean(error) && (error.code === "PGRST204" || error.code === "42703" ||
@@ -185,9 +204,12 @@
   async function withoutMissingColumns(row, write) {
     const result = await write(row);
     if (!isMissingColumn(result.error) || !PREFERENCE_COLUMNS.some(c => c in row)) return result;
+    // Drop only the column the database named, or every optional one if it named none.
+    const message = String((result.error && result.error.message) || "");
+    const named = PREFERENCE_COLUMNS.filter(c => c in row && message.includes(c));
     const reduced = { ...row };
-    PREFERENCE_COLUMNS.forEach(c => delete reduced[c]);
-    return write(reduced);
+    (named.length ? named : PREFERENCE_COLUMNS).forEach(c => delete reduced[c]);
+    return withoutMissingColumns(reduced, write);
   }
   async function saveOwnProfile(db, user, payload) {
     return withoutMissingColumns(payload, row => db.from("members").update(row).eq("user_id", user.id).select("id").maybeSingle());
@@ -380,7 +402,7 @@
     GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
     saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor, showSignedIn,
     authErrorMessage, photoTypeOf, preparePhoto, decodeImage, randomId, withTimeout, signedPhotoUrls, isMissingFunction, isNotApproved,
-    listOfficialAccounts, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect
+    listOfficialAccounts, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect, starterBio
   };
   root.FYP = api;
   if (typeof module === "object" && module.exports) module.exports = api;

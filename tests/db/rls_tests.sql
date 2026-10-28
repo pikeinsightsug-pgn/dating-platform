@@ -354,3 +354,20 @@ insert into public.members (user_id, first_name, age, gender, location, city, re
 values (auth.uid(), 'Ama', 30, 'Woman', 'Ghana', 'Accra', 'Marriage', 'Synthetic Ghana', false);
 select t_assert((select location = 'Ghana' and not approved from members), 'the website fallback creates a pending profile from Ghana');
 commit;
+
+-- ===== Profession =====
+begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', true); set local role authenticated;
+update public.members set profession = 'Teacher' where user_id = auth.uid();
+select t_assert((select profession = 'Teacher' from members where user_id = auth.uid()), 'a member can set their own profession');
+select t_denied('update public.members set profession = repeat(''x'', 81) where user_id = auth.uid()', 'a profession over 80 characters is refused');
+commit;
+begin; select set_config('request.jwt.claim.sub', 'bbbbbbbb-0000-4000-8000-000000000002', true); set local role authenticated;
+select t_assert((select profession = 'Teacher' from member_professions(array[:'a_id']::uuid[])), 'an approved member sees the profession of a profile they may open');
+select t_assert((select count(*) = 0 from member_professions(array[:'c_id']::uuid[])), 'no profession is returned for a pending member');
+commit;
+begin; select set_config('request.jwt.claim.sub', 'cccccccc-0000-4000-8000-000000000003', true); set local role authenticated;
+select t_assert((select count(*) = 0 from member_professions(array[:'a_id']::uuid[])), 'a pending member cannot read anyone''s profession');
+commit;
+begin; set local role anon;
+select t_denied(format('select * from public.member_professions(array[%L]::uuid[])', :'a_id'), 'visitors cannot read professions');
+commit;

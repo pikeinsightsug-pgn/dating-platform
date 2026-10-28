@@ -15,6 +15,7 @@
 .panel{background:#fff;border:1px solid #f0dfe7;border-radius:22px;padding:24px;margin:16px 0;box-shadow:0 8px 30px #5c18300b}
 h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:12px 0}h2{margin-top:0}p{line-height:1.55;color:#6a5b64}
 .grid{display:grid;gap:13px}label{font-weight:650;font-size:14px}
+.optional{font-weight:500;color:#75666e;font-size:13px}
 input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #e7ccd8;border-radius:11px;margin-top:6px;font:inherit;font-size:16px;background:#fff}
 button,.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:13px 19px;font:inherit;font-weight:800;cursor:pointer;background:#b32663;color:#fff;text-decoration:none}
 button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}
@@ -60,6 +61,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       <label>Gender<select name="gender" required><option value="">Choose one</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option></select></label>
       <label>Country<select name="location" required autocomplete="country-name"><option value="">Choose country</option></select></label>
       <label>City or town<input name="city" required maxlength="100" autocomplete="address-level2"></label>
+      <label>Profession or what you do <span class="optional">(optional)</span><input name="profession" maxlength="80" autocomplete="organization-title" placeholder="e.g. Teacher, Nurse, Business owner"></label>
       <h2 id="preferences">Your preferences</h2>
       <p class="photo-note">Your relationship goal, biography and interests may appear to approved members. Who you want to meet, your preferred age range and partner qualities stay private and are used to suggest people to you.</p>
       <label>I would like to meet<select name="seeking_gender"><option value="">Not set</option><option>Men</option><option>Women</option><option>Everyone</option></select></label>
@@ -98,7 +100,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   let memberProfile = null;
   function setStatus(message) { status.textContent = message; }
   function valuesFor(row) {
-    ["first_name","age","gender","location","city","relationship_goal","bio","interests","partner_preference","seeking_gender","preferred_age_min","preferred_age_max"].forEach(name => {
+    ["first_name","age","gender","location","city","profession","relationship_goal","bio","interests","partner_preference","seeking_gender","preferred_age_min","preferred_age_max"].forEach(name => {
       const field = form.elements.namedItem(name);
       if (field) field.value = row && row[name] != null ? String(row[name]) : "";
     });
@@ -112,6 +114,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       gender: String(values.get("gender")),
       location: String(values.get("location")),
       city: String(values.get("city")).trim(),
+      profession: String(values.get("profession") || "").trim() || null,
       relationship_goal: String(values.get("relationship_goal")),
       bio: String(values.get("bio")).trim(),
       interests: String(values.get("interests") || "").trim(),

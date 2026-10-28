@@ -27,10 +27,8 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     <form id="register-form" class="form-grid card" novalidate style="margin-top:16px">
       <p class="step-title">Your account</p>
       <div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email"><span class="hint">You log in with this. It is never shown to other members.</span><p class="error" id="email-error"></p></div>
-      <div class="row2">
-        <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" required minlength="8" autocomplete="new-password"><span class="hint">At least 8 characters.</span><p class="error" id="password-error"></p></div>
-        <div class="field"><label for="password_confirm">Confirm password</label><input id="password_confirm" name="password_confirm" type="password" required minlength="8" autocomplete="new-password"><p class="error" id="password_confirm-error"></p></div>
-      </div>
+      <div class="field"><label for="password">Choose a password</label><input id="password" name="password" type="password" required minlength="8" autocomplete="new-password"><span class="hint">At least 8 characters.</span>
+        <label class="check small-check"><input id="show_password" type="checkbox"><span>Show password</span></label><p class="error" id="password-error"></p></div>
 
       <p class="step-title">About you</p>
       <div class="field"><label for="first_name">First name or display name</label><input id="first_name" name="first_name" required maxlength="80" autocomplete="given-name"><span class="hint">This is what other members will see.</span><p class="error" id="first_name-error"></p></div>
@@ -40,28 +38,23 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
       </div>
       <div class="field" id="location-field"><label for="location">Country you live in</label><select id="location" name="location" required autocomplete="country-name"><option value="">Choose your country…</option></select><p class="error" id="location-error"></p></div>
       <div class="field"><label for="city">City or general area</label><input id="city" name="city" required maxlength="100" autocomplete="address-level2" placeholder="e.g. Kampala, Gaborone, Nairobi, London"><span class="hint">No street address, please.</span><p class="error" id="city-error"></p></div>
+      <div class="field"><label for="profession">Profession or what you do <span class="optional">(optional)</span></label><input id="profession" name="profession" maxlength="80" autocomplete="organization-title" placeholder="e.g. Teacher, Nurse, Business owner, Student"><p class="error" id="profession-error"></p></div>
 
       <p class="step-title">Who you'd like to meet</p>
       <fieldset class="field" id="seeking_gender-field"><legend>I would like to meet</legend>
         <div class="chips"><label><input type="radio" name="seeking_gender" value="Men" required><span>Men</span></label><label><input type="radio" name="seeking_gender" value="Women"><span>Women</span></label><label><input type="radio" name="seeking_gender" value="Everyone"><span>Everyone</span></label></div>
         <p class="error" id="seeking_gender-error"></p></fieldset>
       <div class="field"><label for="relationship_goal">I am looking for</label><select id="relationship_goal" name="relationship_goal" required><option value="">Choose…</option></select><p class="error" id="relationship_goal-error"></p></div>
-      <fieldset class="field" id="age-range-field"><legend>Preferred partner age</legend>
-        <div class="row2"><label class="hint" for="preferred_age_min">From<select id="preferred_age_min" name="preferred_age_min" required></select></label><label class="hint" for="preferred_age_max">To<select id="preferred_age_max" name="preferred_age_max" required></select></label></div>
-        <span class="hint">Kept private — used only to suggest people to you.</span>
-        <p class="error" id="preferred_age-error"></p></fieldset>
-      <div class="field"><label for="bio">A little about you</label><textarea id="bio" name="bio" rows="4" required maxlength="500" placeholder="What makes you smile? What are you hoping to find?"></textarea><span class="hint"><span id="bio-count">0</span>/500 · at least 20 characters</span><p class="error" id="bio-error"></p></div>
+      <div class="field"><label for="bio">A little about you <span class="optional">(optional)</span></label><textarea id="bio" name="bio" rows="3" maxlength="500" placeholder="What makes you smile? What are you hoping to find?"></textarea><span class="hint"><span id="bio-count">0</span>/500 · you can add or change this later</span><p class="error" id="bio-error"></p></div>
 
       <p class="step-title">Photo</p>
       <div class="field"><label for="photo">Profile photo <span class="optional">(optional)</span></label>
         <div class="photo-pick"><img id="photo-preview" class="hidden" alt="Preview of your chosen photo"><input id="photo" name="photo" type="file" accept="image/*"></div>
         <span class="hint">A clear photo of yourself. Large phone photos are resized automatically. You can also add one after logging in.</span><p class="error" id="photo-error"></p></div>
 
-      <div class="notice small" id="privacy-notice"><strong>Your privacy:</strong> your profile stays hidden until our team reviews and approves it. After approval, other signed-in approved members can see your display name, age, gender, country, city, goal, biography and photo. Your email address and preferred partner age are never shown. Photos are stored privately. <a href="privacy.html" target="_blank" rel="noopener">Read the full privacy notice</a>.</div>
-      <label class="check"><input id="adult_confirm" name="adult_confirm" type="checkbox" required><span>I confirm I am 18 years of age or older.</span></label>
-      <p class="error" id="adult_confirm-error"></p>
-      <label class="check"><input id="privacy_accept" name="privacy_accept" type="checkbox" required><span>I have read the privacy notice and agree that approved members may see my profile.</span></label>
-      <p class="error" id="privacy_accept-error"></p>
+      <div class="notice small" id="privacy-notice"><strong>Your privacy:</strong> your profile stays hidden until our team reviews and approves it. After approval, other signed-in approved members can see your display name, age, gender, country, city, profession, goal, biography and photo. Your email address is never shown. Photos are stored privately. <a href="privacy.html" target="_blank" rel="noopener">Read the full privacy notice</a>.</div>
+      <label class="check"><input id="agree" name="agree" type="checkbox" required><span>I am 18 or older, and I agree to the privacy notice.</span></label>
+      <p class="error" id="agree-error"></p>
       <button class="btn large" type="submit">Create my account</button>
       <p id="status" class="status notice" role="status" aria-live="polite"></p>
     </form>
@@ -137,10 +130,9 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
   const goal = document.getElementById("relationship_goal");
   window.FYP.GOALS.forEach(value => goal.append(new Option(window.FYP.GOAL_LABELS[value], value)));
   window.FYP.fillCountrySelect(document.getElementById("location"));
-  const minSelect = document.getElementById("preferred_age_min"), maxSelect = document.getElementById("preferred_age_max");
-  minSelect.append(new Option("Choose…", "")); maxSelect.append(new Option("Choose…", ""));
-  for (let age = 18; age <= 80; age++) { minSelect.append(new Option(String(age), String(age))); maxSelect.append(new Option(String(age), String(age))); }
-  maxSelect.append(new Option("80+", "120"));
+  document.getElementById("show_password").addEventListener("change", event => {
+    form.elements.password.type = event.target.checked ? "text" : "password";
+  });
   const bio = document.getElementById("bio");
   bio.addEventListener("input", () => { document.getElementById("bio-count").textContent = bio.value.length; });
 
@@ -159,7 +151,6 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     push("email", !email ? "Enter your email address." : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? "Enter a valid email address, like name@example.com." : "");
     const password = form.elements.password.value;
     push("password", password.length < 8 ? "Use at least 8 characters." : "");
-    push("password_confirm", !form.elements.password_confirm.value ? "Type your password again." : form.elements.password_confirm.value !== password ? "The passwords do not match." : "");
     push("first_name", !v("first_name") ? "Tell us what to call you." : "");
     const age = Number(v("age"));
     push("age", !v("age") ? "Enter your age." : !Number.isInteger(age) ? "Enter your age as a whole number." : age < 18 ? "You must be 18 or older to join." : age > 120 ? "Check your age." : "");
@@ -168,13 +159,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     push("city", !v("city") ? "Enter your city or general area." : "");
     push("seeking_gender", !v("seeking_gender") ? "Choose who you would like to meet." : "");
     push("relationship_goal", !v("relationship_goal") ? "Choose what you are looking for." : "");
-    const min = Number(v("preferred_age_min")), max = Number(v("preferred_age_max"));
-    const rangeMessage = !min || !max ? "Choose a minimum and maximum age." : min > max ? "The minimum age must not be higher than the maximum." : "";
-    push("preferred_age", rangeMessage, minSelect); setError("preferred_age", rangeMessage, maxSelect);
-    const bioText = v("bio");
-    push("bio", bioText.length < 20 ? "Write at least 20 characters about yourself." : "");
-    push("adult_confirm", !form.elements.adult_confirm.checked ? "Please confirm you are 18 or older." : "", form.elements.adult_confirm);
-    push("privacy_accept", !form.elements.privacy_accept.checked ? "Please accept the privacy notice to continue." : "", form.elements.privacy_accept);
+    push("agree", !form.elements.agree.checked ? "Please confirm you are 18 or older and agree to the privacy notice." : "", form.elements.agree);
     const photo = form.elements.photo.files[0];
     push("photo", photo && !window.FYP.photoTypeOf(photo).startsWith("image/") ? "Choose a photo (JPEG, PNG or WebP), or leave this empty." : "", form.elements.photo);
     return errors;
@@ -240,10 +225,10 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
       location: text("location"),
       city: text("city"),
       relationship_goal: text("relationship_goal"),
-      bio: text("bio"),
-      seeking_gender: text("seeking_gender"),
-      preferred_age_min: Number(text("preferred_age_min")),
-      preferred_age_max: Number(text("preferred_age_max"))
+      // A short starter line when left empty; the member can change it in My Profile.
+      bio: text("bio") || window.FYP.starterBio(text("first_name"), text("city")),
+      profession: text("profession"),
+      seeking_gender: text("seeking_gender")
     };
     setBusy(true); registering = true; say("Creating your account…");
     try {

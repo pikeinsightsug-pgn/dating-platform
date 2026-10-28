@@ -48,16 +48,18 @@ test("launch pages", async (t) => {
     await page.goto(env.base + "account.html");
     await page.click("#register-form button[type=submit]");
     const errors = await page.locator("#register-form .error:not(:empty)").allTextContents();
-    for (const expected of [/email address/, /8 characters/, /what to call you/, /your age/i, /gender/, /country you live in/, /city/, /who you would like to meet/, /looking for/, /minimum and maximum age/, /20 characters/, /18 or older/, /privacy notice/]) {
+    for (const expected of [/email address/, /8 characters/, /what to call you/, /your age/i, /gender/, /country you live in/, /city/, /who you would like to meet/, /looking for/, /18 or older/, /privacy notice/]) {
       assert.ok(errors.some(e => expected.test(e)), "message for " + expected);
     }
     assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), "email", "focus moves to the first problem");
 
-    await env.fillRegistration(page, { name: "Young", email: "young@test.invalid", age: "17", confirm: "different-pass", min: "40", max: "30" });
+    await env.fillRegistration(page, { name: "Young", email: "young@test.invalid", age: "17", password: "short" });
     await page.click("#register-form button[type=submit]");
     assert.match(await page.textContent("#age-error"), /18 or older/);
-    assert.match(await page.textContent("#password_confirm-error"), /do not match/);
-    assert.match(await page.textContent("#preferred_age-error"), /must not be higher/);
+    assert.match(await page.textContent("#password-error"), /8 characters/);
+    // "Show password" lets people check what they typed instead of typing it twice.
+    await page.check("#show_password");
+    assert.equal(await page.getAttribute("#password", "type"), "text");
     assert.equal((await env.sql("select count(*)::int as n from auth.users where email = 'young@test.invalid'")).rows[0].n, 0, "nothing was submitted");
   });
 
@@ -76,10 +78,10 @@ test("launch pages", async (t) => {
     assert.equal((await env.sql("select count(*)::int as n from public.members where first_name in ('Taken', 'Again')")).rows[0].n, 1);
   });
 
-  await t.test("registration with an optional photo (Android file with no type) saves the profile, preferences and photo", async () => {
+  await t.test("registration with an optional photo (Android file with no type) saves the profile, profession and photo", async () => {
     env.gateway.options.requireEmailConfirmation = false; // sign-in straight after signup
     const page = await env.newPage({ mobile: true });
-    await env.fillRegistration(page, { name: "Photogenic", email: "photo-signup@test.invalid", gender: "Woman", seeking: "Men", min: "30", max: "45" });
+    await env.fillRegistration(page, { name: "Photogenic", email: "photo-signup@test.invalid", gender: "Woman", seeking: "Men", profession: "Nurse", bio: "" });
     await page.evaluate(bytes => {
       const transfer = new DataTransfer();
       transfer.items.add(new File([new Uint8Array(bytes)], "IMG_2001.jpg", { type: "" }));
@@ -91,7 +93,9 @@ test("launch pages", async (t) => {
     env.gateway.options.requireEmailConfirmation = true;
     const row = (await env.sql("select m.* from public.members m join auth.users u on u.id = m.user_id where u.email = 'photo-signup@test.invalid'")).rows[0];
     assert.equal(row.seeking_gender, "Men");
-    assert.deepEqual([row.preferred_age_min, row.preferred_age_max], [30, 45]);
+    assert.deepEqual([row.preferred_age_min, row.preferred_age_max], [null, null], "age range is no longer asked when joining");
+    assert.equal(row.profession, "Nurse");
+    assert.equal(row.bio, "Hello! I'm Photogenic from Kampala. I'm new on P.K CONNECT. Say hi 👋", "an empty bio gets a starter line");
     assert.equal(row.approved, false, "new members always start pending");
     assert.ok(row.profile_photo_url && row.profile_photo_url.startsWith(row.user_id + "/"), "photo stored in the member's private folder");
     await page.waitForSelector("#photo-preview:not(.hidden)");
@@ -106,23 +110,31 @@ test("launch pages", async (t) => {
     await env.login(page, "photo-signup@test.invalid");
     await page.waitForURL(/discover\.html$/);
     await page.waitForSelector("#profiles .card");
-    assert.deepEqual(await page.locator("#profiles .card h2").allTextContents(), ["Bloke, 35"], "men aged 30–45 first, from her own answers");
+    assert.deepEqual((await page.locator("#profiles .card h2").allTextContents()).sort(), ["Bloke, 35", "Elder, 60"], "men first, from her own answer");
     assert.equal(await page.inputValue("#filters [name=gender]"), "Man");
 
     await page.goto(env.base + "dashboard.html");
     await page.waitForSelector("#profile-panel:not(.hidden)");
     await page.selectOption("[name=seeking_gender]", "Everyone");
+    await page.fill("[name=preferred_age_min]", "30");
     await page.fill("[name=preferred_age_max]", "65");
+    assert.equal(await page.inputValue("[name=profession]"), "Nurse");
+    await page.fill("[name=profession]", "Senior nurse");
     await page.fill("[name=bio]", "Updated biography from the profile editor.");
     await page.click("#save-profile");
     await page.waitForFunction(() => /has been saved/.test(document.getElementById("status").textContent));
-    const row = (await env.sql("select seeking_gender, preferred_age_max, bio, approved from public.members where first_name = 'Photogenic'")).rows[0];
-    assert.deepEqual(row, { seeking_gender: "Everyone", preferred_age_max: 65, bio: "Updated biography from the profile editor.", approved: true });
+    const row = (await env.sql("select seeking_gender, preferred_age_max, bio, profession, approved from public.members where first_name = 'Photogenic'")).rows[0];
+    assert.deepEqual(row, { seeking_gender: "Everyone", preferred_age_max: 65, bio: "Updated biography from the profile editor.", profession: "Senior nurse", approved: true });
 
     await page.goto(env.base + "discover.html");
     await page.waitForSelector("#profiles .card");
     const names = await page.locator("#profiles .card h2").allTextContents();
     assert.ok(names.includes("Elder, 60") && names.includes("Lady, 33") && !names.some(n => n.startsWith("Photogenic")), "wider preferences, still never herself");
+    // Other approved members see her profession on her card.
+    const bloke = await env.newPage();
+    await env.login(bloke, "bloke-35@test.invalid"); await bloke.waitForURL(/discover\.html$/);
+    await bloke.waitForSelector("#profiles .card");
+    assert.match(await bloke.locator("#profiles .card", { hasText: "Photogenic" }).textContent(), /💼 Senior nurse/);
   });
 
   await t.test("login: wrong password message, then an existing member is taken past registration", async () => {
@@ -192,6 +204,7 @@ test("launch pages", async (t) => {
     assert.match(await owner.textContent("#function-version"), /^Owner function admin-members is up to date \(version \d{4}-\d{2}-\d{2}\)\.$/);
     const card = name => owner.locator("#members article.member").filter({ has: owner.locator("h3", { hasText: name }) });
     assert.match(await card("Photogenic").textContent(), /Wants to meet: Everyone/);
+    assert.match(await card("Photogenic").textContent(), /Profession: Senior nurse/);
     await card("Newbie").getByRole("button", { name: "Approve" }).click();
     await owner.waitForFunction(() => [...document.querySelectorAll("#members article")].some(a => a.textContent.includes("Newbie") && a.textContent.includes("Approved")));
 

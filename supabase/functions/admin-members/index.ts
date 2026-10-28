@@ -4,7 +4,7 @@ import { COUNTRIES } from "../_shared/countries.js";
 
 // Bump when this function changes; the owner console compares it with the version it expects,
 // so the owner can see whether the deployed function is current without opening Supabase.
-const FUNCTION_VERSION = "2026-10-26";
+const FUNCTION_VERSION = "2026-10-28";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
       interests: m.interests, partner_preference: m.partner_preference,
       profile_photo_url: m.profile_photo_url, approved: m.approved === true,
       is_test_account: m.is_test_account === true, is_official: m.is_official === true, created_at: m.created_at,
-      seeking_gender: m.seeking_gender ?? null,
+      seeking_gender: m.seeking_gender ?? null, profession: m.profession ?? null,
       preferred_age_min: m.preferred_age_min ?? null, preferred_age_max: m.preferred_age_max ?? null,
     }));
     const authUsers = new Map<string, { email: string | null; confirmed: boolean }>();

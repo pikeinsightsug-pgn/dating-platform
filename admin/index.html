@@ -95,7 +95,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     return data;
   }
   // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
-  const EXPECTED_FUNCTION_VERSION = "2026-10-26";
+  const EXPECTED_FUNCTION_VERSION = "2026-10-28";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
@@ -205,6 +205,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     card.append(el("p", m.bio || "No bio provided.", "bio"));
     card.append(el("p", "Wants to meet: " + (m.seeking_gender || "Not given") + " · Preferred age: " +
       (m.preferred_age_min ? m.preferred_age_min + "–" + (m.preferred_age_max >= 120 ? "80+" : m.preferred_age_max) : "Not given"), "muted"));
+    card.append(el("p", "Profession: " + (m.profession || "Not given")));
     card.append(el("p", "Interests: " + (m.interests || "Not provided")));
     card.append(el("p", "Partner preferences: " + (m.partner_preference || "Not provided"), "bio"));
     const actions = el("div", null, "actions");
