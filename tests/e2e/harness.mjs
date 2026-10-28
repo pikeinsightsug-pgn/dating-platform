@@ -12,7 +12,7 @@ const repo = fileURLToPath(new URL("../../", import.meta.url));
 const PG = { host: process.env.PGHOST || "/var/run/postgresql", port: Number(process.env.PGPORT || 5432), user: process.env.PGUSER || "postgres" };
 export const SUPABASE = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
 const CDN = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";
-export const ALL = ["supabase/registration_setup.sql", "supabase/launch_features_secure.sql", "supabase/member_discovery_photos.sql", "supabase/discovery_messaging_safety.sql", "supabase/legacy_registrations.sql", "supabase/member_extra_photos.sql", "supabase/official_account.sql", "supabase/worldwide_members.sql"];
+export const ALL = ["supabase/registration_setup.sql", "supabase/launch_features_secure.sql", "supabase/member_discovery_photos.sql", "supabase/discovery_messaging_safety.sql", "supabase/legacy_registrations.sql", "supabase/member_extra_photos.sql", "supabase/official_account.sql", "supabase/worldwide_members.sql", "supabase/member_profession.sql"];
 export const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
 
 async function freshDatabase(name, files) {
@@ -82,23 +82,20 @@ export async function setup(name, files = ALL) {
   // Fills the registration questionnaire on account.html (does not submit).
   async function fillRegistration(page, f) {
     const v = { password: "Test-pass-123", age: "29", gender: "Woman", location: "Uganda", city: "Kampala",
-      seeking: "Men", goal: "Serious relationship", min: "25", max: "40", bio: "Synthetic test member who enjoys music and long walks.", ...f };
+      seeking: "Men", goal: "Serious relationship", bio: "Synthetic test member who enjoys music and long walks.", ...f };
     await page.goto(base + "account.html");
     await page.fill("#first_name", v.name);
     await page.fill("#email", v.email);
     await page.fill("#password", v.password);
-    await page.fill("#password_confirm", v.confirm ?? v.password);
     await page.fill("#age", v.age);
     await page.selectOption("#gender", v.gender);
     await page.selectOption("#location", v.location);
     await page.fill("#city", v.city);
     await page.check(`input[name=seeking_gender][value="${v.seeking}"]`);
     await page.selectOption("#relationship_goal", v.goal);
-    await page.selectOption("#preferred_age_min", v.min);
-    await page.selectOption("#preferred_age_max", v.max);
+    if (v.profession) await page.fill("#profession", v.profession);
     await page.fill("#bio", v.bio);
-    if (v.adult !== false) await page.check("#adult_confirm");
-    if (v.privacy !== false) await page.check("#privacy_accept");
+    if (v.adult !== false && v.privacy !== false) await page.check("#agree");
   }
   return {
     base, gateway, sql, newPage, member, login, fillRegistration, repo,

@@ -22,7 +22,9 @@ for file in \
   supabase/member_extra_photos.sql \
   supabase/official_account.sql \
   supabase/worldwide_members.sql \
-  supabase/worldwide_members.sql; do
+  supabase/worldwide_members.sql \
+  supabase/member_profession.sql \
+  supabase/member_profession.sql; do
   # The newest migration runs twice to prove it is safe to rerun.
   PGOPTIONS="-c client_min_messages=warning" psql_q -d "$DB" -f "$file"
 done

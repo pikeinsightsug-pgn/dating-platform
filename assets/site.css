@@ -61,6 +61,7 @@ input[aria-invalid=true],select[aria-invalid=true],textarea[aria-invalid=true]{b
 .error:empty{display:none}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .check{display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:15px}
+.small-check{font-size:14px;margin-top:6px;color:var(--muted)}
 .check input{width:22px;height:22px;flex:none;margin-top:2px}
 fieldset{border:0;margin:0;padding:0}
 .chips{display:flex;flex-wrap:wrap;gap:8px}

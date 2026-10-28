@@ -145,6 +145,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     const body = document.createElement("div"); body.className = "body";
     addText(body, "h2", profile.first_name + ", " + profile.age);
     addText(body, "p", detailsLine(profile), "details");
+    if (profile.profession) addText(body, "p", "💼 " + profile.profession, "details");
     if (profile.relationship_goal) addText(body, "p", "Looking for: " + profile.relationship_goal);
     if (profile.bio) addText(body, "p", profile.bio, "bio clamp");
     open.append(body);
@@ -160,6 +161,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     document.getElementById("dialog-name").textContent = current.first_name + ", " + current.age;
     document.getElementById("dialog-details").textContent = detailsLine(current);
     const text = document.getElementById("dialog-text"); text.replaceChildren();
+    if (current.profession) addText(text, "p", "💼 " + current.profession);
     if (current.relationship_goal) addText(text, "p", "Looking for: " + current.relationship_goal);
     if (current.bio) addText(text, "p", current.bio, "bio");
     if (current.interests) addText(text, "p", "Interests: " + current.interests, "bio");
@@ -252,6 +254,16 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     if (error) throw error;
     return (data || []).map(row => ({ ...row, total_count: (data || []).length }));
   }
+  // Professions come from their own function, so Discover keeps working before it exists.
+  async function professionsFor(rows) {
+    const found = new Map();
+    if (!rows.length) return found;
+    try {
+      const { data, error } = await db.rpc("member_professions", { p_member_ids: rows.map(row => row.id) });
+      if (!error) (data || []).forEach(item => found.set(item.id, item.profession));
+    } catch (error) { /* optional detail */ }
+    return found;
+  }
   async function loadPage(reset) {
     if (loading) return;
     loading = true; loadMore.disabled = true; filters.querySelector("button").disabled = true;
@@ -259,8 +271,9 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     try {
       const rows = await fetchPage();
       if (!legacyMode) filters.classList.remove("hidden");
-      const urls = await window.FYP.signedPhotoUrls(db, rows.map(row => row.profile_photo_path));
-      rows.forEach(row => showCard(row, urls.get(row.profile_photo_path) || null));
+      const [urls, professions] = await Promise.all([
+        window.FYP.signedPhotoUrls(db, rows.map(row => row.profile_photo_path)), professionsFor(rows)]);
+      rows.forEach(row => showCard({ ...row, profession: professions.get(row.id) || row.profession || null }, urls.get(row.profile_photo_path) || null));
       total = rows.length ? Number(rows[0].total_count) || rows.length : (reset ? 0 : total);
       offset += rows.length;
       const more = !legacyMode && offset < total && rows.length > 0;
