@@ -19,6 +19,8 @@ input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #e7
 button,.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:13px 19px;font:inherit;font-weight:800;cursor:pointer;background:#b32663;color:#fff;text-decoration:none}
 button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;border:1px solid #efd2df}
 .notice{padding:13px 15px;background:#fde8f0;border-radius:12px;color:#8f1e51;line-height:1.5}
+.photo-reminder{display:grid;gap:8px;justify-items:start;margin:14px 0;padding:16px 18px;border:2px solid #f2a3c2;border-radius:16px;background:#fff4f8;color:#5a1d3c;line-height:1.5}
+.photo-reminder strong{font-size:18px;color:#8f1e51}
 .help{font-size:14px;color:#75666e;line-height:1.5}.help a,#recovery-panel a{color:#a21f59;font-weight:700;overflow-wrap:anywhere}
 #status{white-space:pre-wrap;overflow-wrap:anywhere;min-height:1.4em}.hidden{display:none!important}
 @media(max-width:480px){.panel{padding:18px}.top button{width:100%}.wrap{padding:16px 14px 40px}}
@@ -46,6 +48,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     <div class="notice" id="approval-guidance"><strong>How approval works:</strong> The platform owner reviews member profiles and linked accounts manually. Until your profile is approved, it stays private and you cannot browse or message other members. Approval is never automatic. No payment is requested.</div>
     <h1>My profile</h1>
     <p id="approval-status" role="status" aria-live="polite"></p>
+    <div id="photo-reminder" class="photo-reminder hidden" role="note"><strong>📸 Add your profile photo</strong><span>Your profile has no photo yet. Members with a clear photo get far more interest, and we can review your profile faster.</span><a class="btn" href="#photo-title">Add my photo</a></div>
     <div id="official-self" class="official-box hidden" role="note"><p>✅ This is the official P.K Connect account. Members see it pinned at the top of Discover with an Official badge, never as a dating profile. Keep the name and bio clearly official.</p></div>
     <div id="official-contact" class="official-box hidden"><p id="official-contact-text">Questions, problems or ideas? Message our founder directly.</p><a id="official-contact-link" class="btn" href="messages.html">Message Pike ✅</a></div>
     <section class="photo-actions" aria-labelledby="photo-title"><h2 id="photo-title">Profile photo</h2><p class="photo-note">Choose a clear photo of yourself, then zoom and position it in the frame. JPEG, PNG and WebP photos from phones and computers are accepted and resized automatically. Photos are private and shown only to approved members.</p><img id="photo-preview" class="photo-preview hidden" alt="Preview of your profile photo"><p id="photo-empty" class="photo-note">No profile photo uploaded yet.</p><label for="photo-file">Upload or replace photo<input id="photo-file" type="file" accept="image/*"></label><button id="upload-photo" type="button" disabled>Upload photo</button><p id="photo-status" class="photo-note" role="status" aria-live="polite"></p></section>
@@ -209,9 +212,12 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     const image = document.getElementById("photo-preview");
     const empty = document.getElementById("photo-empty");
     if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); previewObjectUrl = null; }
+    // Until a photo is saved, a reminder at the top of the page asks for one.
+    const reminder = document.getElementById("photo-reminder");
     if (!path || !user || !path.startsWith(user.id + "/")) {
-      image.classList.add("hidden"); empty.classList.remove("hidden"); return;
+      image.classList.add("hidden"); empty.classList.remove("hidden"); reminder.classList.remove("hidden"); return;
     }
+    reminder.classList.add("hidden");
     const urls = await window.FYP.signedPhotoUrls(db, [path]);
     if (!urls.get(path)) { image.classList.add("hidden"); empty.classList.remove("hidden"); return; }
     image.src = urls.get(path); image.classList.remove("hidden"); empty.classList.add("hidden");
