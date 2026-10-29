@@ -74,6 +74,14 @@ test("auth errors produce specific guidance", () => {
   assert.match(core.authErrorMessage({ code: "invalid_credentials" }), /do not match/);
   assert.match(core.authErrorMessage({ message: "User already registered" }, "signup"), /already exists/);
   assert.match(core.authErrorMessage({ code: "REQUEST_TIMEOUT" }), /timed out/);
+  // Supabase's site-wide email limit must not read as the person clicking too often.
+  for (const error of [{ code: "over_email_send_rate_limit", status: 429, message: "email rate limit exceeded" },
+                       { status: 500, message: "Error sending confirmation email" }]) {
+    const text = core.authErrorMessage(error, "signup");
+    assert.match(text, /not a mistake on your part/);
+    assert.match(text, /details are still filled in/);
+    assert.doesNotMatch(text, /Too many attempts/);
+  }
   assert.match(core.authErrorMessage({ message: "Database error saving new user" }, "signup"), /server setup/);
 });
 

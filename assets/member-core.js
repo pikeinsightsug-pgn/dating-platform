@@ -246,6 +246,13 @@
     if (code === "invalid_credentials" || message.includes("invalid login credentials")) return "That email and password do not match an account. Check them, or use “Forgot password?”.";
     if (code === "user_already_exists" || message.includes("already registered")) return "An account with this email already exists. Log in instead, or reset your password.";
     if (code === "weak_password" || message.includes("password should")) return "Choose a stronger password: at least 8 characters, mixing letters and numbers.";
+    // Supabase's email sending limit is shared by the whole site, so this is never the person's fault.
+    if (code === "over_email_send_rate_limit" || message.includes("email rate limit") || message.includes("error sending confirmation")
+        || message.includes("error sending recovery") || message.includes("error sending magic link")) {
+      return "We could not send your email just now because many people are joining at the same time. This is not a mistake on your part. "
+        + (action === "signup" ? "Your details are still filled in: please wait a few minutes, then press “Create my account” again." : "Please wait a few minutes and try again.")
+        + " If it keeps happening, email " + CONTACT_EMAIL + ".";
+    }
     if (status === 429 || code.includes("rate_limit") || message.includes("rate limit")) return "Too many attempts. Please wait a few minutes and try again.";
     if (code === "signup_disabled" || message.includes("signups not allowed")) return "New registrations are paused right now. Please email " + CONTACT_EMAIL + ".";
     if (message.includes("database error saving new user")) return "Your account could not be created because of a server setup problem. Please email " + CONTACT_EMAIL + ".";

@@ -31,7 +31,7 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
     confirmations.delete(value);
     return (await pool.query("update auth.users set email_confirmed_at = now() where email = $1 returning *", [entry.email])).rows[0];
   }
-  const options = { requireEmailConfirmation: true, failUploads: null, adminFunction: null, adminFunctionOnly: null };
+  const options = { requireEmailConfirmation: true, failSignup: null, failUploads: null, adminFunction: null, adminFunctionOnly: null };
 
   function token(userRow) {
     const exp = Math.floor(Date.now() / 1000) + 3600;
@@ -245,6 +245,7 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
     const body = raw ? JSON.parse(raw) : {};
     const authError = (status, code, msg) => send(res, status, { code: status, error_code: code, msg });
     if (route === "signup" && req.method === "POST") {
+      if (options.failSignup) { const [status, body] = options.failSignup; return send(res, status, body); }
       const email = String(body.email || "").toLowerCase();
       const exists = await pool.query("select 1 from auth.users where email = $1", [email]);
       if (exists.rows.length) {
