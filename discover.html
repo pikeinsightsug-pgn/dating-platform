@@ -101,7 +101,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
 <script src="assets/member-core.js"></script>
 <script>
 (() => {
-  const PAGE_SIZE = 24;
+  const PAGE_SIZE = 50; // the database allows at most 50 per request
   const status = document.getElementById("status");
   const root = document.getElementById("profiles");
   const filters = document.getElementById("filters");
