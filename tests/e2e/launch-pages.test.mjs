@@ -118,7 +118,7 @@ test("launch pages", async (t) => {
     // She can still narrow the list herself.
     await page.selectOption("#filters [name=gender]", "Man");
     await page.click("#filters button[type=submit]");
-    await page.waitForFunction(() => !document.querySelector("#profiles").textContent.includes("Lady"));
+    await page.waitForFunction(() => /Showing/.test(document.getElementById("status").textContent) && !document.querySelector("#profiles").textContent.includes("Lady"));
     assert.deepEqual((await page.locator("#profiles .card h2").allTextContents()).sort(), ["Bloke, 35", "Elder, 60"]);
 
     await page.goto(env.base + "dashboard.html");

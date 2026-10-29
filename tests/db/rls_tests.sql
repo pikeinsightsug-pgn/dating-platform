@@ -178,7 +178,7 @@ select t_assert(exists (select 1 from auth.users where email = 'rejected@test.in
   'a profile row the database rejects is skipped; the Auth signup still succeeds');
 alter table public.members drop constraint t_reject_name;
 
--- ===== Owner test accounts are kept apart from genuine members =====
+-- ===== The test-account marker never hides anyone (owner's request: everyone visible) =====
 insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
  ('13131313-0000-4000-8000-000000000013', 'owner-test-2@test.invalid', now(), '{"profile_type":"member_registration","first_name":"OwnerTest2","age":35,"gender":"Man","location":"Uganda","city":"Kampala","relationship_goal":"Friendship","bio":"owner test"}');
 update members set approved = true, is_test_account = true where user_id = '13131313-0000-4000-8000-000000000013';
@@ -186,17 +186,17 @@ update members set is_test_account = true where id = :'e_id';
 select id as t2_id from members where user_id = '13131313-0000-4000-8000-000000000013' \gset
 select t_assert((select count(*) = 0 from members where is_test_account and user_id::text like 'aaaaaaaa%'), 'genuine profiles start unmarked');
 begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', true); set local role authenticated;
-select t_assert((select array_agg(first_name order by first_name) = array['TestB'] from browse_member_profiles()), 'a genuine member never sees test accounts in discovery');
-select t_assert((select array_agg(first_name order by first_name) = array['TestB'] from browse_approved_profiles()), 'the older discovery function also hides test accounts');
-select t_assert((select count(*) = 0 from get_member_profile(:'t2_id')), 'a genuine member cannot open a test profile');
-select t_denied(format('select * from public.send_member_message(%L, %L)', :'t2_id', 'hi'), 'a genuine member cannot message a test account');
+select t_assert((select array_agg(first_name order by first_name) = array['OwnerTest2','TestB','TestE'] from browse_member_profiles()), 'a genuine member sees test accounts in discovery too');
+select t_assert((select array_agg(first_name order by first_name) = array['OwnerTest2','TestB','TestE'] from browse_approved_profiles()), 'the older discovery function shows them too');
+select t_assert((select count(*) = 1 from get_member_profile(:'t2_id')), 'a genuine member can open a test account''s profile');
+select t_assert((select count(*) = 1 from send_member_message(:'t2_id', 'hi')), 'a genuine member can message a test account');
 select t_denied('update public.members set is_test_account = true where user_id = auth.uid()', 'members cannot mark themselves as test accounts');
 commit;
 begin; select set_config('request.jwt.claim.sub', '13131313-0000-4000-8000-000000000013', true); set local role authenticated;
-select t_assert((select array_agg(first_name order by first_name) = array['TestE'] from browse_member_profiles()), 'test accounts see only other test accounts');
-select t_denied(format('select * from public.send_member_message(%L, %L)', :'a_id', 'hi'), 'a test account cannot message a genuine member');
+select t_assert((select array_agg(first_name order by first_name) = array['TestA','TestB','TestE'] from browse_member_profiles()), 'a test account sees every approved member');
+select t_assert((select count(*) = 1 from send_member_message(:'a_id', 'hi back')), 'a test account can message a genuine member');
 select t_assert((select count(*) = 1 from send_member_message(:'e_id', 'test to test')), 'two test accounts can message each other');
-select t_assert((select count(*) = 0 from list_my_conversations() where other_member_id = :'a_id'), 'no genuine conversations are visible to a test account');
+select t_assert((select count(*) = 1 from list_my_conversations() where other_member_id = :'a_id'), 'the conversation with a genuine member is listed');
 commit;
 update members set is_test_account = false where id = :'e_id';
 
@@ -259,7 +259,7 @@ select id as ot_id from members where user_id = '17171717-0000-4000-8000-0000000
 select t_assert((select bool_and(not is_official) from members), 'every existing profile starts as not official');
 -- What the owner console does: approve, mark official, and make sure it is not a test account.
 update members set approved = true, is_official = true, is_test_account = false where id = :'o_id';
-update members set approved = true, is_official = true, is_test_account = true where id = :'ot_id';
+update members set approved = true, is_test_account = true where id = :'ot_id';
 
 begin; select set_config('request.jwt.claim.sub', 'aaaaaaaa-0000-4000-8000-000000000001', true); set local role authenticated;
 select t_assert((select count(*) = 0 from browse_member_profiles() where id = :'o_id'), 'the official account is not shown in Discover as a dating profile');
@@ -284,7 +284,7 @@ update public.members set first_name = 'Pike – Founder' where user_id = auth.u
 select t_assert((select first_name = 'Pike – Founder' and is_official from members), 'the official account can use the Founder name and sees its own flag');
 select t_assert((select count(*) = 0 from list_official_accounts()), 'the official account does not list itself');
 select t_assert((select count(*) >= 3 from browse_member_profiles()), 'the official account can browse genuine members to welcome them');
-select t_assert((select count(*) = 0 from browse_member_profiles() where id in (:'t2_id', :'ot_id')), 'the official account never sees test accounts');
+select t_assert((select count(*) = 2 from browse_member_profiles() where id in (:'t2_id', :'ot_id')), 'the official account sees test accounts too');
 commit;
 -- 30 recent messages is the normal limit; the official account may keep welcoming members.
 insert into member_messages (sender_member_id, recipient_member_id, body)
@@ -299,7 +299,7 @@ select t_denied(format('select * from public.send_member_message(%L, %L)', :'e_i
 commit;
 
 begin; select set_config('request.jwt.claim.sub', '13131313-0000-4000-8000-000000000013', true); set local role authenticated;
-select t_assert((select array_agg(id) = array[:'ot_id'::uuid] from list_official_accounts()), 'test accounts see only the test official account');
+select t_assert((select array_agg(id) = array[:'o_id'::uuid] from list_official_accounts()), 'test accounts see the official account like everyone else');
 commit;
 begin; select set_config('request.jwt.claim.sub', 'cccccccc-0000-4000-8000-000000000003', true); set local role authenticated;
 select t_denied('select * from public.list_official_accounts()', 'pending members cannot list the official account');

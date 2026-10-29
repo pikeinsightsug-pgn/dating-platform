@@ -65,7 +65,7 @@ test("extra profile photos", async (t) => {
     assert.equal(await kabo.textContent("#photo-count"), "2 / 3");
   });
 
-  await t.test("pending members, visitors and test accounts cannot see the extra photos", async () => {
+  await t.test("pending members and visitors cannot see the extra photos; test accounts see them like everyone", async () => {
     const { Amina } = await ids();
     const paths = (await env.sql("select storage_path from public.member_photos")).rows.map(r => r.storage_path);
     const peek = async page => page.evaluate(async ({ id, paths }) => {
@@ -76,7 +76,7 @@ test("extra profile photos", async (t) => {
     }, { id: Amina, paths });
     const alp = await env.newPage();
     await env.login(alp, "alp@test.invalid"); await alp.waitForURL(/discover\.html$/);
-    assert.deepEqual(await peek(alp), { listed: 0, files: 2 }, "a test account is not given the list (it could only open files it already knew the private address of)");
+    assert.deepEqual(await peek(alp), { listed: 2, files: 2 }, "an approved test account sees them like any approved member");
     const pendo = await env.newPage();
     await env.login(pendo, "pendo@test.invalid"); await pendo.waitForURL(/dashboard\.html$/);
     assert.deepEqual(await peek(pendo), { listed: 0, files: 0 }, "a pending member sees nothing");

@@ -174,12 +174,14 @@ as $$
 $$;
 revoke all on function public.members_are_blocked(uuid, uuid) from public, anon, authenticated;
 
+-- Every approved member can see and message every other approved member. The owner's
+-- "test account" marker only keeps an account out of the member totals; it never hides
+-- anyone (the owner asked that no member ever disappears from view again).
 create or replace function public.members_share_audience(member_a uuid, member_b uuid)
 returns boolean language sql stable security definer set search_path = ''
 as $$
-  select coalesce((select a.is_test_account = b.is_test_account
-                   from public.members a, public.members b
-                   where a.id = member_a and b.id = member_b), false)
+  select exists (select 1 from public.members a where a.id = member_a)
+     and exists (select 1 from public.members b where b.id = member_b)
 $$;
 revoke all on function public.members_share_audience(uuid, uuid) from public, anon, authenticated;
 
