@@ -101,7 +101,7 @@ test("launch pages", async (t) => {
     await page.waitForSelector("#photo-preview:not(.hidden)");
   });
 
-  await t.test("profile editing saves preferences, and discovery starts from them", async () => {
+  await t.test("profile editing saves preferences, and discovery shows every approved member", async () => {
     await env.member("bloke-35@test.invalid", profile("Bloke", { gender: "Man", age: 35 }), { approved: true });
     await env.member("bloke-60@test.invalid", profile("Elder", { gender: "Man", age: 60 }), { approved: true });
     await env.member("lady-33@test.invalid", profile("Lady", { gender: "Woman", age: 33 }), { approved: true });
@@ -110,8 +110,16 @@ test("launch pages", async (t) => {
     await env.login(page, "photo-signup@test.invalid");
     await page.waitForURL(/discover\.html$/);
     await page.waitForSelector("#profiles .card");
-    assert.deepEqual((await page.locator("#profiles .card h2").allTextContents()).sort(), ["Bloke, 35", "Elder, 60"], "men first, from her own answer");
-    assert.equal(await page.inputValue("#filters [name=gender]"), "Man");
+    const everyone = await page.locator("#profiles .card h2").allTextContents();
+    assert.ok(["Bloke, 35", "Elder, 60", "Lady, 33"].every(n => everyone.includes(n)), "every approved member, whatever her preferences");
+    assert.equal(await page.inputValue("#filters [name=gender]"), "", "gender filter starts at Any");
+    assert.equal(await page.inputValue("#filters [name=min_age]"), "18");
+    assert.equal(await page.inputValue("#filters [name=max_age]"), "120");
+    // She can still narrow the list herself.
+    await page.selectOption("#filters [name=gender]", "Man");
+    await page.click("#filters button[type=submit]");
+    await page.waitForFunction(() => !document.querySelector("#profiles").textContent.includes("Lady"));
+    assert.deepEqual((await page.locator("#profiles .card h2").allTextContents()).sort(), ["Bloke, 35", "Elder, 60"]);
 
     await page.goto(env.base + "dashboard.html");
     await page.waitForSelector("#profile-panel:not(.hidden)");

@@ -281,7 +281,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
       if (!shown.size) {
         say(legacyMode || !hasActiveFilters()
           ? "There are no other approved member profiles yet. You are one of our first members — check back soon as more people are approved."
-          : "No approved members match these filters (they start from your preferences). Try a wider age range, “All countries” or “Any” gender.");
+          : "No approved members match these filters. Try a wider age range, “All countries” or “Any” gender.");
       } else {
         say("Showing " + shown.size + " of " + total + " approved member " + (total === 1 ? "profile." : "profiles."));
       }
@@ -365,14 +365,9 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     window.FYP.showSignedIn(profile, data.session.user);
     document.getElementById("official-self").classList.toggle("hidden", profile.is_official !== true);
     if (profile.approved === true && profile.is_official !== true) showOfficial();
-    // Start from the member's own preferences; they can widen the filters at any time.
-    // The official account sees everyone, so it can welcome every new member.
-    const wanted = profile.is_official === true ? null : { Men: "Man", Women: "Woman" }[profile.seeking_gender];
-    if (wanted) filters.elements.gender.value = wanted;
-    if (profile.is_official !== true && profile.preferred_age_min && profile.preferred_age_max) {
-      filters.elements.min_age.value = profile.preferred_age_min;
-      filters.elements.max_age.value = Math.min(120, profile.preferred_age_max);
-    }
+    // Everyone starts with every approved member visible (any gender, ages 18–120, all
+    // countries, any goal). The member's saved preferences no longer narrow the list
+    // silently; members choose their own filters and press "Apply filters".
     await loadPage(true);
   })().catch(error => say(failureMessage(error)));
 })();
