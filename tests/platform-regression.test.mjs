@@ -385,3 +385,13 @@ test("members can join from any country, and every part of the platform uses the
   }
   assert.doesNotMatch(await read("supabase/functions/admin-members/index.ts"), /\["Uganda", "Botswana"\]/);
 });
+
+test("the test-account marker never hides members (owner: everyone must stay visible)", async () => {
+  for (const file of ["supabase/discovery_messaging_safety.sql", "supabase/everyone_visible.sql"]) {
+    const sql = await read(file);
+    const fn = sql.match(/create or replace function public\.members_share_audience[\s\S]*?\$\$;/)[0];
+    assert.doesNotMatch(fn, /is_test_account/, file + " must not split members by the test-account marker");
+  }
+  const admin = await read("admin/index.html");
+  assert.doesNotMatch(admin, /hidden from genuine members|will no longer see or message/, "the owner console must not promise to hide test accounts");
+});

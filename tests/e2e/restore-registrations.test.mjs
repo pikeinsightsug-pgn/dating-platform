@@ -137,24 +137,25 @@ test("restoring original registrations: archive, activate, link, approve, then m
     assert.equal(await page.textContent("#approved"), "2", "genuine approved count excludes test accounts");
   });
 
-  await t.test("restored members see each other; test accounts stay out of their view", async () => {
+  await t.test("restored members see each other, and everyone sees the test accounts too", async () => {
     const restora = await env.newPage({ mobile: true });
     await env.login(restora, "restora@test.invalid", "Restora-pass-1");
     await restora.waitForURL(/discover\.html$/);
     await restora.waitForSelector("#profiles .card");
-    assert.deepEqual(await restora.locator("#profiles .card h2").allTextContents(), ["Revivo, 37"]);
+    assert.ok((await restora.locator("#profiles .card h2").allTextContents()).includes("Revivo, 37"));
 
     const revivo = await env.newPage();
     await env.login(revivo, "revivo@test.invalid", "Revivo-pass-1");
     await revivo.waitForURL(/discover\.html$/);
     await revivo.waitForSelector("#profiles .card");
-    assert.deepEqual(await revivo.locator("#profiles .card h2").allTextContents(), ["Restora, 27"]);
+    assert.ok((await revivo.locator("#profiles .card h2").allTextContents()).includes("Restora, 27"));
 
     const tester = await env.newPage();
     await env.login(tester, "tester-one@test.invalid");
     await tester.waitForURL(/discover\.html$/);
     await tester.waitForSelector("#profiles .card");
-    assert.deepEqual(await tester.locator("#profiles .card h2").allTextContents(), ["TesterTwo, 30"], "test accounts only see each other");
+    const seen = await tester.locator("#profiles .card h2").allTextContents();
+    assert.ok(["TesterTwo, 30", "Restora, 27", "Revivo, 37"].every(n => seen.includes(n)), "a test account sees every approved member");
 
     const originals = await env.sql("select count(*)::int as n from public.legacy_registrations");
     assert.equal(originals.rows[0].n, 2, "original registrations are all still archived");

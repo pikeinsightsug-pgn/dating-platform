@@ -197,7 +197,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     card.append(el("h3", (m.first_name || "Unnamed member") + " · " + (m.age ?? "Age unknown")));
     card.append(el("span", m.approved ? "Approved" : "Pending review", "badge"));
     if (m.is_official) card.append(el("span", " ✅ OFFICIAL P.K CONNECT ACCOUNT — shown to members as the official contact, not in Discover", "badge official"));
-    if (m.is_test_account) card.append(el("span", " TEST ACCOUNT — hidden from genuine members", "badge"));
+    if (m.is_test_account) card.append(el("span", " TEST ACCOUNT — visible to members, not counted in totals", "badge"));
     if (!m.is_official && RESERVED_NAME.test(m.first_name || "")) card.append(el("span", " ⚠️ Name looks official — check this is not someone posing as P.K Connect", "badge"));
     if (m.user_id && m.account_email && m.account_confirmed === false) card.append(el("span", " Waiting for them to accept the invitation or confirm their email", "badge"));
     card.append(el("p", "Registered email: " + (m.account_email || "No linked Auth email") + " · Supabase Auth ID: " + (m.user_id || "No linked Auth ID"), "bio"));
@@ -227,7 +227,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     approve.onclick = () => change(m.id, "approve");
     const reject = el("button", "Return to pending", "danger"); reject.disabled = !m.approved;
     reject.onclick = () => change(m.id, "reject");
-    const test = el("button", m.is_test_account ? "Mark as genuine member" : "Mark as my test account", "secondary");
+    const test = el("button", m.is_test_account ? "Count as genuine member" : "Mark as my test account (not counted)", "secondary");
     test.onclick = () => setTest(m, !m.is_test_account);
     test.disabled = !!m.is_official;
     if (test.disabled) test.title = "Remove official status first.";
@@ -276,7 +276,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
   async function setTest(m, isTest) {
     try {
       if (!confirm(isTest
-        ? "Mark " + (m.first_name || "this profile") + " as your test account? Genuine members will no longer see or message it, and it will not be counted as a genuine member."
+        ? "Mark " + (m.first_name || "this profile") + " as your test account? It stays visible to members and can still message them; it is only left out of the genuine member count."
         : "Mark " + (m.first_name || "this profile") + " as a genuine member?")) return;
       await invoke("set_test_account", m.id, { is_test_account: isTest });
       await load();
@@ -357,7 +357,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
   }
   async function change(id, action) {
     try {
-      if (!confirm(action === "approve" ? "Approve this member after reviewing their registration?" : "Return this member to pending status?")) return;
+      if (!confirm(action === "approve" ? "Approve this member after reviewing their registration?" : "Return this member to pending status? They will be HIDDEN from all members and cannot use Discover or Messages until you approve them again.")) return;
       say("Updating approval…");
       await invoke(action, id);
       await load();
