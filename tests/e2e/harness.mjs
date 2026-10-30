@@ -52,8 +52,11 @@ export async function setup(name, files = ALL) {
   const base = `http://127.0.0.1:${site.address().port}/dating-platform/`;
   const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   const supabaseJs = await readFile(join(repo, "node_modules/@supabase/supabase-js/dist/umd/supabase.js"));
-  async function newPage({ mobile = false } = {}) {
-    const context = await browser.newContext(mobile ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : {});
+  async function newPage({ mobile = false, timezoneId } = {}) {
+    const context = await browser.newContext({
+      ...(mobile ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : {}),
+      ...(timezoneId ? { timezoneId } : {})
+    });
     await context.route(CDN, route => route.fulfill({ status: 200, contentType: "text/javascript", body: supabaseJs }));
     await context.route(SUPABASE + "/**", async route => {
       const request = route.request();
@@ -93,6 +96,8 @@ export async function setup(name, files = ALL) {
     await page.fill("#city", v.city);
     await page.check(`input[name=seeking_gender][value="${v.seeking}"]`);
     await page.selectOption("#relationship_goal", v.goal);
+    // Profession, bio and photo are folded under "Add a photo and more about you".
+    await page.evaluate(() => { document.getElementById("more-about-you").open = true; });
     if (v.profession) await page.fill("#profession", v.profession);
     await page.fill("#bio", v.bio);
     if (v.adult !== false && v.privacy !== false) await page.check("#agree");

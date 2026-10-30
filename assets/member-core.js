@@ -56,6 +56,36 @@
     }));
     if (selected) select.value = selected;
   }
+  // Phones set a time zone named after a city in the country (Africa/Kampala), so it is a good
+  // first guess for the country list. Only zones used by a single country are listed; anything
+  // else returns "" and the person chooses as before.
+  const TIME_ZONE_COUNTRIES = {
+    "Africa/Kampala": "Uganda", "Africa/Gaborone": "Botswana", "Africa/Nairobi": "Kenya", "Africa/Dar_es_Salaam": "Tanzania",
+    "Africa/Kigali": "Rwanda", "Africa/Bujumbura": "Burundi", "Africa/Juba": "South Sudan", "Africa/Addis_Ababa": "Ethiopia",
+    "Africa/Mogadishu": "Somalia", "Africa/Lusaka": "Zambia", "Africa/Harare": "Zimbabwe", "Africa/Blantyre": "Malawi",
+    "Africa/Maputo": "Mozambique", "Africa/Windhoek": "Namibia", "Africa/Johannesburg": "South Africa", "Africa/Maseru": "Lesotho",
+    "Africa/Mbabane": "Eswatini", "Africa/Lagos": "Nigeria", "Africa/Accra": "Ghana", "Africa/Abidjan": "Côte d'Ivoire",
+    "Africa/Dakar": "Senegal", "Africa/Douala": "Cameroon", "Africa/Kinshasa": "Congo (DRC)",
+    "Africa/Lubumbashi": "Congo (DRC)", "Africa/Luanda": "Angola", "Africa/Khartoum": "Sudan",
+    "Africa/Cairo": "Egypt", "Africa/Casablanca": "Morocco", "Africa/Freetown": "Sierra Leone", "Africa/Monrovia": "Liberia",
+    "Europe/London": "United Kingdom", "Europe/Dublin": "Ireland", "Europe/Paris": "France", "Europe/Berlin": "Germany",
+    "Europe/Amsterdam": "Netherlands", "Europe/Brussels": "Belgium", "Europe/Zurich": "Switzerland", "Europe/Rome": "Italy",
+    "Europe/Madrid": "Spain", "Europe/Lisbon": "Portugal", "Europe/Stockholm": "Sweden", "Europe/Oslo": "Norway",
+    "Europe/Copenhagen": "Denmark", "Europe/Helsinki": "Finland", "Europe/Vienna": "Austria", "Europe/Warsaw": "Poland",
+    "America/New_York": "United States", "America/Chicago": "United States", "America/Denver": "United States",
+    "America/Phoenix": "United States", "America/Los_Angeles": "United States", "America/Anchorage": "United States",
+    "Pacific/Honolulu": "United States", "America/Toronto": "Canada", "America/Vancouver": "Canada", "America/Edmonton": "Canada",
+    "America/Winnipeg": "Canada", "America/Halifax": "Canada", "Australia/Sydney": "Australia", "Australia/Melbourne": "Australia",
+    "Australia/Brisbane": "Australia", "Australia/Perth": "Australia", "Australia/Adelaide": "Australia", "Pacific/Auckland": "New Zealand",
+    "Asia/Dubai": "United Arab Emirates", "Asia/Qatar": "Qatar", "Asia/Riyadh": "Saudi Arabia", "Asia/Kolkata": "India",
+    "Asia/Calcutta": "India", "Asia/Kathmandu": "Nepal", "Asia/Katmandu": "Nepal"
+  };
+  function countryFromTimeZone(timeZone) {
+    let zone = timeZone;
+    if (zone === undefined) { try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (error) { zone = ""; } }
+    const country = TIME_ZONE_COUNTRIES[zone] || "";
+    return COUNTRIES.includes(country) ? country : "";
+  }
   const GOALS = ["Serious relationship", "Marriage", "Friendship", "Exploring connections"];
   // Stored values stay as above (the database checks them); these are the labels people see.
   const GOAL_LABELS = {
@@ -402,7 +432,7 @@
     GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
     saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor, showSignedIn,
     authErrorMessage, photoTypeOf, preparePhoto, decodeImage, randomId, withTimeout, signedPhotoUrls, isMissingFunction, isNotApproved,
-    listOfficialAccounts, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect, starterBio
+    listOfficialAccounts, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect, countryFromTimeZone, starterBio
   };
   root.FYP = api;
   if (typeof module === "object" && module.exports) module.exports = api;
