@@ -36,21 +36,24 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
         <div class="field"><label for="age">Your age</label><input id="age" name="age" type="number" required min="18" max="120" inputmode="numeric"><p class="error" id="age-error"></p></div>
         <div class="field"><label for="gender">Gender</label><select id="gender" name="gender" required><option value="">Choose…</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option></select><p class="error" id="gender-error"></p></div>
       </div>
-      <div class="field" id="location-field"><label for="location">Country you live in</label><select id="location" name="location" required autocomplete="country-name"><option value="">Choose your country…</option></select><p class="error" id="location-error"></p></div>
+      <div class="field" id="location-field"><label for="location">Country you live in</label><select id="location" name="location" required autocomplete="country-name"><option value="">Choose your country…</option></select><span class="hint hidden" id="location-guess">Filled in from your phone's time zone. Change it if it is wrong.</span><p class="error" id="location-error"></p></div>
       <div class="field"><label for="city">City or general area</label><input id="city" name="city" required maxlength="100" autocomplete="address-level2" placeholder="e.g. Kampala, Gaborone, Nairobi, London"><span class="hint">No street address, please.</span><p class="error" id="city-error"></p></div>
-      <div class="field"><label for="profession">Profession or what you do <span class="optional">(optional)</span></label><input id="profession" name="profession" maxlength="80" autocomplete="organization-title" placeholder="e.g. Teacher, Nurse, Business owner, Student"><p class="error" id="profession-error"></p></div>
 
       <p class="step-title">Who you'd like to meet</p>
       <fieldset class="field" id="seeking_gender-field"><legend>I would like to meet</legend>
         <div class="chips"><label><input type="radio" name="seeking_gender" value="Men" required><span>Men</span></label><label><input type="radio" name="seeking_gender" value="Women"><span>Women</span></label><label><input type="radio" name="seeking_gender" value="Everyone"><span>Everyone</span></label></div>
         <p class="error" id="seeking_gender-error"></p></fieldset>
       <div class="field"><label for="relationship_goal">I am looking for</label><select id="relationship_goal" name="relationship_goal" required><option value="">Choose…</option></select><p class="error" id="relationship_goal-error"></p></div>
-      <div class="field"><label for="bio">A little about you <span class="optional">(optional)</span></label><textarea id="bio" name="bio" rows="3" maxlength="500" placeholder="What makes you smile? What are you hoping to find?"></textarea><span class="hint"><span id="bio-count">0</span>/500 · you can add or change this later</span><p class="error" id="bio-error"></p></div>
 
-      <p class="step-title">Photo</p>
-      <div class="field"><label for="photo">Profile photo <span class="optional">(optional)</span></label>
-        <div class="photo-pick"><img id="photo-preview" class="hidden" alt="Preview of your chosen photo"><input id="photo" name="photo" type="file" accept="image/*"></div>
-        <span class="hint">A clear photo of yourself. Large phone photos are resized automatically. You can also add one after logging in.</span><p class="error" id="photo-error"></p></div>
+      <!-- Optional extras stay folded so the form looks short on a phone; members can add them later. -->
+      <details class="more-fields" id="more-about-you">
+        <summary>＋ Add a photo and more about you <span class="optional">(optional, or later)</span></summary>
+        <div class="field"><label for="profession">Profession or what you do <span class="optional">(optional)</span></label><input id="profession" name="profession" maxlength="80" autocomplete="organization-title" placeholder="e.g. Teacher, Nurse, Business owner, Student"><p class="error" id="profession-error"></p></div>
+        <div class="field"><label for="bio">A little about you <span class="optional">(optional)</span></label><textarea id="bio" name="bio" rows="3" maxlength="500" placeholder="What makes you smile? What are you hoping to find?"></textarea><span class="hint"><span id="bio-count">0</span>/500 · you can add or change this later</span><p class="error" id="bio-error"></p></div>
+        <div class="field"><label for="photo">Profile photo <span class="optional">(optional)</span></label>
+          <div class="photo-pick"><img id="photo-preview" class="hidden" alt="Preview of your chosen photo"><input id="photo" name="photo" type="file" accept="image/*"></div>
+          <span class="hint">A clear photo of yourself. Large phone photos are resized automatically. You can also add one after logging in.</span><p class="error" id="photo-error"></p></div>
+      </details>
 
       <div class="notice small" id="privacy-notice"><strong>Your privacy:</strong> your profile stays hidden until our team reviews and approves it. After approval, other signed-in approved members can see your display name, age, gender, country, city, profession, goal, biography and photo. Your email address is never shown. Photos are stored privately. <a href="privacy.html" target="_blank" rel="noopener">Read the full privacy notice</a>.</div>
       <label class="check"><input id="agree" name="agree" type="checkbox" required><span>I am 18 or older, and I agree to the privacy notice.</span></label>
@@ -130,6 +133,11 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
   const goal = document.getElementById("relationship_goal");
   window.FYP.GOALS.forEach(value => goal.append(new Option(window.FYP.GOAL_LABELS[value], value)));
   window.FYP.fillCountrySelect(document.getElementById("location"));
+  const guessedCountry = window.FYP.countryFromTimeZone();
+  if (guessedCountry) {
+    document.getElementById("location").value = guessedCountry;
+    document.getElementById("location-guess").classList.remove("hidden");
+  }
   document.getElementById("show_password").addEventListener("change", event => {
     form.elements.password.type = event.target.checked ? "text" : "password";
   });
@@ -168,6 +176,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
   function previewPhoto() {
     const file = form.elements.photo.files[0];
     const preview = document.getElementById("photo-preview");
+    if (file) document.getElementById("more-about-you").open = true;
     if (!file || !window.FYP.photoTypeOf(file).startsWith("image/")) { preview.classList.add("hidden"); return; }
     preview.src = URL.createObjectURL(file); preview.classList.remove("hidden");
   }
@@ -210,6 +219,8 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     if (errors.length) {
       say("Please check the highlighted answers.");
       const first = form.querySelector("[aria-invalid=true]");
+      // Unfold the optional section whenever one of its answers needs attention.
+      if (form.querySelector("#more-about-you [aria-invalid=true]")) document.getElementById("more-about-you").open = true;
       if (first) first.focus();
       return;
     }

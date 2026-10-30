@@ -70,6 +70,10 @@ fieldset{border:0;margin:0;padding:0}
 .chips span{display:inline-block;padding:10px 16px;border:1px solid #e7ccd8;border-radius:999px;background:#fff;font-weight:650;cursor:pointer}
 .chips input:checked+span{background:var(--rose);border-color:var(--rose);color:#fff}
 .chips input:focus-visible+span{outline:3px solid #b3266366;outline-offset:2px}
+.more-fields{border:1px dashed var(--line);border-radius:16px;padding:12px 14px}
+.more-fields summary{cursor:pointer;font-weight:700;color:var(--rose)}
+.more-fields[open] summary{margin-bottom:12px}
+.more-fields .field+.field{margin-top:12px}
 .step-title{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--rose);font-weight:800;margin:10px 0 -4px}
 .photo-pick{display:flex;gap:14px;align-items:center}
 .photo-pick img{width:84px;height:84px;border-radius:50%;object-fit:cover;background:var(--rose-soft)}
