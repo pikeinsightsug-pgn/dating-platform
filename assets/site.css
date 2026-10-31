@@ -102,3 +102,14 @@ fieldset{border:0;margin:0;padding:0}
   .card{padding:18px}
 }
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn{transition:none}}
+/* Sign-up form: a warmer look with numbered, emoji-led sections. */
+.signup-hero{display:flex;gap:10px;font-size:30px;margin-bottom:6px}
+.signup-hero span{display:grid;place-items:center;width:54px;height:54px;border-radius:50%;background:var(--rose-soft);box-shadow:var(--shadow)}
+#register-form{border-top:5px solid var(--rose);background:linear-gradient(180deg,var(--blush) 0,#fff 140px)}
+#register-form .step-title{display:flex;align-items:center;gap:10px;font-size:14px;margin:18px 0 0;padding-top:14px;border-top:1px dashed var(--line)}
+#register-form .step-title:first-child{border-top:0;padding-top:0;margin-top:0}
+#register-form .step-num{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--rose);color:#fff;font-size:13px;letter-spacing:0}
+#register-form input:focus,#register-form select:focus,#register-form textarea:focus{border-color:var(--rose);box-shadow:0 0 0 3px var(--rose-soft)}
+#register-form .chips span{transition:transform .15s ease}
+#register-form .chips input:checked+span{transform:scale(1.04)}
+.almost-there{margin:4px 0 -4px;text-align:center;font-weight:700;color:var(--rose-dark)}

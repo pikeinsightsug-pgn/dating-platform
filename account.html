@@ -20,45 +20,47 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
 </div></header>
 <main class="form-page">
   <section id="register-view" aria-labelledby="register-title">
-    <h1 id="register-title">Create your account</h1>
-    <p class="muted">A few short questions — about two minutes. Fields marked <span class="optional">(optional)</span> can be skipped.</p>
-    <p class="notice"><strong>Free to join:</strong> registration does not require any payment. No card details are requested and no automatic charges are made.</p>
+    <div class="signup-hero" aria-hidden="true"><span>💖</span><span>🌍</span><span>💬</span></div>
+    <h1 id="register-title">Your love story starts here ✨</h1>
+    <p class="muted">A few short questions, about two minutes. Fields marked <span class="optional">(optional)</span> can be skipped.</p>
+    <p class="notice"><strong>💸 Free to join:</strong> registration does not require any payment. No card details are requested and no automatic charges are made.</p>
 
     <form id="register-form" class="form-grid card" novalidate style="margin-top:16px">
-      <p class="step-title">Your account</p>
-      <div class="field"><label for="email">Your email address</label><input id="email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email"><span class="hint">Use a real email you can open. You log in with it, and password reset links are sent there. It is never shown to other members.</span><p class="error" id="email-error"></p></div>
-      <div class="field"><label for="password">Create a new password for P.K CONNECT</label><input id="password" name="password" type="password" required minlength="8" autocomplete="new-password"><span class="hint">At least 8 characters. Do not use your email or Facebook password.</span>
+      <p class="step-title"><span class="step-num">1</span>🔐 Your account</p>
+      <div class="field"><label for="email">📧 Your email address</label><input id="email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email"><span class="hint">Use a real email you can open. You log in with it, and password reset links are sent there. It is never shown to other members.</span><p class="error" id="email-error"></p></div>
+      <div class="field"><label for="password">🔑 Create a new password for P.K CONNECT</label><input id="password" name="password" type="password" required minlength="8" autocomplete="new-password"><span class="hint">At least 8 characters. Do not use your email or Facebook password.</span>
         <label class="check small-check"><input id="show_password" type="checkbox"><span>Show password</span></label><p class="error" id="password-error"></p></div>
 
-      <p class="step-title">About you</p>
-      <div class="field"><label for="first_name">First name or display name</label><input id="first_name" name="first_name" required maxlength="80" autocomplete="given-name"><span class="hint">This is what other members will see.</span><p class="error" id="first_name-error"></p></div>
+      <p class="step-title"><span class="step-num">2</span>😊 About you</p>
+      <div class="field"><label for="first_name">✨ First name or display name</label><input id="first_name" name="first_name" required maxlength="80" autocomplete="given-name"><span class="hint">This is what other members will see.</span><p class="error" id="first_name-error"></p></div>
       <div class="row2">
-        <div class="field"><label for="age">Your age</label><input id="age" name="age" type="number" required min="18" max="120" inputmode="numeric"><p class="error" id="age-error"></p></div>
-        <div class="field"><label for="gender">Gender</label><select id="gender" name="gender" required><option value="">Choose…</option><option>Woman</option><option>Man</option><option>Non-binary</option><option>Prefer not to say</option></select><p class="error" id="gender-error"></p></div>
+        <div class="field"><label for="age">🎂 Your age</label><input id="age" name="age" type="number" required min="18" max="120" inputmode="numeric"><p class="error" id="age-error"></p></div>
+        <div class="field"><label for="gender">🙋 Gender</label><select id="gender" name="gender" required><option value="">Choose…</option><option value="Woman">👩 Woman</option><option value="Man">👨 Man</option><option value="Non-binary">🧑 Non-binary</option><option value="Prefer not to say">🤐 Prefer not to say</option></select><p class="error" id="gender-error"></p></div>
       </div>
-      <div class="field" id="location-field"><label for="location">Country you live in</label><select id="location" name="location" required autocomplete="country-name"><option value="">Choose your country…</option></select><span class="hint hidden" id="location-guess">Filled in from your phone's time zone. Change it if it is wrong.</span><p class="error" id="location-error"></p></div>
-      <div class="field"><label for="city">City or general area</label><input id="city" name="city" required maxlength="100" autocomplete="address-level2" placeholder="e.g. Kampala, Gaborone, Nairobi, London"><span class="hint">No street address, please.</span><p class="error" id="city-error"></p></div>
+      <div class="field" id="location-field"><label for="location">🌍 Country you live in</label><select id="location" name="location" required autocomplete="country-name"><option value="">Choose your country…</option></select><span class="hint hidden" id="location-guess">Filled in from your phone's time zone. Change it if it is wrong.</span><p class="error" id="location-error"></p></div>
+      <div class="field"><label for="city">📍 City or general area</label><input id="city" name="city" required maxlength="100" autocomplete="address-level2" placeholder="e.g. Kampala, Gaborone, Nairobi, London"><span class="hint">No street address, please.</span><p class="error" id="city-error"></p></div>
 
-      <p class="step-title">Who you'd like to meet</p>
-      <fieldset class="field" id="seeking_gender-field"><legend>I would like to meet</legend>
-        <div class="chips"><label><input type="radio" name="seeking_gender" value="Men" required><span>Men</span></label><label><input type="radio" name="seeking_gender" value="Women"><span>Women</span></label><label><input type="radio" name="seeking_gender" value="Everyone"><span>Everyone</span></label></div>
+      <p class="step-title"><span class="step-num">3</span>💞 Who you'd like to meet</p>
+      <fieldset class="field" id="seeking_gender-field"><legend>👀 I would like to meet</legend>
+        <div class="chips"><label><input type="radio" name="seeking_gender" value="Men" required><span>👨 Men</span></label><label><input type="radio" name="seeking_gender" value="Women"><span>👩 Women</span></label><label><input type="radio" name="seeking_gender" value="Everyone"><span>💞 Everyone</span></label></div>
         <p class="error" id="seeking_gender-error"></p></fieldset>
-      <div class="field"><label for="relationship_goal">I am looking for</label><select id="relationship_goal" name="relationship_goal" required><option value="">Choose…</option></select><p class="error" id="relationship_goal-error"></p></div>
+      <div class="field"><label for="relationship_goal">💍 I am looking for</label><select id="relationship_goal" name="relationship_goal" required><option value="">Choose…</option></select><p class="error" id="relationship_goal-error"></p></div>
 
       <!-- Optional extras stay folded so the form looks short on a phone; members can add them later. -->
       <details class="more-fields" id="more-about-you">
-        <summary>＋ Add a photo and more about you <span class="optional">(optional, or later)</span></summary>
-        <div class="field"><label for="profession">Profession or what you do <span class="optional">(optional)</span></label><input id="profession" name="profession" maxlength="80" autocomplete="organization-title" placeholder="e.g. Teacher, Nurse, Business owner, Student"><p class="error" id="profession-error"></p></div>
-        <div class="field"><label for="bio">A little about you <span class="optional">(optional)</span></label><textarea id="bio" name="bio" rows="3" maxlength="500" placeholder="What makes you smile? What are you hoping to find?"></textarea><span class="hint"><span id="bio-count">0</span>/500 · you can add or change this later</span><p class="error" id="bio-error"></p></div>
-        <div class="field"><label for="photo">Profile photo <span class="optional">(optional)</span></label>
+        <summary>📸 Add a photo and more about you <span class="optional">(optional, or later)</span></summary>
+        <div class="field"><label for="profession">💼 Profession or what you do <span class="optional">(optional)</span></label><input id="profession" name="profession" maxlength="80" autocomplete="organization-title" placeholder="e.g. Teacher, Nurse, Business owner, Student"><p class="error" id="profession-error"></p></div>
+        <div class="field"><label for="bio">💬 A little about you <span class="optional">(optional)</span></label><textarea id="bio" name="bio" rows="3" maxlength="500" placeholder="What makes you smile? What are you hoping to find?"></textarea><span class="hint"><span id="bio-count">0</span>/500 · you can add or change this later</span><p class="error" id="bio-error"></p></div>
+        <div class="field"><label for="photo">📷 Profile photo <span class="optional">(optional)</span></label>
           <div class="photo-pick"><img id="photo-preview" class="hidden" alt="Preview of your chosen photo"><input id="photo" name="photo" type="file" accept="image/*"></div>
           <span class="hint">A clear photo of yourself. Large phone photos are resized automatically. You can also add one after logging in.</span><p class="error" id="photo-error"></p></div>
       </details>
 
-      <div class="notice small" id="privacy-notice"><strong>Your privacy:</strong> your profile stays hidden until our team reviews and approves it. After approval, other signed-in approved members can see your display name, age, gender, country, city, profession, goal, biography and photo. Your email address is never shown. Photos are stored privately. <a href="privacy.html" target="_blank" rel="noopener">Read the full privacy notice</a>.</div>
+      <div class="notice small" id="privacy-notice"><strong>🔒 Your privacy:</strong> your profile stays hidden until our team reviews and approves it. After approval, other signed-in approved members can see your display name, age, gender, country, city, profession, goal, biography and photo. Your email address is never shown. Photos are stored privately. <a href="privacy.html" target="_blank" rel="noopener">Read the full privacy notice</a>.</div>
       <label class="check"><input id="agree" name="agree" type="checkbox" required><span>I am 18 or older, and I agree to the privacy notice.</span></label>
       <p class="error" id="agree-error"></p>
-      <button class="btn large" type="submit">Create my account</button>
+      <p class="almost-there">🎉 Almost there! One tap and you're in.</p>
+      <button class="btn large" type="submit">💖 Create my account</button>
       <p id="status" class="status notice" role="status" aria-live="polite"></p>
     </form>
     <p class="muted small" style="margin-top:16px">Already have an account? <a href="login.html" style="font-weight:700">Log in</a></p>
@@ -131,7 +133,8 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
 
   // Questionnaire options.
   const goal = document.getElementById("relationship_goal");
-  window.FYP.GOALS.forEach(value => goal.append(new Option(window.FYP.GOAL_LABELS[value], value)));
+  const GOAL_EMOJI = { "Serious relationship": "❤️ ", "Marriage": "💍 ", "Friendship": "🤝 ", "Exploring connections": "🌱 " };
+  window.FYP.GOALS.forEach(value => goal.append(new Option((GOAL_EMOJI[value] || "") + window.FYP.GOAL_LABELS[value], value)));
   window.FYP.fillCountrySelect(document.getElementById("location"));
   const guessedCountry = window.FYP.countryFromTimeZone();
   if (guessedCountry) {
