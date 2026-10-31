@@ -21,9 +21,9 @@ If the live `members` table differs from the listed core columns, stop before ap
 
 In **Authentication → URL Configuration**:
 
-- Set **Site URL** to `https://pikeinsightsug-pgn.github.io/dating-platform/`.
-- Add `https://pikeinsightsug-pgn.github.io/dating-platform/account.html` to **Redirect URLs** for email confirmation.
-- Add `https://pikeinsightsug-pgn.github.io/dating-platform/account.html?mode=recovery` to **Redirect URLs** for password reset.
+- Set **Site URL** to `https://pkconnectonline.com/`.
+- Add `https://pkconnectonline.com/account.html` to **Redirect URLs** for email confirmation.
+- Add `https://pkconnectonline.com/account.html?mode=recovery` to **Redirect URLs** for password reset.
 
 Keep the project's email confirmation setting as intended. The page explains when the member must confirm before logging in. Password reset responses do not reveal whether an email is registered.
 
@@ -105,9 +105,9 @@ Every migration is exercised locally by `npm run test:db` (66 RLS assertions) an
    new one.
 4. Only then merge the pull request (GitHub Pages publishes `main`).
 5. Authentication → URL Configuration: keep **Site URL** as
-   `https://pikeinsightsug-pgn.github.io/dating-platform/` and make sure **Redirect URLs**
-   include `https://pikeinsightsug-pgn.github.io/dating-platform/account.html` and
-   `https://pikeinsightsug-pgn.github.io/dating-platform/account.html?mode=recovery`.
+   `https://pkconnectonline.com/` and make sure **Redirect URLs**
+   include `https://pkconnectonline.com/account.html` and
+   `https://pkconnectonline.com/account.html?mode=recovery`.
    Invitation and confirmation links that land on the homepage are forwarded to
    `account.html`, where invited people choose their password.
 
@@ -137,7 +137,7 @@ Nothing here creates, merges, links or approves a profile automatically.
    the private `legacy_registrations` table. Rerunning skips rows already archived.
 4. **Help each person activate.** Contact them on the WhatsApp/phone number they gave.
    - **No profile in the app** (most of the original 47): send them
-     `https://pikeinsightsug-pgn.github.io/dating-platform/account.html` to register with their
+     `https://pkconnectonline.com/account.html` to register with their
      own email. Ask which email they used.
    - **An old profile exists without an account:** Authentication → Users → **Invite user** with
      their email. The invitation creates no profile, so there is no duplicate. They choose a
