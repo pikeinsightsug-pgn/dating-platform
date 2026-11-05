@@ -49,7 +49,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   <header class="top">
     <div class="brand"><span class="brand-main">P.K <span>CONNECT</span> ❤️</span><span class="brand-sub">Find Your Person</span></div>
     <nav class="actions" aria-label="Member navigation">
-      <a class="btn" href="discover.html" aria-current="page">Discover Members</a><a class="btn secondary" href="messages.html">Messages</a><a class="btn secondary" href="dashboard.html#profile-panel">My Profile</a>
+      <a class="btn" href="discover.html" aria-current="page">Discover Members</a><a class="btn secondary" href="messages.html" data-messages-link>Messages</a><a class="btn secondary" href="dashboard.html#profile-panel">My Profile</a>
       <button class="secondary" id="signout" type="button">Log out</button>
     </nav>
   </header>
@@ -363,6 +363,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     if (!profile) { window.location.replace("dashboard.html?profile=recovery"); return; }
     ownId = profile.id;
     window.FYP.showSignedIn(profile, data.session.user);
+    window.FYP.startUnreadAlerts(db, profile);
     document.getElementById("official-self").classList.toggle("hidden", profile.is_official !== true);
     if (profile.approved === true && profile.is_official !== true) showOfficial();
     // Everyone starts with every approved member visible (any gender, ages 18–120, all

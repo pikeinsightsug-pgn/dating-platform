@@ -261,6 +261,70 @@
     node.classList.remove("hidden");
   }
 
+  // Unread messages, impossible to miss: a red count on every "Messages" link, a bright banner
+  // on Discover and My Profile, and the count in the browser tab. Refreshed every 30 seconds.
+  const UNREAD_STYLE = `
+a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81b60!important;animation:fyp-pulse 1.6s ease-in-out infinite}
+.unread-badge{display:inline-grid;place-items:center;min-width:24px;height:24px;margin-left:8px;padding:0 7px;border-radius:999px;
+ background:#fff;color:#c2185b;font-weight:900;font-size:14px;line-height:1;box-shadow:0 0 0 2px #c2185b}
+@keyframes fyp-pulse{0%,100%{box-shadow:0 0 0 0 #d81b6080}50%{box-shadow:0 0 0 9px #d81b6000}}
+.unread-banner{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin:14px 0;padding:16px 18px;
+ border-radius:16px;background:linear-gradient(135deg,#d81b60,#8f1e51);color:#fff;font-weight:800;font-size:18px;box-shadow:0 10px 26px #8f1e5140}
+.unread-banner a{background:#fff;color:#a0124b;text-decoration:none;border-radius:999px;padding:11px 20px;font-weight:900;font-size:16px;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){a.has-unread{animation:none}}`;
+  let unreadDb = null, unreadTimer = null, unreadBanner = false, baseTitle = null;
+  function renderUnread(count) {
+    document.querySelectorAll("a[data-messages-link]").forEach(link => {
+      let badge = link.querySelector(".unread-badge");
+      link.classList.toggle("has-unread", count > 0);
+      if (count > 0) {
+        if (!badge) { badge = document.createElement("span"); badge.className = "unread-badge"; link.append(badge); }
+        badge.textContent = count > 99 ? "99+" : String(count);
+        link.setAttribute("aria-label", "Messages, " + count + " unread");
+      } else {
+        if (badge) badge.remove();
+        link.removeAttribute("aria-label");
+      }
+    });
+    let banner = document.getElementById("unread-banner");
+    if (unreadBanner && count > 0) {
+      if (!banner) {
+        banner = document.createElement("div"); banner.id = "unread-banner"; banner.className = "unread-banner"; banner.setAttribute("role", "status");
+        const text = document.createElement("span"); text.id = "unread-banner-text";
+        const go = document.createElement("a"); go.href = "messages.html"; go.textContent = "Read now →";
+        banner.append(text, go);
+        const anchor = document.getElementById("signed-in");
+        if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(banner, anchor.nextSibling);
+        else document.body.prepend(banner);
+      }
+      document.getElementById("unread-banner-text").textContent =
+        "💬 You have " + count + " unread message" + (count === 1 ? "" : "s") + ". Someone is waiting for your reply!";
+    } else if (banner) banner.remove();
+    if (baseTitle === null) baseTitle = document.title;
+    document.title = (count > 0 ? "(" + count + ") " : "") + baseTitle;
+  }
+  async function refreshUnread() {
+    if (!unreadDb) return 0;
+    try {
+      const { data, error } = await unreadDb.rpc("list_my_conversations");
+      const count = error ? 0 : (data || []).reduce((sum, row) => sum + (Number(row.unread_count) || 0), 0);
+      renderUnread(count);
+      return count;
+    } catch (error) { return 0; }
+  }
+  function startUnreadAlerts(db, profile, options = {}) {
+    if (typeof document === "undefined" || !db || !profile || profile.approved !== true) return;
+    unreadDb = db; unreadBanner = options.banner !== false;
+    if (!document.getElementById("unread-style")) {
+      const style = document.createElement("style"); style.id = "unread-style"; style.textContent = UNREAD_STYLE; document.head.append(style);
+    }
+    refreshUnread();
+    if (!unreadTimer) {
+      unreadTimer = setInterval(() => { if (!document.hidden) refreshUnread(); }, root.FYP_UNREAD_INTERVAL_MS || 30000);
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshUnread(); });
+    }
+  }
+
   function destinationFor(profile) {
     if (!profile) return "dashboard.html?profile=recovery";
     return canUseMemberFeatures(profile) ? "discover.html" : "dashboard.html";
@@ -432,7 +496,7 @@
     GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
     saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor, showSignedIn,
     authErrorMessage, photoTypeOf, preparePhoto, decodeImage, randomId, withTimeout, signedPhotoUrls, isMissingFunction, isNotApproved,
-    listOfficialAccounts, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect, countryFromTimeZone, starterBio
+    listOfficialAccounts, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect, countryFromTimeZone, starterBio, startUnreadAlerts, refreshUnread
   };
   root.FYP = api;
   if (typeof module === "object" && module.exports) module.exports = api;
