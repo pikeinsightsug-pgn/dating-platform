@@ -42,7 +42,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
 <main class="wrap">
   <header class="top">
     <div class="brand"><span class="brand-main">P.K <span>CONNECT</span> ❤️</span><span class="brand-sub">Find Your Person</span></div>
-    <nav class="member-nav" aria-label="Member dashboard"><a id="discover-nav" class="btn" href="discover.html">Discover Members</a><a id="messages-nav" class="btn secondary" href="messages.html">Messages</a><a id="profile-nav" class="btn secondary" href="#profile-panel">My Profile</a><a id="preferences-nav" class="btn secondary" href="#preferences">Preferences</a><button id="signout" class="secondary" type="button">Log out</button></nav>
+    <nav class="member-nav" aria-label="Member dashboard"><a id="discover-nav" class="btn" href="discover.html">Discover Members</a><a id="messages-nav" class="btn secondary" href="messages.html" data-messages-link>Messages</a><a id="profile-nav" class="btn secondary" href="#profile-panel">My Profile</a><a id="preferences-nav" class="btn secondary" href="#preferences">Preferences</a><button id="signout" class="secondary" type="button">Log out</button></nav>
   </header>
   <p id="signed-in" class="signed-in hidden" role="status"></p>
   <section id="profile-panel" class="panel hidden">
@@ -171,6 +171,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     showApproval(profile);
     showOfficial(profile);
     window.FYP.showSignedIn(profile, user);
+    window.FYP.startUnreadAlerts(db, profile);
     loadPhotoPreview(profile.profile_photo_url);
     loadExtraPhotos();
     try {

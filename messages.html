@@ -41,7 +41,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
   <header class="top">
     <div class="brand"><span class="brand-main">P.K <span>CONNECT</span> ❤️</span><span class="brand-sub">Find Your Person</span></div>
     <nav class="actions" aria-label="Member navigation">
-      <a class="btn secondary" href="discover.html">Discover Members</a><a class="btn" href="messages.html" aria-current="page">Messages</a><a class="btn secondary" href="dashboard.html#profile-panel">My Profile</a>
+      <a class="btn secondary" href="discover.html">Discover Members</a><a class="btn" href="messages.html" aria-current="page" data-messages-link>Messages</a><a class="btn secondary" href="dashboard.html#profile-panel">My Profile</a>
       <button class="secondary" id="signout" type="button">Log out</button>
     </nav>
   </header>
@@ -158,6 +158,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
     if (scroll || nearBottom) thread.scrollTop = thread.scrollHeight;
     if ((data || []).some(m => !m.from_me && !m.read_at)) {
       await db.rpc("mark_conversation_read", { p_other_member_id: active.id });
+      window.FYP.refreshUnread();
     }
   }
   async function openThread(member) {
@@ -216,6 +217,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
     const profile = await window.FYP.readOwnProfile(db, data.session.user);
     if (!profile) { window.location.replace("dashboard.html?profile=recovery"); return; }
     window.FYP.showSignedIn(profile, data.session.user);
+    window.FYP.startUnreadAlerts(db, profile, { banner: false });
     if (!profile.approved) { say("Messaging opens once the platform owner approves your profile. Your profile stays private until then."); return; }
     officialIds = new Set((await window.FYP.listOfficialAccounts(db)).map(account => account.id));
     try { await refreshList(); }
