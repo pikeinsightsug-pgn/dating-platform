@@ -386,11 +386,36 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
   const PHOTO_MAX_EDGE = 1600;
   const PHOTO_RECOMPRESS_BYTES = 1.5 * 1024 * 1024;
 
+  // Phones shoot 50–108 megapixel photos; opening one at full size needs 200–430 MB and
+  // low-memory phones give up ("low memory"). Photos are opened at most this size, which
+  // still keeps the cropper sharp at 2x zoom.
+  const DECODE_MAX_EDGE = 2400;
+
   function decodeImage(file) {
-    if (typeof root.createImageBitmap === "function") {
-      return root.createImageBitmap(file).catch(() => decodeWithElement(file));
-    }
-    return decodeWithElement(file);
+    return decodeScaled(file).catch(() => {
+      if (typeof root.createImageBitmap === "function") {
+        return root.createImageBitmap(file).catch(() => decodeWithElement(file));
+      }
+      return decodeWithElement(file);
+    });
+  }
+  // The image decoder reads a JPEG straight at a reduced scale (it picks 1/8 steps to fit the
+  // asked area), so the full-size photo never exists in memory. It also keeps the photo upright.
+  // Browsers without it (e.g. older Safari) use the full-size path above.
+  async function decodeScaled(file) {
+    const type = photoTypeOf(file);
+    if (typeof root.ImageDecoder !== "function" || typeof root.createImageBitmap !== "function" ||
+        !(await root.ImageDecoder.isTypeSupported(type))) throw new Error("no scaled decoder");
+    const decoder = new root.ImageDecoder({ data: file.stream(), type, desiredWidth: DECODE_MAX_EDGE * 2, desiredHeight: DECODE_MAX_EDGE * 1.5 });
+    try {
+      const { image } = await decoder.decode();
+      try {
+        const width = image.displayWidth, height = image.displayHeight;
+        const scale = Math.min(1, DECODE_MAX_EDGE / Math.max(width, height));
+        return await root.createImageBitmap(image, scale < 1
+          ? { resizeWidth: Math.round(width * scale), resizeHeight: Math.round(height * scale), resizeQuality: "high" } : {});
+      } finally { image.close(); }
+    } finally { decoder.close(); }
   }
   function decodeWithElement(file) {
     return new Promise((resolve, reject) => {
