@@ -63,6 +63,22 @@ test("launch pages", async (t) => {
     assert.equal((await env.sql("select count(*)::int as n from auth.users where email = 'young@test.invalid'")).rows[0].n, 0, "nothing was submitted");
   });
 
+  await t.test("after an early Create press, the next tap lands where the person aimed", async () => {
+    const page = await env.newPage({ mobile: true });
+    await page.goto(env.base + "account.html");
+    await page.click("#register-form button[type=submit]");
+    await page.fill("#first_name", "Tapper");
+    await page.fill("#email", "tapper@test.invalid");
+    await page.fill("#password", "Test-pass-123");
+    await page.fill("#age", "29");
+    await page.selectOption("#gender", "Woman");
+    await page.fill("#city", "Kampala");
+    // Tapping a chip takes focus off the city box; its message must already be gone so nothing moves.
+    await page.locator('#seeking_gender-field label:has(input[value="Men"]) span').tap();
+    assert.equal(await page.isChecked('input[name=seeking_gender][value="Men"]'), true, "the first tap selects the chip");
+    assert.equal(await page.textContent("#city-error"), "", "the city message cleared while typing");
+  });
+
   await t.test("duplicate registration is caught without creating a second account", async () => {
     await env.member("taken@test.invalid", profile("Taken"));
     for (const confirm of [true, false]) {
