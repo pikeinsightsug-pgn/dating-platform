@@ -112,4 +112,12 @@ fieldset{border:0;margin:0;padding:0}
 #register-form input:focus,#register-form select:focus,#register-form textarea:focus{border-color:var(--rose);box-shadow:0 0 0 3px var(--rose-soft)}
 #register-form .chips span{transition:transform .15s ease}
 #register-form .chips input:checked+span{transform:scale(1.04)}
+.photo-badge{border:2px solid var(--rose);border-radius:18px;padding:16px;background:var(--rose-soft);display:grid;gap:10px;animation:photo-badge-glow 2.4s ease-in-out infinite}
+.photo-badge-title{margin:0;font-size:19px;font-weight:800;line-height:1.3;color:var(--rose-dark)}
+.photo-badge ul{margin:0;padding-left:4px;list-style:none;display:grid;gap:4px;color:var(--rose-dark);font-weight:600;font-size:15px}
+.photo-badge .field label{font-weight:800}
+.photo-badge.done{border-color:var(--ok);background:#e8f6ee;animation:none}
+.photo-badge.done .photo-badge-title{color:var(--ok)}
+@keyframes photo-badge-glow{0%,100%{box-shadow:0 0 0 0 #b3266333}50%{box-shadow:0 0 0 8px #b3266300}}
+@media (prefers-reduced-motion:reduce){.photo-badge{animation:none}}
 .almost-there{margin:4px 0 -4px;text-align:center;font-weight:700;color:var(--rose-dark)}
