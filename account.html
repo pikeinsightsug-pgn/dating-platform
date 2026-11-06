@@ -46,14 +46,25 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
         <p class="error" id="seeking_gender-error"></p></fieldset>
       <div class="field"><label for="relationship_goal">💍 I am looking for</label><select id="relationship_goal" name="relationship_goal" required><option value="">Choose…</option></select><p class="error" id="relationship_goal-error"></p></div>
 
+      <!-- The photo has its own always-visible step: most members never opened it while it was folded away. -->
+      <p class="step-title"><span class="step-num">4</span>📸 Your photo</p>
+      <div class="photo-badge" id="photo-badge" role="note">
+        <p class="photo-badge-title" id="photo-badge-title">📸 Add your photo — it's the most important step!</p>
+        <ul id="photo-badge-points">
+          <li>💌 Members with a photo get many more messages and replies.</li>
+          <li>✅ A photo shows you are a real, genuine person.</li>
+          <li>⚠️ Profiles without a photo may be removed.</li>
+        </ul>
+        <div class="field"><label for="photo">📷 Choose a clear photo of your face</label>
+          <div class="photo-pick"><img id="photo-preview" class="hidden" alt="Preview of your chosen photo"><input id="photo" name="photo" type="file" accept="image/*"></div>
+          <span class="hint">🔒 Stored privately: only signed-in, approved members can see it. Large phone photos are resized automatically.</span><p class="error" id="photo-error"></p></div>
+      </div>
+
       <!-- Optional extras stay folded so the form looks short on a phone; members can add them later. -->
       <details class="more-fields" id="more-about-you">
-        <summary>📸 Add a photo and more about you <span class="optional">(optional, or later)</span></summary>
+        <summary>✍️ Tell us more about you <span class="optional">(optional, or later)</span></summary>
         <div class="field"><label for="profession">💼 Profession or what you do <span class="optional">(optional)</span></label><input id="profession" name="profession" maxlength="80" autocomplete="organization-title" placeholder="e.g. Teacher, Nurse, Business owner, Student"><p class="error" id="profession-error"></p></div>
         <div class="field"><label for="bio">💬 A little about you <span class="optional">(optional)</span></label><textarea id="bio" name="bio" rows="3" maxlength="500" placeholder="What makes you smile? What are you hoping to find?"></textarea><span class="hint"><span id="bio-count">0</span>/500 · you can add or change this later</span><p class="error" id="bio-error"></p></div>
-        <div class="field"><label for="photo">📷 Profile photo <span class="optional">(optional)</span></label>
-          <div class="photo-pick"><img id="photo-preview" class="hidden" alt="Preview of your chosen photo"><input id="photo" name="photo" type="file" accept="image/*"></div>
-          <span class="hint">A clear photo of yourself. Large phone photos are resized automatically. You can also add one after logging in.</span><p class="error" id="photo-error"></p></div>
       </details>
 
       <div class="notice small" id="privacy-notice"><strong>🔒 Your privacy:</strong> your profile stays hidden until our team reviews and approves it. After approval, other signed-in approved members can see your display name, age, gender, country, city, profession, goal, biography and photo. Your email address is never shown. Photos are stored privately. <a href="privacy.html" target="_blank" rel="noopener">Read the full privacy notice</a>.</div>
@@ -182,8 +193,14 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
   function previewPhoto() {
     const file = form.elements.photo.files[0];
     const preview = document.getElementById("photo-preview");
-    if (file) document.getElementById("more-about-you").open = true;
-    if (!file || !window.FYP.photoTypeOf(file).startsWith("image/")) { preview.classList.add("hidden"); return; }
+    const chosen = Boolean(file && window.FYP.photoTypeOf(file).startsWith("image/"));
+    // The badge turns green with a thank-you once a photo is chosen.
+    document.getElementById("photo-badge").classList.toggle("done", chosen);
+    document.getElementById("photo-badge-title").textContent = chosen
+      ? "✅ Great — your photo will be added to your profile!"
+      : "📸 Add your photo — it's the most important step!";
+    document.getElementById("photo-badge-points").classList.toggle("hidden", chosen);
+    if (!chosen) { preview.classList.add("hidden"); return; }
     preview.src = URL.createObjectURL(file); preview.classList.remove("hidden");
   }
 

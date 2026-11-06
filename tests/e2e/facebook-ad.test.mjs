@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { setup } from "./harness.mjs";
+import { setup, PNG } from "./harness.mjs";
 
 // Facebook opens ad links in its own in-app browser and adds tracking parameters to the URL.
 const FB_AD = "?fbclid=IwAR0TestAdClick123&utm_source=facebook&utm_medium=paid";
@@ -29,6 +29,15 @@ test("a visitor from a Facebook ad can open the site and register", async () => 
     assert.equal(await page.inputValue("#location"), "Botswana", "the country is pre-selected from the time zone");
     assert.ok(await page.isVisible("#location-guess"), "the page says where the country guess came from");
     assert.equal(await page.isVisible("#bio"), false, "optional questions are folded away");
+    // The photo is never folded away: a big badge asks for it before the optional extras.
+    assert.ok(await page.isVisible("#photo-badge"), "the photo badge is visible without opening anything");
+    assert.match(await page.textContent("#photo-badge"), /most important step/);
+    assert.ok(await page.isVisible("#photo"), "the photo can be chosen without opening anything");
+    await page.setInputFiles("#photo", { name: "me.png", mimeType: "image/png", buffer: PNG });
+    await page.waitForSelector("#photo-badge.done");
+    assert.match(await page.textContent("#photo-badge-title"), /Great/, "the badge thanks the person once a photo is chosen");
+    await page.setInputFiles("#photo", []);
+    await page.waitForSelector("#photo-badge:not(.done)");
 
     await page.fill("#first_name", "Neo");
     await page.fill("#email", "neo-fb@test.invalid");
@@ -54,10 +63,9 @@ test("a visitor from a Facebook ad can open the site and register", async () => 
     assert.equal(await direct.inputValue("#location"), "", "an unlisted time zone leaves the country for the person to choose");
     assert.equal(await direct.isVisible("#location-guess"), false);
 
-    // A mistake inside the folded section opens it so the person can see the message.
+    // A file that is not a photo gets a visible message right in the photo badge.
     await direct.fill("#email", "kai-fb@test.invalid");
     await direct.setInputFiles("#photo", { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("not a photo") });
-    await direct.evaluate(() => { document.getElementById("more-about-you").open = false; });
     await direct.click("#register-form button[type=submit]");
     assert.ok(await direct.isVisible("#photo-error"), "the photo error is visible");
   } finally {
