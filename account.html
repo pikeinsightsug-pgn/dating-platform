@@ -176,6 +176,9 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     return errors;
   }
   form.addEventListener("change", event => { if (form.dataset.tried) validate(); if (event.target.name === "photo") previewPhoto(); });
+  // Also re-check while typing: a message that only vanished when the field lost focus moved
+  // the form up mid-tap, so the next chip or button tapped was missed.
+  form.addEventListener("input", () => { if (form.dataset.tried) validate(); });
   function previewPhoto() {
     const file = form.elements.photo.files[0];
     const preview = document.getElementById("photo-preview");
