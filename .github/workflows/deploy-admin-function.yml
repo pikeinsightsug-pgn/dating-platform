@@ -43,6 +43,6 @@ jobs:
         with:
           version: latest
       - name: Deploy admin-members
-        run: supabase functions deploy admin-members --project-ref "$PROJECT_REF" --use-api
+        run: supabase functions deploy admin-members --project-ref "$PROJECT_REF" --use-api --yes
       - name: Show the deployed version
         run: grep -o 'FUNCTION_VERSION = "[^"]*"' supabase/functions/admin-members/index.ts
