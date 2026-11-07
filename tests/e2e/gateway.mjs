@@ -141,12 +141,13 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
       if (req.method === "GET") {
         const { where, values } = filters(url);
         const limit = Number(url.searchParams.get("limit")) || null;
+        const offset = Number(url.searchParams.get("offset")) || 0;
         const order = (url.searchParams.get("order") || "").split(",").filter(Boolean).map(term => {
           const [col, dir = "asc"] = term.split(".");
           if (!IDENT.test(col) || !/^(asc|desc)$/.test(dir)) throw Object.assign(new Error("bad order"), { code: "PGRST100" });
           return col + " " + dir;
         });
-        const rows = await asRole(sub, c => c.query(`select ${columns(url)} from public.${table}${where}${order.length ? " order by " + order.join(", ") : ""}${limit ? " limit " + limit : ""}`, values).then(r => r.rows));
+        const rows = await asRole(sub, c => c.query(`select ${columns(url)} from public.${table}${where}${order.length ? " order by " + order.join(", ") : ""}${limit ? " limit " + limit : ""}${offset ? " offset " + offset : ""}`, values).then(r => r.rows));
         return respondRows(req, res, rows);
       }
       const wantRows = /return=representation/.test(String(req.headers.prefer || ""));
@@ -310,7 +311,10 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
         const row = (await pool.query("select * from auth.users where id::text = $1", [id])).rows[0];
         return row ? send(res, 200, userJson(row)) : authError(404, "user_not_found", "User not found");
       }
-      const rows = (await pool.query("select * from auth.users order by created_at")).rows;
+      // Paged like Supabase: ?page=1&per_page=50 by default.
+      const query = new URL(req.url, "http://x").searchParams;
+      const perPage = Math.min(1000, Number(query.get("per_page")) || 50), page = Math.max(1, Number(query.get("page")) || 1);
+      const rows = (await pool.query("select * from auth.users order by created_at, id limit $1 offset $2", [perPage, (page - 1) * perPage])).rows;
       return send(res, 200, { users: rows.map(userJson), aud: "authenticated" });
     }
     // The confirmation link in Supabase's default email: confirm, then return to the site

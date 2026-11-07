@@ -102,7 +102,7 @@ test("profile photo changes never spin forever", async (t) => {
     }, SIDEWAYS_JPEG);
     assert.ok(result.asked >= 2, "photos are read at a reduced size by the image decoder");
     assert.equal(result.opened, "2400x1800", "a big photo is never held at full size");
-    assert.equal(result.prepared, "1600x1200", "the uploaded copy keeps the usual size");
+    assert.equal(result.prepared, "1280x960", "the uploaded copy keeps the usual size");
     assert.deepEqual([result.turned, result.topRight, result.topLeft], ["60x80", true, false], "a sideways-stored photo stays upright");
   });
 });

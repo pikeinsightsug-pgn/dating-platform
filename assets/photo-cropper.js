@@ -155,7 +155,7 @@
           const canvas = document.createElement("canvas");
           canvas.width = OUT_W; canvas.height = OUT_H;
           draw(canvas);
-          let blob = await encode(canvas, 0.88);
+          let blob = await encode(canvas, 0.82);
           if (blob && blob.size > MAX_BYTES) blob = await encode(canvas, 0.7);
           els.preview.disabled = false;
           output = blob;
