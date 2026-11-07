@@ -36,7 +36,7 @@ jobs:
             echo "::error::Add the SUPABASE_ACCESS_TOKEN repository secret (see the comment at the top of this file), then re-run this workflow."
             exit 1
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Confirm JWT verification stays enabled
         run: grep -A2 '^\[functions.admin-members\]' supabase/config.toml | grep -q 'verify_jwt = true'
       - uses: supabase/setup-cli@v1
