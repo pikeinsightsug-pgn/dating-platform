@@ -121,9 +121,12 @@ test("owner preview endpoint checks owner identity and signs only same-owner pri
   const source = await read("supabase/functions/admin-members/index.ts");
   const authGate = source.indexOf("Not authorized for owner actions.");
   const listAction = source.indexOf('body.action === "list"');
-  const signer = source.indexOf("createSignedUrl(photoPath, 300)");
-  assert.ok(authGate >= 0 && listAction > authGate && signer > listAction);
-  assert.match(source, /isMemberPhotoPathOwnedByUser\(member\.user_id, photoPath\)/);
+  const signer = source.indexOf("createSignedUrls(paths.slice(i, i + 500), 300)");
+  const profileSigning = source.indexOf("signPhotos(rows");
+  assert.ok(authGate >= 0 && listAction > authGate && signer > authGate && profileSigning > listAction);
+  // Only each member's own photo paths are signed.
+  assert.match(source, /signPhotos\(rows\s*\.filter\(\(member\) => isMemberPhotoPathOwnedByUser\(member\.user_id, member\.profile_photo_url\)\)/);
+  assert.match(source, /signPhotos\(owned\.map/);
   const helper = (await read("supabase/functions/_shared/member-photo-path.js")).replace("export function", "function");
   const check = new Function(helper + "; return isMemberPhotoPathOwnedByUser;")();
   assert.equal(check("user-1", "user-1/photo.webp"), true);

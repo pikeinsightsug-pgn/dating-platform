@@ -4,7 +4,20 @@ import { COUNTRIES } from "../_shared/countries.js";
 
 // Bump when this function changes; the owner console compares it with the version it expects,
 // so the owner can see whether the deployed function is current without opening Supabase.
-const FUNCTION_VERSION = "2026-10-28";
+const FUNCTION_VERSION = "2026-11-07";
+
+// Lists are read in pages so the console keeps showing everyone as the community grows
+// (a single request returns at most 1000 rows). `page` builds the query for one range.
+const PAGE_ROWS = 1000;
+async function readAllRows<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>) {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_ROWS) {
+    const { data, error } = await page(from, from + PAGE_ROWS - 1);
+    if (error) return { data: null, error };
+    rows.push(...(data || []));
+    if (!data || data.length < PAGE_ROWS) return { data: rows, error: null };
+  }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,12 +66,28 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  // Short-lived preview links for many photos, signed a few hundred per request. Paths that
+  // cannot be signed are simply left out.
+  async function signPhotos(paths: string[]) {
+    const urls = new Map<string, string>();
+    for (let i = 0; i < paths.length; i += 500) {
+      try {
+        const { data: signed } = await db.storage.from("profile-photos").createSignedUrls(paths.slice(i, i + 500), 300);
+        (signed || []).forEach((item) => { if (item?.path && item.signedUrl && !item.error) urls.set(item.path, item.signedUrl); });
+      } catch {
+        // Leave this batch without previews.
+      }
+    }
+    return urls;
+  }
+
   if (body.action === "list") {
-    const { data, error } = await db.from("members")
+    const { data, error } = await readAllRows((from, to) => db.from("members")
       // "*" keeps the console working before is_test_account exists; fields are picked below.
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(500);
+      .order("id", { ascending: true })
+      .range(from, to));
     if (error) return json({ error: "Could not load registrations.", detail: error.message }, 500);
     const rows = (data || []).map((m) => ({
       id: m.id, user_id: m.user_id, first_name: m.first_name, age: m.age, gender: m.gender,
@@ -79,44 +108,30 @@ Deno.serve(async (req: Request) => {
     // Members' extra photos, so the owner can remove an inappropriate one. Skipped quietly
     // until supabase/member_extra_photos.sql is applied.
     const extraByMember = new Map<string, Array<{ id: string; url: string | null }>>();
-    const { data: extraRows, error: extraError } = await db.from("member_photos")
-      .select("id, member_id, storage_path").order("created_at").limit(3000);
+    const { data: extraRows, error: extraError } = await readAllRows((from, to) => db.from("member_photos")
+      .select("id, member_id, storage_path").order("created_at").order("id").range(from, to));
     if (!extraError && extraRows?.length) {
       const owners = new Map(rows.map((m) => [m.id, m.user_id]));
       const owned = extraRows.filter((p) => isMemberPhotoPathOwnedByUser(owners.get(p.member_id), p.storage_path));
-      const urls = new Map<string, string>();
-      try {
-        const { data: signed } = await db.storage.from("profile-photos").createSignedUrls(owned.map((p) => p.storage_path), 300);
-        (signed || []).forEach((item) => { if (item?.path && item.signedUrl && !item.error) urls.set(item.path, item.signedUrl); });
-      } catch {
-        // Previews are optional; the owner can still remove photos.
-      }
+      // Previews are optional; the owner can still remove photos.
+      const urls = await signPhotos(owned.map((p) => p.storage_path));
       for (const p of owned) {
         const list = extraByMember.get(p.member_id) || [];
         list.push({ id: p.id, url: urls.get(p.storage_path) ?? null });
         extraByMember.set(p.member_id, list);
       }
     }
-    const identifiedRows = await Promise.all(rows.map(async (member) => {
-      let admin_photo_signed_url: string | null = null;
-      const photoPath = member.profile_photo_url;
-      const safeOwnedPath = isMemberPhotoPathOwnedByUser(member.user_id, photoPath);
-      if (safeOwnedPath) {
-        try {
-          const { data: signedPhoto, error: signedPhotoError } = await db.storage.from("profile-photos")
-            .createSignedUrl(photoPath, 300);
-          if (!signedPhotoError) admin_photo_signed_url = signedPhoto?.signedUrl ?? null;
-        } catch {
-          // A photo preview failure must not prevent the owner from reviewing member records.
-        }
-      }
-      return {
-        ...member,
-        account_email: member.user_id ? authUsers.get(member.user_id)?.email ?? null : null,
-        account_confirmed: member.user_id ? authUsers.get(member.user_id)?.confirmed ?? false : false,
-        admin_photo_signed_url,
-        extra_photos: extraByMember.get(member.id) || [],
-      };
+    // A photo preview failure must not prevent the owner from reviewing member records.
+    const profilePhotoUrls = await signPhotos(rows
+      .filter((member) => isMemberPhotoPathOwnedByUser(member.user_id, member.profile_photo_url))
+      .map((member) => member.profile_photo_url));
+    const identifiedRows = rows.map((member) => ({
+      ...member,
+      account_email: member.user_id ? authUsers.get(member.user_id)?.email ?? null : null,
+      account_confirmed: member.user_id ? authUsers.get(member.user_id)?.confirmed ?? false : false,
+      admin_photo_signed_url: (isMemberPhotoPathOwnedByUser(member.user_id, member.profile_photo_url)
+        && profilePhotoUrls.get(member.profile_photo_url)) || null,
+      extra_photos: extraByMember.get(member.id) || [],
     }));
     return json({
       function_version: FUNCTION_VERSION,
@@ -253,10 +268,11 @@ Deno.serve(async (req: Request) => {
   // These actions never create, link, approve or edit member profiles.
   const LEGACY_STATUSES = ["unreviewed", "matched_profile", "needs_account", "needs_profile", "possible_duplicate", "ineligible", "incomplete", "linked", "declined"];
   if (body.action === "list_legacy") {
-    const { data, error } = await db.from("legacy_registrations")
+    const { data, error } = await readAllRows((from, to) => db.from("legacy_registrations")
       .select("id, source, submitted_at, first_name, age, country, email_normalized, phone_normalized, referral_code, reconciliation_status, matched_member_id, owner_notes")
       .order("submitted_at", { ascending: true })
-      .limit(500);
+      .order("id", { ascending: true })
+      .range(from, to));
     if (error) return json({ error: "Original registrations are not archived yet. Apply supabase/legacy_registrations.sql and run the archive SQL first.", detail: error.message }, 500);
     return json({ registrations: data || [] });
   }

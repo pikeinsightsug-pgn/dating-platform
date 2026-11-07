@@ -383,8 +383,11 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
     return "";
   }
 
-  const PHOTO_MAX_EDGE = 1600;
-  const PHOTO_RECOMPRESS_BYTES = 1.5 * 1024 * 1024;
+  // Uploaded photos are kept small (about 150–300 KB) so storage and members' mobile data
+  // last as the community grows; 1280 px is still sharp on any phone screen.
+  const PHOTO_MAX_EDGE = 1280;
+  const PHOTO_RECOMPRESS_BYTES = 400 * 1024;
+  const PHOTO_JPEG_QUALITY = 0.82;
 
   // Phones shoot 50–108 megapixel photos; opening one at full size needs 200–430 MB and
   // low-memory phones give up ("low memory"). Photos are opened at most this size, which
@@ -461,7 +464,7 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
     canvas.height = Math.max(1, Math.round(height * scale));
     canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
     if (typeof image.close === "function") image.close();
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.85));
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", PHOTO_JPEG_QUALITY));
     if (!blob || blob.size > PHOTO_MAX_BYTES) {
       throw Object.assign(new Error("This photo could not be made small enough. Choose a different photo."), { code: "PHOTO_SIZE" });
     }
