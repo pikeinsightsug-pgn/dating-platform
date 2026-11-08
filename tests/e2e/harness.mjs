@@ -28,9 +28,12 @@ async function freshDatabase(name, files) {
   await db.end();
 }
 
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".jpg": "image/jpeg", ".css": "text/css" };
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".jpg": "image/jpeg", ".css": "text/css", ".png": "image/png", ".webmanifest": "application/manifest+json" };
+// Lets a test make the website stop answering, as when a phone loses its connection.
+let siteDown = false;
 function staticServer() {
   const server = http.createServer(async (req, res) => {
+    if (siteDown) { req.socket.destroy(); return; }
     // Like GitHub Pages: a path ending in "/" serves that folder's index.html.
     let path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname)).replace(/^\/dating-platform\/?/, "/");
     if (path.endsWith("/")) path += "index.html";
@@ -104,6 +107,7 @@ export async function setup(name, files = ALL) {
   }
   return {
     base, gateway, sql, newPage, member, login, fillRegistration, repo,
+    setSiteDown(down) { siteDown = down; },
     async close() { await browser.close(); await gateway.close(); site.close(); }
   };
 }

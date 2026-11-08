@@ -6,6 +6,11 @@
 <meta name="referrer" content="same-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="deployment-version" content="2026-10-18-launch-redesign">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#b32663">
+<link rel="icon" type="image/png" href="assets/app/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/app/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="P.K CONNECT">
 <title>P.K CONNECT – Find Your Person ❤️ | Meaningful relationships, worldwide</title>
 <meta name="description" content="A private, verified dating community for adults 18+ around the world. Every profile is reviewed before it is shown. Free to join.">
 <meta property="og:site_name" content="P.K CONNECT – Find Your Person">
@@ -36,6 +41,11 @@
 .hero-photo{position:relative}
 .hero-photo img{width:100%;aspect-ratio:680/470;object-fit:cover;border-radius:28px;box-shadow:0 26px 60px #5c183040}
 .hero-photo .badge{position:absolute;left:-14px;bottom:22px;background:#fff;border-radius:16px;padding:12px 16px;box-shadow:var(--shadow);font-weight:750;font-size:14px;display:flex;gap:10px;align-items:center;max-width:250px}
+.install-app{background:#fff;border-bottom:1px solid var(--line)}.install-app[hidden]{display:none}
+.install-app .wrap{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;padding-top:14px;padding-bottom:14px}
+.install-app img{border-radius:12px;flex:none}.install-app div div{flex:1;min-width:180px}
+.install-app strong{display:block;font-size:17px}.install-app span{color:var(--muted);font-size:14px}.install-app p{margin:6px 0 0;font-size:14px}
+.install-app .btn[hidden]{display:none}
 .free-banner{background:var(--plum);color:#fff}
 .free-banner .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:center;padding-top:14px;padding-bottom:14px;text-align:center;font-weight:650}
 .free-banner strong{color:#ffd3e4}.free-banner a{color:#fff;text-decoration:underline}
@@ -101,6 +111,13 @@
     </div>
   </div>
 </section>
+
+<div id="install-app" class="install-app" hidden><div class="wrap">
+  <img src="assets/app/icon-192.png" alt="" width="52" height="52">
+  <div><strong>Get the P.K CONNECT app</strong><span>Free · opens from your home screen · no app store needed</span>
+    <p data-install-tip hidden>On iPhone: tap <b>Share</b> <span aria-hidden="true">⬆️</span> then <b>Add to Home Screen</b>.</p></div>
+  <button class="btn" type="button" hidden>📲 Install the app</button>
+</div></div>
 
 <div class="free-banner" role="note"><div class="wrap"><span><strong>Free to join:</strong> registration does not require any payment.</span><span>No card details are requested and no automatic charges are made.</span><span><strong>We will never ask you for money in a private message</strong>, or for your password or payment codes. Our only official account is <strong>Pike – Founder ✅</strong>. <a href="safety.html">Safety tips</a></span></div></div>
 
@@ -174,5 +191,6 @@
     </nav>
   </div>
 </footer>
+<script src="assets/app-install.js" defer></script>
 </body>
 </html>
