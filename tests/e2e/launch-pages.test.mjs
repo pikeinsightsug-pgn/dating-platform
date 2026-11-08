@@ -48,7 +48,7 @@ test("launch pages", async (t) => {
     await page.goto(env.base + "account.html");
     await page.click("#register-form button[type=submit]");
     const errors = await page.locator("#register-form .error:not(:empty)").allTextContents();
-    for (const expected of [/email address/, /8 characters/, /what to call you/, /your age/i, /gender/, /country you live in/, /city/, /who you would like to meet/, /looking for/, /18 or older/, /privacy notice/]) {
+    for (const expected of [/email address/, /8 characters/, /what to call you/, /your age/i, /gender/, /country you live in/, /city/, /18 or older/, /privacy notice/]) {
       assert.ok(errors.some(e => expected.test(e)), "message for " + expected);
     }
     assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), "email", "focus moves to the first problem");
@@ -74,6 +74,7 @@ test("launch pages", async (t) => {
     await page.selectOption("#gender", "Woman");
     await page.fill("#city", "Kampala");
     // Tapping a chip takes focus off the city box; its message must already be gone so nothing moves.
+    await page.evaluate(() => { document.getElementById("more-about-you").open = true; });
     await page.locator('#seeking_gender-field label:has(input[value="Men"]) span').tap();
     assert.equal(await page.isChecked('input[name=seeking_gender][value="Men"]'), true, "the first tap selects the chip");
     assert.equal(await page.textContent("#city-error"), "", "the city message cleared while typing");
@@ -266,3 +267,4 @@ test("before the new database file is applied, registration and profile editing 
   const row = (await env.sql("select city, approved from public.members where first_name = 'Early'")).rows[0];
   assert.deepEqual(row, { city: "Entebbe", approved: false });
 });
+

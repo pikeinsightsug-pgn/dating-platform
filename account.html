@@ -26,9 +26,12 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
 <main class="form-page">
   <section id="register-view" aria-labelledby="register-title">
     <div class="signup-hero" aria-hidden="true"><span>💖</span><span>🌍</span><span>💬</span></div>
-    <h1 id="register-title">Your love story starts here ✨</h1>
-    <p class="muted">A few short questions, about two minutes. Fields marked <span class="optional">(optional)</span> can be skipped.</p>
-    <p class="notice"><strong>💸 Free to join:</strong> registration does not require any payment. No card details are requested and no automatic charges are made.</p>
+    <h1 id="register-title">Join in 30 seconds ✨</h1>
+    <p class="muted">Just the basics now. You can add the rest after you're in.</p>
+    <ul class="trust-strip" aria-label="Why join">
+      <li>✅ 100% free · no card needed</li><li>🔒 Private</li><li>👤 Every profile checked by a real person</li><li>🔞 Adults 18+</li>
+    </ul>
+    <a class="whatsapp-help" id="whatsapp-help" href="https://wa.me/26772965279?text=Hello%20P.K%20CONNECT%2C%20I%20have%20a%20question%20about%20joining" target="_blank" rel="noopener">💬 Questions before joining? <strong>WhatsApp us</strong></a>
 
     <form id="register-form" class="form-grid card" novalidate style="margin-top:16px">
       <p class="step-title"><span class="step-num">1</span>🔐 Your account</p>
@@ -45,14 +48,8 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
       <div class="field" id="location-field"><label for="location">🌍 Country you live in</label><select id="location" name="location" required autocomplete="country-name"><option value="">Choose your country…</option></select><span class="hint hidden" id="location-guess">Filled in from your phone's time zone. Change it if it is wrong.</span><p class="error" id="location-error"></p></div>
       <div class="field"><label for="city">📍 City or general area</label><input id="city" name="city" required maxlength="100" autocomplete="address-level2" placeholder="e.g. Kampala, Gaborone, Nairobi, London"><span class="hint">No street address, please.</span><p class="error" id="city-error"></p></div>
 
-      <p class="step-title"><span class="step-num">3</span>💞 Who you'd like to meet</p>
-      <fieldset class="field" id="seeking_gender-field"><legend>👀 I would like to meet</legend>
-        <div class="chips"><label><input type="radio" name="seeking_gender" value="Men" required><span>👨 Men</span></label><label><input type="radio" name="seeking_gender" value="Women"><span>👩 Women</span></label><label><input type="radio" name="seeking_gender" value="Everyone"><span>💞 Everyone</span></label></div>
-        <p class="error" id="seeking_gender-error"></p></fieldset>
-      <div class="field"><label for="relationship_goal">💍 I am looking for</label><select id="relationship_goal" name="relationship_goal" required><option value="">Choose…</option></select><p class="error" id="relationship_goal-error"></p></div>
-
       <!-- The photo has its own always-visible step: most members never opened it while it was folded away. -->
-      <p class="step-title"><span class="step-num">4</span>📸 Your photo</p>
+      <p class="step-title"><span class="step-num">3</span>📸 Your photo <span class="optional">(you can add it later)</span></p>
       <div class="photo-badge" id="photo-badge" role="note">
         <p class="photo-badge-title" id="photo-badge-title">📸 Add your photo — it's the most important step!</p>
         <ul id="photo-badge-points">
@@ -67,7 +64,12 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
 
       <!-- Optional extras stay folded so the form looks short on a phone; members can add them later. -->
       <details class="more-fields" id="more-about-you">
-        <summary>✍️ Tell us more about you <span class="optional">(optional, or later)</span></summary>
+        <summary>✍️ Who you'd like to meet, and more about you <span class="optional">(optional, or later)</span></summary>
+      <fieldset class="field" id="seeking_gender-field"><legend>👀 I would like to meet <span class="optional">(optional)</span></legend>
+        <div class="chips"><label><input type="radio" name="seeking_gender" value="Men"><span>👨 Men</span></label><label><input type="radio" name="seeking_gender" value="Women"><span>👩 Women</span></label><label><input type="radio" name="seeking_gender" value="Everyone"><span>💞 Everyone</span></label></div>
+        <p class="error" id="seeking_gender-error"></p></fieldset>
+      <div class="field"><label for="relationship_goal">💍 I am looking for <span class="optional">(optional)</span></label><select id="relationship_goal" name="relationship_goal"><option value="">Choose…</option></select><p class="error" id="relationship_goal-error"></p></div>
+
         <div class="field"><label for="profession">💼 Profession or what you do <span class="optional">(optional)</span></label><input id="profession" name="profession" maxlength="80" autocomplete="organization-title" placeholder="e.g. Teacher, Nurse, Business owner, Student"><p class="error" id="profession-error"></p></div>
         <div class="field"><label for="bio">💬 A little about you <span class="optional">(optional)</span></label><textarea id="bio" name="bio" rows="3" maxlength="500" placeholder="What makes you smile? What are you hoping to find?"></textarea><span class="hint"><span id="bio-count">0</span>/500 · you can add or change this later</span><p class="error" id="bio-error"></p></div>
       </details>
@@ -75,7 +77,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
       <div class="notice small" id="privacy-notice"><strong>🔒 Your privacy:</strong> your profile stays hidden until our team reviews and approves it. After approval, other signed-in approved members can see your display name, age, gender, country, city, profession, goal, biography and photo. Your email address is never shown. Photos are stored privately. <a href="privacy.html" target="_blank" rel="noopener">Read the full privacy notice</a>.</div>
       <label class="check"><input id="agree" name="agree" type="checkbox" required><span>I am 18 or older, and I agree to the privacy notice.</span></label>
       <p class="error" id="agree-error"></p>
-      <p class="almost-there">🎉 Almost there! One tap and you're in.</p>
+      <p class="almost-there">🎉 That's it! One tap and you're in.</p>
       <button class="btn large" type="submit">💖 Create my account</button>
       <p id="status" class="status notice" role="status" aria-live="polite"></p>
     </form>
@@ -184,8 +186,6 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     push("gender", !v("gender") ? "Choose your gender." : "");
     push("location", !v("location") ? "Choose the country you live in." : "");
     push("city", !v("city") ? "Enter your city or general area." : "");
-    push("seeking_gender", !v("seeking_gender") ? "Choose who you would like to meet." : "");
-    push("relationship_goal", !v("relationship_goal") ? "Choose what you are looking for." : "");
     push("agree", !form.elements.agree.checked ? "Please confirm you are 18 or older and agree to the privacy notice." : "", form.elements.agree);
     const photo = form.elements.photo.files[0];
     push("photo", photo && !window.FYP.photoTypeOf(photo).startsWith("image/") ? "Choose a photo (JPEG, PNG or WebP), or leave this empty." : "", form.elements.photo);
@@ -263,7 +263,9 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
       gender: text("gender"),
       location: text("location"),
       city: text("city"),
-      relationship_goal: text("relationship_goal"),
+      // Not chosen yet: a neutral starting answer the member is asked to complete in My Profile.
+      relationship_goal: text("relationship_goal") || "Exploring connections",
+      goal_chosen: Boolean(text("relationship_goal")),
       // A short starter line when left empty; the member can change it in My Profile.
       bio: text("bio") || window.FYP.starterBio(text("first_name"), text("city")),
       profession: text("profession"),
