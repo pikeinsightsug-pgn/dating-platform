@@ -398,3 +398,17 @@ test("the test-account marker never hides members (owner: everyone must stay vis
   const admin = await read("admin/index.html");
   assert.doesNotMatch(admin, /hidden from genuine members|will no longer see or message/, "the owner console must not promise to hide test accounts");
 });
+
+test("the installable app never keeps member data or old pages", async () => {
+  const sw = (await read("sw.js")).replace(/^\s*\/\/.*$/gm, "");
+  assert.match(sw, /request\.mode !== "navigate"/, "only page visits are handled");
+  assert.match(sw, /fetch\(request\)\.catch\(\(\) => caches\.match\(OFFLINE\)\)/, "pages always come fresh from the network");
+  assert.doesNotMatch(sw, /supabase|cache\.put/i, "logins, profiles, messages and photos are never stored");
+  const manifest = JSON.parse(await read("manifest.webmanifest"));
+  assert.equal(manifest.display, "standalone");
+  for (const page of ["index.html", "account.html", "login.html", "dashboard.html", "discover.html", "messages.html", "about.html", "safety.html", "privacy.html"]) {
+    const html = await read(page);
+    assert.match(html, /<link rel="manifest" href="manifest\.webmanifest">/, page);
+    assert.match(html, /<script src="assets\/app-install\.js" defer><\/script>/, page);
+  }
+});
