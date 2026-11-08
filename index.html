@@ -41,11 +41,22 @@
 .hero-photo{position:relative}
 .hero-photo img{width:100%;aspect-ratio:680/470;object-fit:cover;border-radius:28px;box-shadow:0 26px 60px #5c183040}
 .hero-photo .badge{position:absolute;left:-14px;bottom:22px;background:#fff;border-radius:16px;padding:12px 16px;box-shadow:var(--shadow);font-weight:750;font-size:14px;display:flex;gap:10px;align-items:center;max-width:250px}
-.install-app{background:#fff;border-bottom:1px solid var(--line)}.install-app[hidden]{display:none}
-.install-app .wrap{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;padding-top:14px;padding-bottom:14px}
-.install-app img{border-radius:12px;flex:none}.install-app div div{flex:1;min-width:180px}
-.install-app strong{display:block;font-size:17px}.install-app span{color:var(--muted);font-size:14px}.install-app p{margin:6px 0 0;font-size:14px}
-.install-app .btn[hidden]{display:none}
+.install-app{padding:18px 0 6px}.install-app[hidden]{display:none}
+.app-card{position:relative;overflow:hidden;display:grid;grid-template-columns:auto 1fr;gap:16px 18px;align-items:center;padding:22px;border-radius:24px;
+  background:radial-gradient(120% 140% at 0% 0%,#d81b60 0%,#8f1e51 55%,#4a0a26 100%);color:#fff;box-shadow:0 18px 40px #8f1e5140}
+.app-card::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:#ffffff14}
+.app-card img{width:76px;height:76px;border-radius:20px;box-shadow:0 10px 24px #0005;border:2px solid #ffffff40}
+.app-badge{display:inline-block;background:#ffd23f;color:#4a0a26;font-size:12px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+.app-card h3{margin:2px 0 4px;font-size:22px;line-height:1.15;color:#fff}
+.app-card .sub{margin:0;color:#ffe3ee;font-size:15px}
+.app-perks{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 0;padding:0;list-style:none}
+.app-perks li{background:#ffffff1f;border:1px solid #ffffff38;border-radius:999px;padding:6px 11px;font-size:12.5px;font-weight:700;white-space:nowrap}
+.app-cta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.app-card .btn{background:#fff;color:#a0124b;border:0;font-weight:900;font-size:17px;padding:14px 24px;box-shadow:0 10px 22px #0004}
+.app-card .btn[hidden]{display:none}
+.app-card .tip{margin:0;background:#ffffff1f;border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.45}
+.app-card .tip[hidden]{display:none}.app-card .tip b{color:#fff}
+@media(min-width:760px){.app-card{grid-template-columns:auto 1fr auto}.app-perks{grid-column:2/3}.app-cta{grid-column:3/4;grid-row:1/3;justify-content:flex-end}}
 .free-banner{background:var(--plum);color:#fff}
 .free-banner .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:center;padding-top:14px;padding-bottom:14px;text-align:center;font-weight:650}
 .free-banner strong{color:#ffd3e4}.free-banner a{color:#fff;text-decoration:underline}
@@ -113,10 +124,15 @@
 </section>
 
 <div id="install-app" class="install-app" hidden><div class="wrap">
-  <img src="assets/app/icon-192.png" alt="" width="52" height="52">
-  <div><strong>Get the P.K CONNECT app</strong><span>Free · opens from your home screen · no app store needed</span>
-    <p data-install-tip hidden>On iPhone: tap <b>Share</b> <span aria-hidden="true">⬆️</span> then <b>Add to Home Screen</b>.</p></div>
-  <button class="btn" type="button" hidden>📲 Install the app</button>
+  <div class="app-card">
+    <img src="assets/app/icon-192.png" alt="P.K CONNECT app icon" width="76" height="76">
+    <div><span class="app-badge">📱 New · Free</span><h3>Get the P.K CONNECT app</h3><p class="sub">Your matches, one tap away on your home screen.</p></div>
+    <ul class="app-perks"><li>💬 See new messages fast</li><li>⚡ Opens instantly</li><li>📦 No app store needed</li></ul>
+    <div class="app-cta">
+      <button class="btn" type="button" hidden>📲 Install the free app</button>
+      <p class="tip" data-install-tip hidden>On iPhone: tap <b>Share</b> <span aria-hidden="true">⬆️</span> at the bottom of Safari, then <b>Add to Home Screen</b> ➕</p>
+    </div>
+  </div>
 </div></div>
 
 <div class="free-banner" role="note"><div class="wrap"><span><strong>Free to join:</strong> registration does not require any payment.</span><span>No card details are requested and no automatic charges are made.</span><span><strong>We will never ask you for money in a private message</strong>, or for your password or payment codes. Our only official account is <strong>Pike – Founder ✅</strong>. <a href="safety.html">Safety tips</a></span></div></div>
