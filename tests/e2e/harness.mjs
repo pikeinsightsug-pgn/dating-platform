@@ -97,12 +97,12 @@ export async function setup(name, files = ALL) {
     await page.selectOption("#gender", v.gender);
     await page.selectOption("#location", v.location);
     await page.fill("#city", v.city);
-    await page.check(`input[name=seeking_gender][value="${v.seeking}"]`);
-    await page.selectOption("#relationship_goal", v.goal);
-    // Profession, bio and photo are folded under "Add a photo and more about you".
+    // Who to meet, goal, profession and bio are folded under the optional "more about you".
     await page.evaluate(() => { document.getElementById("more-about-you").open = true; });
+    if (v.seeking) await page.check(`input[name=seeking_gender][value="${v.seeking}"]`);
+    if (v.goal) await page.selectOption("#relationship_goal", v.goal);
     if (v.profession) await page.fill("#profession", v.profession);
-    await page.fill("#bio", v.bio);
+    if (v.bio !== undefined) await page.fill("#bio", v.bio);
     if (v.adult !== false && v.privacy !== false) await page.check("#agree");
   }
   return {

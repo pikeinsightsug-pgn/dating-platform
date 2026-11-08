@@ -284,6 +284,11 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
         if (String(body.password).length < 8) return authError(422, "weak_password", "Password should be at least 8 characters.");
         passwords.set(row.email, body.password);
       }
+      // Like Supabase: "data" is merged into the user's own metadata.
+      if (body.data && typeof body.data === "object") {
+        const merged = (await pool.query("update auth.users set raw_user_meta_data = raw_user_meta_data || $2::jsonb where id = $1 returning *", [row.id, JSON.stringify(body.data)])).rows[0];
+        return send(res, 200, userJson(merged));
+      }
       return send(res, 200, userJson(row));
     }
     // Owner invitation (supabase-js auth.admin.inviteUserByEmail): an unconfirmed account with

@@ -45,15 +45,15 @@ test("a visitor from a Facebook ad can open the site and register", async () => 
     await page.fill("#age", "31");
     await page.selectOption("#gender", "Man");
     await page.fill("#city", "Gaborone");
-    await page.check('input[name=seeking_gender][value="Women"]');
-    await page.selectOption("#relationship_goal", "Serious relationship");
+    // The quick path: who to meet, goal, bio and profession are left for later.
     await page.check("#agree");
     await page.click("#register-form button[type=submit]");
     await page.waitForSelector("#success-view:not(.hidden)");
     await env.sql("update auth.users set email_confirmed_at = now() where email = 'neo-fb@test.invalid'");
 
-    const row = (await env.sql("select m.location, m.approved from public.members m join auth.users u on u.id = m.user_id where u.email = 'neo-fb@test.invalid'")).rows[0];
-    assert.deepEqual(row, { location: "Botswana", approved: false }, "a pending profile is created for the team to review");
+    const row = (await env.sql("select m.location, m.approved, m.relationship_goal, m.seeking_gender, m.bio like 'Hello! I''m Neo%' as starter from public.members m join auth.users u on u.id = m.user_id where u.email = 'neo-fb@test.invalid'")).rows[0];
+    assert.deepEqual(row, { location: "Botswana", approved: false, relationship_goal: "Exploring connections", seeking_gender: null, starter: true },
+      "a pending profile is created from just the basics, ready to complete later");
     for (const redirect of signupRedirects) assert.ok(!redirect || !redirect.includes("fbclid"), "the confirmation email link does not carry Facebook tracking: " + redirect);
 
     // The Page's Sign up button may also link straight to the form with tracking added.
