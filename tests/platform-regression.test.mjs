@@ -412,3 +412,16 @@ test("the installable app never keeps member data or old pages", async () => {
     assert.match(html, /<script src="assets\/app-install\.js" defer><\/script>/, page);
   }
 });
+
+test("links shared on Facebook and WhatsApp show a proper preview, and newcomers always find the way in", async () => {
+  for (const page of ["index.html", "account.html", "login.html"]) {
+    const html = await read(page);
+    assert.match(html, /<meta property="og:image" content="https:\/\/pkconnectonline\.com\/assets\/share-card\.jpg">/, page + " absolute preview image");
+    assert.match(html, /<meta property="og:title" content="[^"]+">/, page);
+    assert.match(html, /<meta property="og:url" content="https:\/\/pkconnectonline\.com\//, page);
+  }
+  const { stat } = await import("node:fs/promises");
+  assert.ok((await stat(new URL("../assets/share-card.jpg", import.meta.url))).size > 20000, "the preview picture exists");
+  assert.match(await read("login.html"), /href="account\.html" class="new-here"/, "the login page offers a clear way to join");
+  assert.match(await read("index.html"), /30 seconds/, "the homepage matches the quick join");
+});
