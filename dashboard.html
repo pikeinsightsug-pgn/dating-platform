@@ -21,6 +21,7 @@
 h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:12px 0}h2{margin-top:0}p{line-height:1.55;color:#6a5b64}
 .grid{display:grid;gap:13px}label{font-weight:650;font-size:14px}
 .optional{font-weight:500;color:#75666e;font-size:13px}
+#approval-status.pending-welcome{padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,#fff4f8,#fde8f0);border:2px solid #f6c3d7;color:#5a1d3c;font-weight:600;line-height:1.5}
 .profile-checklist{margin:14px 0;padding:18px;border-radius:18px;background:#fff;border:2px solid #f6c3d7;box-shadow:0 8px 22px #b3266314}
 .checklist-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.checklist-head h2{margin:0;font-size:20px}
 #checklist-progress{font-weight:800;color:#b32663;white-space:nowrap}
@@ -154,9 +155,10 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
         p.preferred_age_min >= 18 && p.preferred_age_max <= 120 && p.preferred_age_min <= p.preferred_age_max));
   }
   function showApproval(profile) {
+    document.getElementById("approval-status").classList.toggle("pending-welcome", !profile.approved);
     document.getElementById("approval-status").textContent = profile.approved
       ? "Your profile is approved. Use Discover Members above to browse other approved members and send private messages."
-      : "Your profile is awaiting manual review by the platform owner. It stays private until approved; Discover Members and Messages open after approval.";
+      : "🎉 Welcome! Your profile is awaiting manual review by the platform owner. We aim to approve new members within 24 hours. While you wait, complete your profile below: members with a photo and a few words get far more messages. Discover Members and Messages open after approval.";
   }
   // The official account sees a reminder; approved members get a direct link to message it.
   async function showOfficial(profile) {

@@ -5,6 +5,16 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cyvkpcwjkeifpvegwhpt.supabase.co; connect-src 'self' blob: data: https://cyvkpcwjkeifpvegwhpt.supabase.co wss://cyvkpcwjkeifpvegwhpt.supabase.co; font-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:">
 <meta name="referrer" content="same-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="P.K CONNECT – Find Your Person">
+<meta property="og:title" content="Log in | P.K CONNECT – Find Your Person">
+<meta property="og:description" content="Log in to P.K CONNECT, or join in about 30 seconds.">
+<meta property="og:url" content="https://pkconnectonline.com/login.html">
+<meta property="og:image" content="https://pkconnectonline.com/assets/share-card.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="P.K CONNECT – Find Your Person: ready for something real?">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#b32663">
 <link rel="icon" type="image/png" href="assets/app/favicon-32.png">
@@ -13,6 +23,10 @@
 <title>Log in | P.K CONNECT – Find Your Person</title>
 <meta name="description" content="Log in to P.K CONNECT – Find Your Person with your email address and password.">
 <link rel="stylesheet" href="assets/site.css">
+<style>
+.new-here{display:grid;gap:2px;margin-top:6px;padding:14px 16px;border-radius:14px;background:#fff4f8;border:2px solid #f6c3d7;text-decoration:none;color:var(--rose-dark)}
+.new-here span{font-size:14px;color:var(--muted)}.new-here strong{font-size:16px}
+</style>
 </head>
 <body>
 <header class="site-header"><div class="wrap">
@@ -34,7 +48,7 @@
     <button id="resend-confirmation" class="btn secondary hidden" type="button">Resend confirmation email</button>
     <p style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:18px">
       <button class="link-button" type="button" data-view="forgot">Forgot your password?</button>
-      <a href="account.html" style="font-weight:700">New here? Create an account</a>
+      <a href="account.html" class="new-here"><span>💖 New to P.K CONNECT?</span><strong>Create your account in 30 seconds →</strong></a>
     </p>
   </section>
 
