@@ -54,15 +54,12 @@ test("restoring original registrations: archive, activate, link, approve, then m
   // Revivo already has an old profile without an account (from the early website form).
   await env.sql("insert into public.members (first_name, age, gender, location, city, relationship_goal, bio, approved) values ('Revivo', 37, 'Man', 'Botswana', 'Gaborone', 'Marriage', 'Original website registration', false)");
 
-  await t.test("an original registrant re-registers on account.html and gets one pending profile", async () => {
+  await t.test("an original registrant re-registers on account.html and gets one profile, approved straight away", async () => {
     const page = await env.newPage({ mobile: true });
     await env.fillRegistration(page, { name: "Restora", email: "restora@test.invalid", password: "Restora-pass-1", age: "27", seeking: "Everyone", min: "18", max: "120", bio: "Back from the original form, still hoping to meet someone kind." });
     await page.click("#register-form button[type=submit]");
-    await page.waitForSelector("#success-view:not(.hidden)");
-    await env.sql("update auth.users set email_confirmed_at = now() where email = 'restora@test.invalid'");
-    await env.login(page, "restora@test.invalid", "Restora-pass-1");
-    await page.waitForURL(/dashboard\.html$/);
-    assert.equal((await env.sql("select count(*)::int as n from public.members where first_name = 'Restora'")).rows[0].n, 1);
+    await page.waitForURL(/discover\.html/);
+    assert.deepEqual((await env.sql("select count(*)::int as n, bool_and(approved) as approved from public.members where first_name = 'Restora'")).rows[0], { n: 1, approved: true });
   });
 
   await t.test("an invited registrant follows the email link from the homepage, sets a password and is not given a guessed profile", async () => {
@@ -100,9 +97,9 @@ test("restoring original registrations: archive, activate, link, approve, then m
     env.gateway.options.adminFunctionOnly = null;
   });
 
-  await t.test("the owner links, marks test accounts and approves — nothing happens automatically", async () => {
+  await t.test("the owner links, marks test accounts and approves — linking approves nobody", async () => {
     const before = (await env.sql("select count(*)::int as n from public.members where approved")).rows[0].n;
-    assert.equal(before, 2, "only the two owner test accounts are approved so far");
+    assert.equal(before, 3, "the two owner test accounts and the new sign-up Restora are approved so far");
     const page = await ownerConsole(env);
 
     await card(page, "TesterOne").getByRole("button", { name: "Mark as my test account" }).click();
@@ -128,9 +125,9 @@ test("restoring original registrations: archive, activate, link, approve, then m
       await page.waitForFunction(n => [...document.querySelectorAll("#legacy article")].some(a => a.textContent.includes(n) && a.textContent.includes("Linked profile")), name);
     }
     assert.equal((await env.sql("select count(*)::int as n from public.legacy_registrations where reconciliation_status = 'linked' and matched_member_id is not null")).rows[0].n, 2);
-    assert.equal((await env.sql("select count(*)::int as n from public.members where approved")).rows[0].n, 2, "linking approved nobody");
+    assert.equal((await env.sql("select count(*)::int as n from public.members where approved")).rows[0].n, 3, "linking approved nobody");
 
-    for (const name of ["Restora", "Revivo"]) {
+    for (const name of ["Revivo"]) {
       await card(page, name).getByRole("button", { name: "Approve" }).click();
       await page.waitForFunction(n => [...document.querySelectorAll("#members article")].some(a => a.textContent.includes(n) && a.textContent.includes("Approved")), name);
     }

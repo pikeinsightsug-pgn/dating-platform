@@ -47,6 +47,9 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
 .gallery .count{position:absolute;bottom:10px;right:12px;background:#241b23b3;color:#fff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px}
 .thumbs{display:flex;gap:8px;overflow-x:auto;padding:10px 12px 0}.thumbs button{all:unset;cursor:pointer;flex:0 0 64px;height:48px;border-radius:8px;overflow:hidden;outline:2px solid transparent}
 .thumbs button[aria-current=true]{outline-color:#b32663}.thumbs img{width:100%;height:100%;object-fit:cover;display:block}.thumbs button:focus-visible{outline-color:#241b23}
+.welcome-new{margin:14px 0;padding:18px;border-radius:20px;color:#fff;background:radial-gradient(120% 140% at 0% 0%,#d81b60 0%,#8f1e51 60%,#4a0a26 100%);box-shadow:0 14px 30px #8f1e5133}
+.welcome-new h2{margin:0 0 6px;font-size:22px;color:#fff}.welcome-new p{margin:0 0 6px;color:#ffe6f0}.welcome-new .welcome-tip{font-size:14px}
+.welcome-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}.welcome-new .btn{background:#fff;color:#a0124b}.welcome-new .secondary{background:transparent;color:#fff;border:1px solid #ffffff80}
 </style>
 </head>
 <body>
@@ -59,8 +62,14 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     </nav>
   </header>
   <p id="signed-in" class="signed-in hidden" role="status"></p>
+  <section id="welcome-new" class="welcome-new hidden" aria-labelledby="welcome-title">
+    <h2 id="welcome-title">🎉 Welcome to P.K CONNECT!</h2>
+    <p>You're in. Browse the members below and say hello to anyone you like. 💬</p>
+    <p class="welcome-tip">📸 Tip: members with a clear photo and a few words about themselves get many more replies.</p>
+    <div class="welcome-actions"><a class="btn" href="dashboard.html#profile-panel">✨ Complete my profile</a><button class="secondary" type="button" id="welcome-close">Start browsing</button></div>
+  </section>
   <h1>Discover members</h1>
-  <p>Genuine adult profiles reviewed and approved by our team. Contact details are never shown — use private messages to get to know someone.</p>
+  <p>Adult members only, with fake accounts removed by our team. Contact details are never shown — use private messages to get to know someone.</p>
   <form id="filters" class="filters hidden" aria-label="Filter profiles">
     <label>Country<select name="country"><option value="">All countries</option></select></label>
     <label>Gender<select name="gender"><option value="">Any</option><option>Woman</option><option>Man</option><option>Non-binary</option></select></label>
@@ -241,7 +250,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   function failureMessage(error) {
     const message = String((error && error.message) || "");
     if (error && error.code === "REQUEST_TIMEOUT") return "Loading profiles took too long. Check your connection and try again.";
-    if (window.FYP.isNotApproved(error)) return "Your profile is awaiting manual review by the platform owner. It remains private until approved. Once approved you can browse and message other approved members here.";
+    if (window.FYP.isNotApproved(error)) return "Your profile is being reviewed by our team. This usually takes less than 24 hours. It stays private until then; afterwards you can browse and message other approved members here.";
     if (/opens after 100 approved|column reference "age" is ambiguous/i.test(message) || (error && error.code === "42702"))
       return "Member discovery is blocked by an older database function that waits for 100 approved members (and fails with an \u201cambiguous age\u201d error). The administrator needs to apply supabase/member_discovery_photos.sql (see the setup guide).";
     if (/jwt|not authenticated|401/i.test(message)) return "Your sign-in has expired. Please log in again.";
@@ -369,6 +378,12 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     ownId = profile.id;
     window.FYP.showSignedIn(profile, data.session.user);
     window.FYP.startUnreadAlerts(db, profile);
+    // First visit straight after joining.
+    if (new URLSearchParams(location.search).get("welcome") === "1" && profile.approved === true) {
+      document.getElementById("welcome-new").classList.remove("hidden");
+      history.replaceState(null, "", "discover.html");
+    }
+    document.getElementById("welcome-close").addEventListener("click", () => document.getElementById("welcome-new").classList.add("hidden"));
     document.getElementById("official-self").classList.toggle("hidden", profile.is_official !== true);
     if (profile.approved === true && profile.is_official !== true) showOfficial();
     // Everyone starts with every approved member visible (any gender, ages 18–120, all

@@ -21,7 +21,7 @@ begin
 end $$;
 grant execute on function public.t_assert(boolean, text), public.t_denied(text, text) to anon, authenticated;
 
--- Synthetic accounts. A, B and E will be approved; C stays pending; F has no profile yet.
+-- Synthetic accounts. A, B and E are approved; the owner returns C to pending; F has no profile yet.
 insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
  ('aaaaaaaa-0000-4000-8000-000000000001', 'member-a@test.invalid', now(), '{"profile_type":"member_registration","first_name":"TestA","age":29,"gender":"Woman","location":"Uganda","city":"Kampala","relationship_goal":"Marriage","bio":"Synthetic test A","partner_preference":"secret-pref-a"}'),
  ('bbbbbbbb-0000-4000-8000-000000000002', 'member-b@test.invalid', now(), '{"profile_type":"member_registration","first_name":"TestB","age":34,"gender":"Man","location":"Botswana","city":"Gaborone","relationship_goal":"Serious relationship","bio":"Synthetic test B"}'),
@@ -50,8 +50,12 @@ values ('LegacyOne', 30, 'Woman', 'Uganda', 'Mbarara', 'Marriage', 'Legacy recor
        ('LegacyTwo', 45, 'Man', 'Botswana', 'Maun', 'Friendship', 'Legacy approved without account', 'legacy2@test.invalid', '+26770000002', true);
 
 select t_assert((select count(*) = 4 from members where user_id is not null), 'four signup profiles were created by the trigger');
-select t_assert((select bool_and(not approved) from members where user_id is not null), 'new profiles start unapproved');
-update members set approved = true where user_id in ('aaaaaaaa-0000-4000-8000-000000000001', 'bbbbbbbb-0000-4000-8000-000000000002', 'eeeeeeee-0000-4000-8000-000000000005');
+-- Instant approval: confirmed signups are approved as soon as their profile is created.
+select t_assert((select bool_and(approved) from members where user_id is not null), 'new signup profiles are approved straight away');
+select t_assert((select bool_and(not approved) from members where first_name = 'LegacyOne'), 'records with no linked account stay pending');
+-- Moderation still works: the owner returns C to pending, and C stays pending for the rest.
+update members set approved = false where user_id = 'cccccccc-0000-4000-8000-000000000003';
+select t_assert((select not approved from members where user_id = 'cccccccc-0000-4000-8000-000000000003'), 'the owner can still set a member back to pending');
 select id as a_id from members where user_id = 'aaaaaaaa-0000-4000-8000-000000000001' \gset
 select id as b_id from members where user_id = 'bbbbbbbb-0000-4000-8000-000000000002' \gset
 select id as c_id from members where user_id = 'cccccccc-0000-4000-8000-000000000003' \gset
@@ -161,9 +165,12 @@ select t_denied('insert into public.members (user_id, first_name, age, gender, l
 select t_denied('insert into public.members (user_id, first_name, age, gender, location, city, relationship_goal, bio, approved) values (auth.uid(), ''F'', 17, ''Woman'', ''Botswana'', ''Maun'', ''Marriage'', ''bio'', false)', 'under-18 profiles are rejected');
 insert into public.members (user_id, first_name, age, gender, location, city, relationship_goal, bio, approved)
 values (auth.uid(), 'TestF', 31, 'Woman', 'Botswana', 'Francistown', 'Marriage', 'Synthetic F', false);
-select t_assert(true, 'MANDATORY 1 (database part): a signed-in member with no profile can create one pending profile from their own signup data');
+select t_assert(true, 'MANDATORY 1 (database part): a signed-in member with no profile can create one profile from their own signup data');
 select t_denied('insert into public.members (user_id, first_name, age, gender, location, city, relationship_goal, bio, approved) values (auth.uid(), ''F'', 31, ''Woman'', ''Botswana'', ''Maun'', ''Marriage'', ''bio'', false)', 'a second profile for the same account is rejected');
 commit;
+select t_assert((select approved from members where user_id = 'ffffffff-0000-4000-8000-000000000006'), 'a profile the website creates is approved straight away too');
+-- (The owner returns F to pending so the checks below keep their earlier member lists.)
+update members set approved = false where user_id = 'ffffffff-0000-4000-8000-000000000006';
 
 -- ===== Legacy registrations are preserved =====
 select t_assert((select count(*) = 2 from members where user_id is null), 'MANDATORY 4 (database part): legacy registrations without accounts remain preserved and unlinked');
@@ -315,7 +322,7 @@ commit;
 -- The signup trigger and the owner are never blocked by the reserved-name rule.
 insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
  ('18181818-0000-4000-8000-000000000018', 'admin-name@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Admin","age":30,"gender":"Woman","location":"Uganda","city":"Kampala","relationship_goal":"Marriage","bio":"x"}');
-select t_assert(exists (select 1 from members where user_id = '18181818-0000-4000-8000-000000000018' and not approved), 'a signup with a reserved name still succeeds (pending, for the owner to review)');
+select t_assert(exists (select 1 from members where user_id = '18181818-0000-4000-8000-000000000018' and not approved), 'a signup with a reserved name still succeeds, but stays pending for the owner (no instant approval)');
 update members set first_name = 'Owner Renamed Official' where id = :'ot_id';
 select t_assert((select first_name = 'Owner Renamed Official' from members where id = :'ot_id'), 'the owner can rename any profile');
 
@@ -328,8 +335,8 @@ insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) value
  ('19191919-0000-4000-8000-000000000019', 'kenya@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Wanjiru","age":28,"gender":"Woman","location":"Kenya","city":"Nairobi","relationship_goal":"Marriage","bio":"Synthetic Kenya"}'),
  ('20202020-0000-4000-8000-000000000020', 'uk@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Oliver","age":36,"gender":"Man","location":"United Kingdom","city":"London","relationship_goal":"Serious relationship","bio":"Synthetic UK"}'),
  ('21212121-0000-4000-8000-000000000021', 'narnia@test.invalid', now(), '{"profile_type":"member_registration","first_name":"Lucy","age":30,"gender":"Woman","location":"Narnia","city":"Cair","relationship_goal":"Marriage","bio":"x"}');
-select t_assert((select count(*) = 2 from members where user_id in ('19191919-0000-4000-8000-000000000019', '20202020-0000-4000-8000-000000000020') and not approved),
-  'signups from Kenya and the United Kingdom create pending profiles');
+select t_assert((select count(*) = 2 from members where user_id in ('19191919-0000-4000-8000-000000000019', '20202020-0000-4000-8000-000000000020') and approved),
+  'signups from Kenya and the United Kingdom create profiles, approved straight away');
 select t_assert(not exists (select 1 from members where user_id = '21212121-0000-4000-8000-000000000021'), 'a signup with an unknown country creates no profile and does not fail');
 select id as k_id from members where user_id = '19191919-0000-4000-8000-000000000019' \gset
 update members set approved = true where id = :'k_id';
@@ -352,7 +359,7 @@ begin; select set_config('request.jwt.claim.sub', '22222222-0000-4000-8000-00000
 select t_denied('insert into public.members (user_id, first_name, age, gender, location, city, relationship_goal, bio, approved) values (auth.uid(), ''Ama'', 30, ''Woman'', ''Narnia'', ''Accra'', ''Marriage'', ''bio'', false)', 'the website fallback cannot create a profile with an unknown country');
 insert into public.members (user_id, first_name, age, gender, location, city, relationship_goal, bio, approved)
 values (auth.uid(), 'Ama', 30, 'Woman', 'Ghana', 'Accra', 'Marriage', 'Synthetic Ghana', false);
-select t_assert((select location = 'Ghana' and not approved from members), 'the website fallback creates a pending profile from Ghana');
+select t_assert((select location = 'Ghana' and approved from members), 'the website fallback creates a profile from Ghana, approved straight away');
 commit;
 
 -- ===== Profession =====
@@ -371,3 +378,18 @@ commit;
 begin; set local role anon;
 select t_denied(format('select * from public.member_professions(array[%L]::uuid[])', :'a_id'), 'visitors cannot read professions');
 commit;
+
+-- ===== Instant approval: moderation is kept =====
+begin; select set_config('request.jwt.claim.sub', 'cccccccc-0000-4000-8000-000000000003', true); set local role authenticated;
+select t_denied('update public.members set approved = true where user_id = auth.uid()', 'a member returned to pending cannot re-approve themselves');
+commit;
+select t_assert((select not approved from members where user_id = 'cccccccc-0000-4000-8000-000000000003'), 'they stay pending until the owner approves them');
+update members set first_name = 'TestC' where user_id = 'cccccccc-0000-4000-8000-000000000003';
+select t_assert((select not approved from members where user_id = 'cccccccc-0000-4000-8000-000000000003'), 'later profile edits never re-approve anyone');
+-- A profile created for an account that has not confirmed its email (owner invitation) stays pending.
+insert into auth.users (id, email, raw_user_meta_data) values ('30303030-0000-4000-8000-000000000030', 'invited@test.invalid', '{}');
+insert into members (user_id, first_name, age, gender, location, city, relationship_goal, bio, approved)
+values ('30303030-0000-4000-8000-000000000030', 'Invited', 33, 'Woman', 'Kenya', 'Nairobi', 'Marriage', 'Invited by the owner', false);
+select t_assert((select not approved from members where first_name = 'Invited'), 'profiles of unconfirmed (invited) accounts stay pending');
+delete from members where first_name = 'Invited';
+delete from auth.users where id = '30303030-0000-4000-8000-000000000030';

@@ -12,7 +12,7 @@ const repo = fileURLToPath(new URL("../../", import.meta.url));
 const PG = { host: process.env.PGHOST || "/var/run/postgresql", port: Number(process.env.PGPORT || 5432), user: process.env.PGUSER || "postgres" };
 export const SUPABASE = "https://cyvkpcwjkeifpvegwhpt.supabase.co";
 const CDN = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js";
-export const ALL = ["supabase/registration_setup.sql", "supabase/launch_features_secure.sql", "supabase/member_discovery_photos.sql", "supabase/discovery_messaging_safety.sql", "supabase/legacy_registrations.sql", "supabase/member_extra_photos.sql", "supabase/official_account.sql", "supabase/worldwide_members.sql", "supabase/member_profession.sql", "supabase/everyone_visible.sql"];
+export const ALL = ["supabase/registration_setup.sql", "supabase/launch_features_secure.sql", "supabase/member_discovery_photos.sql", "supabase/discovery_messaging_safety.sql", "supabase/legacy_registrations.sql", "supabase/member_extra_photos.sql", "supabase/official_account.sql", "supabase/worldwide_members.sql", "supabase/member_profession.sql", "supabase/everyone_visible.sql", "supabase/instant_approval.sql"];
 export const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
 
 async function freshDatabase(name, files) {
@@ -76,7 +76,9 @@ export async function setup(name, files = ALL) {
   async function member(email, meta, { approved = false, password = "Test-pass-123" } = {}) {
     const row = (await sql("insert into auth.users (email, email_confirmed_at, raw_user_meta_data) values ($1, now(), $2) returning id", [email, meta])).rows[0];
     gateway.passwords.set(email, password);
-    if (approved) await sql("update public.members set approved = true where user_id = $1", [row.id]);
+    // New confirmed sign-ups are approved straight away (instant_approval.sql); `approved: false`
+    // stands for a member the owner has returned to pending.
+    await sql("update public.members set approved = $2 where user_id = $1", [row.id, approved]);
     return row.id;
   }
   async function login(page, email, password = "Test-pass-123") {
@@ -95,15 +97,28 @@ export async function setup(name, files = ALL) {
     await page.fill("#password", v.password);
     await page.fill("#age", v.age);
     await page.selectOption("#gender", v.gender);
-    await page.selectOption("#location", v.location);
-    await page.fill("#city", v.city);
+    if (v.adult !== false && v.privacy !== false) await page.check("#agree");
+    // Step 2 (where you live, photo, optional details) opens after "Continue". When step 1 is
+    // deliberately incomplete the step-2 answers are still filled in behind it.
+    const valid = await page.evaluate(() => ["email", "password", "first_name", "age", "gender"]
+      .every(id => document.getElementById(id).checkValidity()) && document.getElementById("agree").checked);
+    if (valid) {
+      await page.click("#join-continue");
+      await page.waitForSelector("#join-step-2:not(.hidden)");
+      await page.selectOption("#location", v.location);
+      await page.fill("#city", v.city);
+    } else {
+      await page.evaluate(({ location, city }) => {
+        document.getElementById("location").value = location; document.getElementById("city").value = city;
+      }, v);
+    }
     // Who to meet, goal, profession and bio are folded under the optional "more about you".
     await page.evaluate(() => { document.getElementById("more-about-you").open = true; });
-    if (v.seeking) await page.check(`input[name=seeking_gender][value="${v.seeking}"]`);
-    if (v.goal) await page.selectOption("#relationship_goal", v.goal);
-    if (v.profession) await page.fill("#profession", v.profession);
-    if (v.bio !== undefined) await page.fill("#bio", v.bio);
-    if (v.adult !== false && v.privacy !== false) await page.check("#agree");
+    const set = async (sel, fn) => { if (valid) await fn(); else await page.evaluate(([s, val]) => { const el = document.querySelector(s); if (el.type === "checkbox" || el.type === "radio") el.checked = true; else el.value = val; }, sel); };
+    if (v.seeking) await set([`input[name=seeking_gender][value="${v.seeking}"]`], () => page.check(`input[name=seeking_gender][value="${v.seeking}"]`));
+    if (v.goal) await set(["#relationship_goal", v.goal], () => page.selectOption("#relationship_goal", v.goal));
+    if (v.profession) await set(["#profession", v.profession], () => page.fill("#profession", v.profession));
+    if (v.bio !== undefined) await set(["#bio", v.bio], () => page.fill("#bio", v.bio));
   }
   return {
     base, gateway, sql, newPage, member, login, fillRegistration, repo,

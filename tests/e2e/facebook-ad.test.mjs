@@ -25,13 +25,27 @@ test("a visitor from a Facebook ad can open the site and register", async () => 
     await page.waitForSelector("#register-form");
     await page.waitForLoadState("load");
 
-    // The country is guessed from the phone's time zone and the optional extras start folded.
+    // Step 1 asks only for the account basics; the optional extras wait for step 2.
+    assert.equal(await page.isVisible("#location"), false, "the country is asked in the short second step");
+    assert.equal(await page.isVisible("#bio"), false, "optional questions are folded away");
+    assert.match(await page.textContent("#join-step-1"), /Free · no card needed/);
+    await page.fill("#first_name", "Neo");
+    await page.fill("#email", "neo-fb@test.invalid");
+    await page.fill("#password", "Test-pass-123");
+    await page.fill("#age", "31");
+    await page.selectOption("#gender", "Man");
+    await page.check("#agree");
+    await page.click("#join-continue");
+    await page.waitForSelector("#join-step-2:not(.hidden)");
+
+    // The country is guessed from the phone's time zone.
     assert.equal(await page.inputValue("#location"), "Botswana", "the country is pre-selected from the time zone");
     assert.ok(await page.isVisible("#location-guess"), "the page says where the country guess came from");
     assert.equal(await page.isVisible("#bio"), false, "optional questions are folded away");
-    // The photo is never folded away: a big badge asks for it before the optional extras.
+    // The photo is never folded away, and is clearly optional.
     assert.ok(await page.isVisible("#photo-badge"), "the photo badge is visible without opening anything");
-    assert.match(await page.textContent("#photo-badge"), /most important step/);
+    assert.match(await page.textContent("#photo-badge"), /stand out/);
+    assert.doesNotMatch(await page.textContent("#register-form"), /may be removed/);
     assert.ok(await page.isVisible("#photo"), "the photo can be chosen without opening anything");
     await page.setInputFiles("#photo", { name: "me.png", mimeType: "image/png", buffer: PNG });
     await page.waitForSelector("#photo-badge.done");
@@ -39,21 +53,15 @@ test("a visitor from a Facebook ad can open the site and register", async () => 
     await page.setInputFiles("#photo", []);
     await page.waitForSelector("#photo-badge:not(.done)");
 
-    await page.fill("#first_name", "Neo");
-    await page.fill("#email", "neo-fb@test.invalid");
-    await page.fill("#password", "Test-pass-123");
-    await page.fill("#age", "31");
-    await page.selectOption("#gender", "Man");
     await page.fill("#city", "Gaborone");
     // The quick path: who to meet, goal, bio and profession are left for later.
-    await page.check("#agree");
     await page.click("#register-form button[type=submit]");
-    await page.waitForSelector("#success-view:not(.hidden)");
-    await env.sql("update auth.users set email_confirmed_at = now() where email = 'neo-fb@test.invalid'");
+    await page.waitForURL(/discover\.html/);
+    await page.waitForSelector("#welcome-new:not(.hidden)");
 
     const row = (await env.sql("select m.location, m.approved, m.relationship_goal, m.seeking_gender, m.bio like 'Hello! I''m Neo%' as starter from public.members m join auth.users u on u.id = m.user_id where u.email = 'neo-fb@test.invalid'")).rows[0];
-    assert.deepEqual(row, { location: "Botswana", approved: false, relationship_goal: "Exploring connections", seeking_gender: null, starter: true },
-      "a pending profile is created from just the basics, ready to complete later");
+    assert.deepEqual(row, { location: "Botswana", approved: true, relationship_goal: "Exploring connections", seeking_gender: null, starter: true },
+      "an approved profile is created from just the basics, ready to complete later");
     for (const redirect of signupRedirects) assert.ok(!redirect || !redirect.includes("fbclid"), "the confirmation email link does not carry Facebook tracking: " + redirect);
 
     // The Page's Sign up button may also link straight to the form with tracking added.
@@ -65,6 +73,9 @@ test("a visitor from a Facebook ad can open the site and register", async () => 
 
     // A file that is not a photo gets a visible message right in the photo badge.
     await direct.fill("#email", "kai-fb@test.invalid");
+    await direct.fill("#password", "Test-pass-123"); await direct.fill("#first_name", "Kai");
+    await direct.fill("#age", "30"); await direct.selectOption("#gender", "Man"); await direct.check("#agree");
+    await direct.click("#join-continue");
     await direct.setInputFiles("#photo", { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("not a photo") });
     await direct.click("#register-form button[type=submit]");
     assert.ok(await direct.isVisible("#photo-error"), "the photo error is visible");

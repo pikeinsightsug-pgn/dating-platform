@@ -47,7 +47,7 @@ test("discovery audit: independent accounts, same display names, pending and unl
     }, ids["Sam-30"]);
     assert.deepEqual(direct, { browse: "42501", one: "42501", table: ["Pat"] });
     await page.goto(env.base + "discover.html");
-    await page.waitForFunction(() => /awaiting manual review/.test(document.getElementById("status").textContent));
+    await page.waitForFunction(() => /being reviewed by our team/.test(document.getElementById("status").textContent));
     assert.equal(await page.locator("#profiles .card").count(), 0);
   });
 

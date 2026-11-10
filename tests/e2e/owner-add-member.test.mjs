@@ -1,6 +1,6 @@
 // The owner helps people who could not finish registering: confirming someone whose email
 // never arrived, and inviting someone who could not register at all. The owner never sets a
-// password and nobody is approved automatically. Every person here is invented.
+// password. People the owner adds before they accept stay pending until the owner approves them. Every person here is invented.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { setup, profile, SUPABASE } from "./harness.mjs";
@@ -40,20 +40,20 @@ test("owner adds or helps members who could not register", async (t) => {
   };
 
   await t.test("someone whose confirmation email never arrived: the owner confirms them with just their email", async () => {
+    env.gateway.options.requireEmailConfirmation = true; // as when the email never arrived
     const page = await env.newPage({ mobile: true });
     await env.fillRegistration(page, { name: "Naledi", email: "naledi@test.invalid", gender: "Woman", seeking: "Men", min: "25", max: "45", location: "Botswana" });
     await page.click("#register-form button[type=submit]");
     await page.waitForSelector("#success-view:not(.hidden)");
+    env.gateway.options.requireEmailConfirmation = false;
     assert.deepEqual(await rows("naledi@test.invalid"), [{ first_name: null, approved: null, location: null, confirmed: false }], "stuck: unconfirmed, no profile");
 
     assert.match(await add({ email: "naledi@test.invalid" }), /is confirmed\. They can now log in with the password they chose/);
-    assert.deepEqual(await rows("naledi@test.invalid"), [{ first_name: "Naledi", approved: false, location: "Botswana", confirmed: true }], "their own answers, pending");
+    assert.deepEqual(await rows("naledi@test.invalid"), [{ first_name: "Naledi", approved: true, location: "Botswana", confirmed: true }], "their own answers, approved like any confirmed sign-up");
 
-    // She logs in with her own password and sees the review message.
+    // She logs in with her own password and goes straight to Discover.
     await env.login(page, "naledi@test.invalid");
-    await page.waitForURL(/dashboard\.html$/);
-    await page.waitForFunction(() => /awaiting manual review/.test(document.getElementById("approval-status").textContent));
-    assert.equal(await card("Naledi").getByRole("button", { name: "Approve" }).isEnabled(), true);
+    await page.waitForURL(/discover\.html$/);
   });
 
   await t.test("someone who could not register at all: the owner fills in their details and they accept an invitation", async () => {
@@ -79,7 +79,7 @@ test("owner adds or helps members who could not register", async (t) => {
     await page.fill("#recovery-form [name=password_confirm]", "Achan-pass-123");
     await page.click("#recovery-form button[type=submit]");
     await page.waitForURL(/dashboard\.html/);
-    await page.waitForFunction(() => /awaiting manual review/.test(document.getElementById("approval-status").textContent));
+    await page.waitForFunction(() => /being reviewed by our team/.test(document.getElementById("approval-status").textContent));
     assert.equal(await page.inputValue("[name=first_name]"), "Achan", "the details the owner entered");
 
     // The owner approves; Achan logs in with her own password and meets members.
@@ -91,7 +91,7 @@ test("owner adds or helps members who could not register", async (t) => {
     await env.login(again, "achan@test.invalid", "Achan-pass-123");
     await again.waitForURL(/discover\.html$/);
     await again.waitForSelector("#profiles .card");
-    assert.deepEqual(await again.locator("#profiles .card h2").allTextContents(), ["Kabo, 34"]);
+    assert.deepEqual((await again.locator("#profiles .card h2").allTextContents()).sort(), ["Kabo, 34", "Naledi, 29"]);
     assert.equal((await rows("achan@test.invalid")).length, 1, "exactly one profile");
   });
 
@@ -103,7 +103,7 @@ test("owner adds or helps members who could not register", async (t) => {
     assert.match(await add({ email: "young@test.invalid", first_name: "Young", age: 17, gender: "Man", location: "Uganda",
       city: "Mbale", relationship_goal: "Friendship", bio: "x" }), /18 or over/);
     assert.deepEqual(await rows("young@test.invalid"), []);
-    assert.equal((await env.sql("select count(*)::int n from public.members where approved")).rows[0].n, 2, "only Kabo and the owner-approved Achan are approved");
+    assert.equal((await env.sql("select count(*)::int n from public.members where approved")).rows[0].n, 3, "Kabo, Naledi and the owner-approved Achan; nobody from the refused attempts");
   });
 
   await t.test("members cannot use the owner action", async () => {

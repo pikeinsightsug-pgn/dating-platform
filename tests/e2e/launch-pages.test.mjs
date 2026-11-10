@@ -46,32 +46,52 @@ test("launch pages", async (t) => {
   await t.test("registration shows a clear message for every missing or invalid answer", async () => {
     const page = await env.newPage({ mobile: true });
     await page.goto(env.base + "account.html");
-    await page.click("#register-form button[type=submit]");
+    await page.click("#join-continue");
     const errors = await page.locator("#register-form .error:not(:empty)").allTextContents();
-    for (const expected of [/email address/, /8 characters/, /what to call you/, /your age/i, /gender/, /country you live in/, /city/, /18 or older/, /privacy notice/]) {
+    for (const expected of [/email address/, /8 characters/, /what to call you/, /your age/i, /gender/, /18 or older/, /privacy notice/]) {
       assert.ok(errors.some(e => expected.test(e)), "message for " + expected);
     }
+    assert.equal(await page.isVisible("#join-step-2"), false, "step 2 waits until step 1 is complete");
     assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), "email", "focus moves to the first problem");
 
     await env.fillRegistration(page, { name: "Young", email: "young@test.invalid", age: "17", password: "short" });
-    await page.click("#register-form button[type=submit]");
+    await page.click("#join-continue");
     assert.match(await page.textContent("#age-error"), /18 or older/);
     assert.match(await page.textContent("#password-error"), /8 characters/);
     // "Show password" lets people check what they typed instead of typing it twice.
     await page.check("#show_password");
     assert.equal(await page.getAttribute("#password", "type"), "text");
+
+    // Step 2: the country and city are asked for before the account is created.
+    await page.fill("#age", "29"); await page.fill("#password", "Test-pass-123");
+    await page.click("#join-continue");
+    await page.waitForSelector("#join-step-2:not(.hidden)");
+    await page.selectOption("#location", ""); await page.fill("#city", "");
+    await page.click("#register-form button[type=submit]");
+    assert.match(await page.textContent("#location-error"), /country you live in/);
+    assert.match(await page.textContent("#city-error"), /city/);
     assert.equal((await env.sql("select count(*)::int as n from auth.users where email = 'young@test.invalid'")).rows[0].n, 0, "nothing was submitted");
+
+    // Back returns to step 1 with everything kept.
+    await page.click("#join-back");
+    await page.waitForSelector("#join-step-1:not(.hidden)");
+    assert.equal(await page.inputValue("#first_name"), "Young");
   });
 
   await t.test("after an early Create press, the next tap lands where the person aimed", async () => {
     const page = await env.newPage({ mobile: true });
     await page.goto(env.base + "account.html");
-    await page.click("#register-form button[type=submit]");
+    await page.click("#join-continue");
     await page.fill("#first_name", "Tapper");
     await page.fill("#email", "tapper@test.invalid");
     await page.fill("#password", "Test-pass-123");
     await page.fill("#age", "29");
     await page.selectOption("#gender", "Woman");
+    await page.check("#agree");
+    await page.click("#join-continue");
+    await page.waitForSelector("#join-step-2:not(.hidden)");
+    await page.click("#register-form button[type=submit]");
+    assert.notEqual(await page.textContent("#city-error"), "", "the early press asks for the city");
     await page.fill("#city", "Kampala");
     // Tapping a chip takes focus off the city box; its message must already be gone so nothing moves.
     await page.evaluate(() => { document.getElementById("more-about-you").open = true; });
@@ -90,13 +110,12 @@ test("launch pages", async (t) => {
       await page.waitForFunction(() => /already/.test(document.getElementById("email-error").textContent));
       assert.equal(await page.isVisible("#success-view"), false);
     }
-    env.gateway.options.requireEmailConfirmation = true;
+    env.gateway.options.requireEmailConfirmation = false;
     assert.equal((await env.sql("select count(*)::int as n from auth.users where email = 'taken@test.invalid'")).rows[0].n, 1);
     assert.equal((await env.sql("select count(*)::int as n from public.members where first_name in ('Taken', 'Again')")).rows[0].n, 1);
   });
 
   await t.test("registration with an optional photo (Android file with no type) saves the profile, profession and photo", async () => {
-    env.gateway.options.requireEmailConfirmation = false; // sign-in straight after signup
     const page = await env.newPage({ mobile: true });
     await env.fillRegistration(page, { name: "Photogenic", email: "photo-signup@test.invalid", gender: "Woman", seeking: "Men", profession: "Nurse", bio: "" });
     await page.evaluate(bytes => {
@@ -106,15 +125,15 @@ test("launch pages", async (t) => {
       input.dispatchEvent(new Event("change", { bubbles: true }));
     }, [...PNG]);
     await page.click("#register-form button[type=submit]");
-    await page.waitForURL(/dashboard\.html$/);
-    env.gateway.options.requireEmailConfirmation = true;
+    await page.waitForURL(/discover\.html\?welcome=1$|discover\.html$/);
     const row = (await env.sql("select m.* from public.members m join auth.users u on u.id = m.user_id where u.email = 'photo-signup@test.invalid'")).rows[0];
     assert.equal(row.seeking_gender, "Men");
     assert.deepEqual([row.preferred_age_min, row.preferred_age_max], [null, null], "age range is no longer asked when joining");
     assert.equal(row.profession, "Nurse");
     assert.equal(row.bio, "Hello! I'm Photogenic from Kampala. I'm new on P.K CONNECT. Say hi 👋", "an empty bio gets a starter line");
-    assert.equal(row.approved, false, "new members always start pending");
+    assert.equal(row.approved, true, "new members are approved straight away");
     assert.ok(row.profile_photo_url && row.profile_photo_url.startsWith(row.user_id + "/"), "photo stored in the member's private folder");
+    await page.goto(env.base + "dashboard.html");
     await page.waitForSelector("#photo-preview:not(.hidden)");
   });
 
@@ -247,7 +266,7 @@ test("launch pages", async (t) => {
     await env.login(newbie, "newbie@test.invalid");
     await newbie.waitForURL(/dashboard\.html$/);
     await newbie.goto(env.base + "discover.html");
-    await newbie.waitForFunction(() => /awaiting manual review/.test(document.getElementById("status").textContent));
+    await newbie.waitForFunction(() => /being reviewed by our team/.test(document.getElementById("status").textContent));
   });
 });
 

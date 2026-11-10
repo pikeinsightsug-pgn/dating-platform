@@ -61,7 +61,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   </header>
   <p id="signed-in" class="signed-in hidden" role="status"></p>
   <section id="profile-panel" class="panel hidden">
-    <div class="notice" id="approval-guidance"><strong>How approval works:</strong> The platform owner reviews member profiles and linked accounts manually. Until your profile is approved, it stays private and you cannot browse or message other members. Approval is never automatic. No payment is requested.</div>
+    <div class="notice hidden" id="approval-guidance"><strong>About approval:</strong> New members can start browsing and messaging straight away. Our team may review a profile, for example after a report; while a profile is under review it stays private and cannot browse or message other members. No payment is requested.</div>
     <h1>My profile</h1>
     <p id="approval-status" role="status" aria-live="polite"></p>
     <div id="photo-reminder" class="photo-reminder hidden" role="note"><strong>📸 Add your profile photo</strong><span>Your profile has no photo yet. Members with a clear photo get far more interest, and we can review your profile faster.</span><a class="btn" href="#photo-title">Add my photo</a></div>
@@ -156,9 +156,10 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   }
   function showApproval(profile) {
     document.getElementById("approval-status").classList.toggle("pending-welcome", !profile.approved);
+    document.getElementById("approval-guidance").classList.toggle("hidden", profile.approved === true);
     document.getElementById("approval-status").textContent = profile.approved
       ? "Your profile is approved. Use Discover Members above to browse other approved members and send private messages."
-      : "🎉 Welcome! Your profile is awaiting manual review by the platform owner. We aim to approve new members within 24 hours. While you wait, complete your profile below: members with a photo and a few words get far more messages. Discover Members and Messages open after approval.";
+      : "⏳ Your profile is being reviewed by our team. This usually takes less than 24 hours. It stays private until then, and Discover Members and Messages open as soon as it's approved. Meanwhile, complete your profile below. Questions? WhatsApp us on +267 72 965 279.";
   }
   // The official account sees a reminder; approved members get a direct link to message it.
   async function showOfficial(profile) {

@@ -1,7 +1,7 @@
 {
   "name": "P.K CONNECT – Find Your Person",
   "short_name": "P.K CONNECT",
-  "description": "A private, verified dating community for adults 18+. Every profile is reviewed. Free to join.",
+  "description": "A private dating community for adults 18+. Join in about 30 seconds. Free to join.",
   "id": "./",
   "start_url": "./login.html?source=app",
   "scope": "./",
