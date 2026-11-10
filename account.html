@@ -131,6 +131,21 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
   </section>
   <p class="help" style="margin-top:20px">Need help? Email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a> · <a href="privacy.html">Privacy notice</a></p>
 </main>
+<script>
+// On a slow connection the main scripts below can take several seconds to arrive. Until they
+// do, "Continue" says it is getting ready instead of doing nothing, and the step is taken as
+// soon as the page is ready. Enter never sends the form before it is ready.
+(function () {
+  var form = document.getElementById("register-form"), next = document.getElementById("join-continue");
+  form.addEventListener("submit", function (event) { if (!window.joinReady) { event.preventDefault(); next.click(); } });
+  next.addEventListener("click", function () {
+    if (window.joinReady) return;
+    window.joinQueued = true;
+    next.textContent = "⏳ One moment…";
+    next.setAttribute("aria-busy", "true");
+  });
+})();
+</script>
 <script src="assets/vendor/supabase-js-2.117.2.js"></script>
 <script src="assets/member-core.js"></script>
 <script>
@@ -235,6 +250,13 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     say(""); delete form.dataset.tried; showStep(2);
   });
   document.getElementById("join-back").addEventListener("click", () => showStep(1));
+  // Ready: take the step someone already asked for while the page was still loading.
+  window.joinReady = true;
+  if (window.joinQueued) {
+    const next = document.getElementById("join-continue");
+    next.textContent = "Continue →"; next.removeAttribute("aria-busy");
+    next.click();
+  }
   form.addEventListener("change", event => { if (form.dataset.tried) validate(); if (event.target.name === "photo") previewPhoto(); });
   // Also re-check while typing: a message that only vanished when the field lost focus moved
   // the form up mid-tap, so the next chip or button tapped was missed.
@@ -288,6 +310,8 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
   form.addEventListener("submit", async event => {
     event.preventDefault();
     if (busy) return;
+    // Enter on the first step means "Continue", not "Create my account".
+    if (form.dataset.step !== "2") { document.getElementById("join-continue").click(); return; }
     form.dataset.tried = "1";
     const errors = validate();
     if (errors.length) {
@@ -349,6 +373,8 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     } catch (error) {
       say(window.FYP.authErrorMessage(error, "signup"));
       if (error && (error.code === "user_already_exists" || /already registered/i.test(String(error.message)))) {
+        // The email box is on step 1: go back there so the message is seen next to it.
+        showStep(1);
         setError("email", "This email already has an account. Log in or reset your password instead.");
       }
     } finally { registering = false; setBusy(false); }

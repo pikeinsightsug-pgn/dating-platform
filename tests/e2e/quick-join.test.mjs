@@ -66,4 +66,29 @@ test("quick join, then complete the profile", async (t) => {
     const row = (await env.sql("select relationship_goal, seeking_gender, profession from public.members where first_name = 'Quick'")).rows[0];
     assert.deepEqual(row, { relationship_goal: "Marriage", seeking_gender: "Women", profession: "Engineer" });
   });
+
+  await t.test("on a slow phone connection, Continue and Enter work even before the page has fully loaded", async () => {
+    const slow = await env.newPage({ mobile: true });
+    let release;
+    const held = new Promise(r => { release = r; });
+    await slow.route("**/assets/vendor/supabase-js-*.js", async route => { await held; await route.continue(); });
+    await slow.goto(env.base + "account.html", { waitUntil: "commit" });
+    await slow.waitForSelector("#join-continue");
+    await slow.fill("#first_name", "Slow"); await slow.fill("#email", "slow@test.invalid");
+    await slow.fill("#password", "Test-pass-123"); await slow.fill("#age", "40");
+    await slow.selectOption("#gender", "Woman"); await slow.check("#agree");
+    await slow.press("#age", "Enter"); // Enter must never send the half-filled form
+    await slow.click("#join-continue");
+    assert.match(await slow.textContent("#join-continue"), /One moment/, "the tap is acknowledged");
+    assert.doesNotMatch(slow.url(), /password=/, "nothing was sent in the address");
+    release();
+    await slow.waitForSelector("#join-step-2:not(.hidden)");
+    assert.equal(await slow.textContent("#join-continue"), "Continue →");
+    // Enter on step 1 means Continue, never Create.
+    await slow.click("#join-back");
+    await slow.press("#age", "Enter");
+    await slow.waitForSelector("#join-step-2:not(.hidden)");
+    assert.equal(await slow.isVisible("#location-error"), false, "no complaints about the step not yet seen");
+    assert.equal((await env.sql("select count(*)::int n from auth.users where email = 'slow@test.invalid'")).rows[0].n, 0);
+  });
 });

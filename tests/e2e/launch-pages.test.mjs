@@ -108,6 +108,7 @@ test("launch pages", async (t) => {
       await env.fillRegistration(page, { name: "Again", email: "taken@test.invalid" });
       await page.click("#register-form button[type=submit]");
       await page.waitForFunction(() => /already/.test(document.getElementById("email-error").textContent));
+      assert.equal(await page.isVisible("#email-error"), true, "the message is shown next to the email box");
       assert.equal(await page.isVisible("#success-view"), false);
     }
     env.gateway.options.requireEmailConfirmation = false;
