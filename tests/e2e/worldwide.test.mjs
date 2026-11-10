@@ -37,7 +37,8 @@ test("people from anywhere in the world can join and be found", async (t) => {
   await t.test("a member can move their profile to another country", async () => {
     const page = await env.newPage();
     await env.login(page, "thabo-za@test.invalid");
-    await page.goto(page.url().replace(/[^/]*$/, "dashboard.html"));
+    await page.waitForURL(/discover\.html/);
+    await page.goto(env.base + "dashboard.html");
     await page.waitForSelector("#profile-panel:not(.hidden)");
     assert.equal(await page.inputValue("#profile-form [name=location]"), "South Africa", "the saved country is selected");
     await page.selectOption("#profile-form [name=location]", "United Kingdom");
