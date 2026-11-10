@@ -1,5 +1,6 @@
-// A new member stays pending until the owner approves them in the owner console; then
-// discovery, photo upload and two-way messaging work. Every person here is invented.
+// A member the owner has returned to pending (for example after a report) stays hidden until the
+// owner approves them again in the owner console; then discovery, photo upload and two-way
+// messaging work. This also covers sign-up while email confirmation is switched on. Every person here is invented.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { setup, profile, SUPABASE, PNG, confirmCrop } from "./harness.mjs";
@@ -11,6 +12,7 @@ const OWNER = "owner@test.invalid";
 test("Daniel: pending until the owner approves, then discovery, photo and two-way messaging", async (t) => {
   const env = await setup("e2e_daniel");
   t.after(() => env.close());
+  env.gateway.options.requireEmailConfirmation = true;
   env.gateway.options.adminFunction = await loadAdminFunction({
     SUPABASE_URL: env.gateway.url, SUPABASE_ANON_KEY: "anon-test", SUPABASE_SERVICE_ROLE_KEY: TEST_SERVICE_KEY, ADMIN_EMAIL: OWNER
   });
@@ -33,15 +35,18 @@ test("Daniel: pending until the owner approves, then discovery, photo and two-wa
   await daniel.waitForSelector("#success-view:not(.hidden)");
   assert.ok(await daniel.isVisible("#success-photo-note"), "the member is told to add the photo after logging in");
   await env.sql("update auth.users set email_confirmed_at = now() where email = 'daniel@test.invalid'");
+  assert.equal((await env.sql("select approved from public.members where first_name = 'Daniel'")).rows[0].approved, true, "approved as soon as the email is confirmed");
+  // The owner returns Daniel to pending, as they might after a report.
+  await env.sql("update public.members set approved = false where first_name = 'Daniel'");
 
   // 2. Daniel logs in: pending, so only his own profile (the reported symptoms).
   await env.login(daniel, "daniel@test.invalid");
   await daniel.waitForURL(/dashboard\.html$/);
-  await daniel.waitForFunction(() => /awaiting manual review/.test(document.getElementById("approval-status").textContent));
+  await daniel.waitForFunction(() => /being reviewed by our team/.test(document.getElementById("approval-status").textContent));
   await daniel.goto(env.base + "messages.html");
   await daniel.waitForFunction(() => /Messaging opens once/.test(document.getElementById("status").textContent));
     const row = (await env.sql("select m.approved, m.is_test_account, m.profile_photo_url from public.members m join auth.users u on u.id = m.user_id where u.email = 'daniel@test.invalid'")).rows[0];
-  assert.deepEqual(row, { approved: false, is_test_account: false, profile_photo_url: null }, "new members start pending");
+  assert.deepEqual(row, { approved: false, is_test_account: false, profile_photo_url: null }, "returned to pending");
 
   // 3. Owner approves Daniel in the owner console (no SQL), marking him as a test account.
   const owner = await env.newPage();

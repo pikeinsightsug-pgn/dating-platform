@@ -126,3 +126,6 @@ fieldset{border:0;margin:0;padding:0}
 @keyframes photo-badge-glow{0%,100%{box-shadow:0 0 0 0 #b3266333}50%{box-shadow:0 0 0 8px #b3266300}}
 @media (prefers-reduced-motion:reduce){.photo-badge{animation:none}}
 .almost-there{margin:4px 0 -4px;text-align:center;font-weight:700;color:var(--rose-dark)}
+#join-step-1,#join-step-2{display:grid;gap:14px}#join-step-1.hidden,#join-step-2.hidden{display:none}
+.join-reassure{margin:-4px 0 0;text-align:center;font-size:14px;font-weight:600;color:var(--muted)}
+.join-back{justify-self:start;font-size:15px}

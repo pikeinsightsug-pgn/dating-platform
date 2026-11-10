@@ -12,33 +12,22 @@ test("browser journeys on the full migration set", async (t) => {
   const env = await setup("e2e_full");
   t.after(() => env.close());
 
-  await t.test("MANDATORY 1: a new member registers, confirms, logs out and back in without recreating the profile", async () => {
+  await t.test("MANDATORY 1: a new member registers, lands in Discover, logs out and back in without recreating the profile", async () => {
     const page = await env.newPage({ mobile: true });
     await env.fillRegistration(page, { name: "NewTester", email: "new-member@test.invalid", age: "27", location: "Botswana", city: "Gaborone" });
     await page.click("#register-form button[type=submit]");
-    await page.waitForSelector("#success-view:not(.hidden)");
-    assert.match(await page.textContent("#success-message"), /new-member@test\.invalid/);
-    await page.click("#success-view a[href='login.html']");
-    await page.waitForURL(/login\.html$/);
+    // Email confirmation is off in Supabase: the new member is signed in and approved at once.
+    await page.waitForURL(/discover\.html$/);
+    await page.waitForSelector("#welcome-new:not(.hidden)");
+    assert.equal(await page.isVisible("#success-view"), false, "no 'check your email' screen");
+    assert.match(await page.textContent("#welcome-new"), /Welcome to P\.K CONNECT/);
+    await page.reload();
+    assert.equal(await page.isVisible("#welcome-new"), false, "the welcome shows once");
 
-    // Logging in before confirming gives a clear message and a resend option.
-    await page.fill("#login-email", "new-member@test.invalid");
-    await page.fill("#login-password", "Test-pass-123");
-    await page.click("#login-form button[type=submit]");
-    await page.waitForFunction(() => /confirm your email/i.test(document.getElementById("status").textContent));
-    assert.equal(await page.isVisible("#resend-confirmation"), true);
-
-    await env.sql("update auth.users set email_confirmed_at = now() where email = 'new-member@test.invalid'");
-    await page.click("#login-form button[type=submit]");
-    await page.waitForURL(/dashboard\.html$/);
+    await page.goto(env.base + "dashboard.html");
     await page.waitForSelector("#profile-panel:not(.hidden)");
     assert.equal(await page.inputValue("[name=city]"), "Gaborone");
-    assert.match(await page.textContent("#approval-status"), /awaiting manual review/);
-
-    await page.reload();
-    await page.waitForSelector("#profile-panel:not(.hidden)");
-    assert.equal(await page.inputValue("[name=first_name]"), "NewTester", "session and profile survive a refresh");
-
+    assert.equal(await page.isVisible("#approval-guidance"), false, "no review notice for an approved member");
     await page.fill("[name=interests]", "Hiking, cooking");
     await page.click("#save-profile");
     await page.waitForFunction(() => /has been saved/.test(document.getElementById("status").textContent));
@@ -47,11 +36,20 @@ test("browser journeys on the full migration set", async (t) => {
     await page.waitForURL(/login\.html\?signedout=1$/);
     assert.equal(await page.isVisible("#signed-out"), true, "a clear logged-out confirmation");
     await env.login(page, "new-member@test.invalid");
-    await page.waitForURL(/dashboard\.html$/);
+    await page.waitForURL(/discover\.html$/);
+    await page.goto(env.base + "dashboard.html");
     await page.waitForSelector("#profile-panel:not(.hidden)");
     assert.equal(await page.inputValue("[name=interests]"), "Hiking, cooking");
-    const rows = await env.sql("select count(*)::int as n, bool_and(not approved) as pending from public.members m join auth.users u on u.id = m.user_id where u.email = 'new-member@test.invalid'");
-    assert.deepEqual(rows.rows[0], { n: 1, pending: true }, "exactly one pending profile");
+    const rows = await env.sql("select count(*)::int as n, bool_and(approved) as approved from public.members m join auth.users u on u.id = m.user_id where u.email = 'new-member@test.invalid'");
+    assert.deepEqual(rows.rows[0], { n: 1, approved: true }, "exactly one approved profile");
+
+    // Moderation still works: the owner returns the member to pending, and they see a friendly wait message.
+    await env.sql("update public.members m set approved = false from auth.users u where u.id = m.user_id and u.email = 'new-member@test.invalid'");
+    const returned = await env.newPage({ mobile: true });
+    await env.login(returned, "new-member@test.invalid");
+    await returned.waitForURL(/dashboard\.html$/);
+    await returned.waitForFunction(() => /being reviewed by our team.*less than 24 hours/.test(document.getElementById("approval-status").textContent));
+    assert.equal(await returned.isVisible("#approval-guidance"), true);
   });
 
   await t.test("a confirmed signup whose profile the trigger did not create is healed at login (no recovery screen)", async () => {
@@ -63,9 +61,10 @@ test("browser journeys on the full migration set", async (t) => {
     env.gateway.passwords.set("heal@test.invalid", "Test-pass-123");
     const page = await env.newPage();
     await env.login(page, "heal@test.invalid");
-    await page.waitForURL(/dashboard\.html$/);
-    await page.waitForSelector("#profile-panel:not(.hidden)");
-    assert.equal((await env.sql("select count(*)::int as n from public.members where user_id = $1", [id])).rows[0].n, 1);
+    await page.waitForURL(/discover\.html$/);
+    assert.deepEqual((await env.sql("select count(*)::int as n, bool_and(approved) as approved from public.members where user_id = $1", [id])).rows[0], { n: 1, approved: true });
+    // Returned to pending so the later discovery checks start from a known list.
+    await env.sql("update public.members set approved = false where user_id = $1", [id]);
   });
 
   await t.test("MANDATORY 7: the first approved member sees a helpful empty discovery message", async () => {
@@ -351,7 +350,7 @@ test("browser journeys on the full migration set", async (t) => {
     await env.login(page, "pending@test.invalid");
     await page.waitForURL(/dashboard\.html$/);
     await page.goto(env.base + "discover.html");
-    await page.waitForFunction(() => /awaiting manual review/.test(document.getElementById("status").textContent));
+    await page.waitForFunction(() => /being reviewed by our team/.test(document.getElementById("status").textContent));
     assert.equal(await page.locator("#profiles .card").count(), 0);
     await page.goto(env.base + "messages.html");
     await page.waitForFunction(() => /opens once the platform owner approves/.test(document.getElementById("status").textContent));

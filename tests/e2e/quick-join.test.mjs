@@ -1,5 +1,5 @@
-// Joining takes only the basics (name, email, password, age, gender, country, city); the
-// rest is guided afterwards by "Complete your profile". Every person here is invented.
+// Joining takes only the basics in two short steps (account and about you, then country and
+// city); the member lands in Discover and the rest is guided by "Complete your profile". Every person here is invented.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { setup, PNG, confirmCrop } from "./harness.mjs";
@@ -7,13 +7,12 @@ import { setup, PNG, confirmCrop } from "./harness.mjs";
 test("quick join, then complete the profile", async (t) => {
   const env = await setup("e2e_quick_join");
   t.after(() => env.close());
-  env.gateway.options.requireEmailConfirmation = false;
   const page = await env.newPage({ mobile: true });
 
   await t.test("the join page asks only the basics, reassures, and offers WhatsApp help", async () => {
     await page.goto(env.base + "account.html");
     assert.match(await page.textContent("#register-title"), /30 seconds/);
-    assert.match(await page.textContent(".trust-strip"), /free.*Private.*real person/s);
+    assert.match(await page.textContent(".trust-strip"), /free.*Private.*Report.*block/s);
     assert.match(await page.getAttribute("#whatsapp-help", "href"), /^https:\/\/wa\.me\/\d+/);
     assert.equal(await page.isVisible("#relationship_goal"), false, "goal is folded away");
     assert.equal(await page.isVisible('input[name=seeking_gender]'), false, "who to meet is folded away");
@@ -22,18 +21,28 @@ test("quick join, then complete the profile", async (t) => {
     await page.fill("#password", "Test-pass-123");
     await page.fill("#age", "33");
     await page.selectOption("#gender", "Man");
+    await page.check("#agree");
+    assert.equal(await page.isVisible("#location"), false, "the country waits for step 2");
+    assert.match(await page.textContent("#join-step-1 .join-reassure"), /Free · no card needed/);
+    await page.click("#join-continue");
+    await page.waitForSelector("#join-step-2:not(.hidden)");
+    assert.equal(await page.isVisible("#whatsapp-help"), true, "WhatsApp help stays easy to find");
     await page.selectOption("#location", "Botswana");
     await page.fill("#city", "Gaborone");
-    await page.check("#agree");
+    assert.match(await page.textContent("#join-step-2"), /no card needed.*never ask for money/s);
     await page.click("#register-form button[type=submit]");
-    await page.waitForURL(/dashboard\.html$/);
-    await page.waitForFunction(() => /awaiting manual review/.test(document.getElementById("approval-status").textContent));
+    await page.waitForURL(/discover\.html$/);
+    await page.waitForSelector("#welcome-new:not(.hidden)");
+    await page.waitForSelector("#profiles, #status");
     const row = (await env.sql("select relationship_goal, seeking_gender, approved from public.members where first_name = 'Quick'")).rows[0];
-    assert.deepEqual(row, { relationship_goal: "Exploring connections", seeking_gender: null, approved: false });
+    assert.deepEqual(row, { relationship_goal: "Exploring connections", seeking_gender: null, approved: true });
+    await page.click("#welcome-new a[href^='dashboard.html']");
+    await page.waitForURL(/dashboard\.html/);
   });
 
   await t.test("My Profile shows what is left, and it updates as the member completes it", async () => {
     await page.waitForSelector("#profile-checklist:not(.hidden)");
+    assert.equal(await page.isVisible("#approval-guidance"), false, "no review notice for an approved member");
     assert.equal(await page.textContent("#checklist-progress"), "0 of 5 done");
     assert.match(await page.textContent("#checklist-items"), /photo.*looking for.*meet.*few words.*profession/is);
 

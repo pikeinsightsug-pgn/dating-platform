@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="P.K CONNECT – Find Your Person">
 <meta property="og:title" content="Join P.K CONNECT – Find Your Person ❤️">
-<meta property="og:description" content="Join in about 30 seconds. Every profile is checked by a real person, and your photos and messages stay private. Adults 18+.">
+<meta property="og:description" content="Join in about 30 seconds and start meeting genuine singles. Free, private, and you can block or report anyone. Adults 18+.">
 <meta property="og:url" content="https://pkconnectonline.com/account.html">
 <meta property="og:image" content="https://pkconnectonline.com/assets/share-card.jpg">
 <meta property="og:image:width" content="1200">
@@ -39,11 +39,12 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     <h1 id="register-title">Join in 30 seconds ✨</h1>
     <p class="muted">Just the basics now. You can add the rest after you're in.</p>
     <ul class="trust-strip" aria-label="Why join">
-      <li>✅ 100% free · no card needed</li><li>🔒 Private</li><li>👤 Every profile checked by a real person</li><li>🔞 Adults 18+</li>
+      <li>✅ 100% free · no card needed</li><li>🔒 Private</li><li>🛡️ Report &amp; block anytime</li><li>🔞 Adults 18+</li>
     </ul>
     <a class="whatsapp-help" id="whatsapp-help" href="https://wa.me/26772965279?text=Hello%20P.K%20CONNECT%2C%20I%20have%20a%20question%20about%20joining" target="_blank" rel="noopener">💬 Questions before joining? <strong>WhatsApp us</strong></a>
 
     <form id="register-form" class="form-grid card" novalidate style="margin-top:16px">
+      <div id="join-step-1">
       <p class="step-title"><span class="step-num">1</span>🔐 Your account</p>
       <div class="field"><label for="email">📧 Your email address</label><input id="email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email"><span class="hint">Use a real email you can open. You log in with it, and password reset links are sent there. It is never shown to other members.</span><p class="error" id="email-error"></p></div>
       <div class="field"><label for="password">🔑 Create a new password for P.K CONNECT</label><input id="password" name="password" type="password" required minlength="8" autocomplete="new-password"><span class="hint">At least 8 characters. Do not use your email or Facebook password.</span>
@@ -55,21 +56,31 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
         <div class="field"><label for="age">🎂 Your age</label><input id="age" name="age" type="number" required min="18" max="120" inputmode="numeric"><p class="error" id="age-error"></p></div>
         <div class="field"><label for="gender">🙋 Gender</label><select id="gender" name="gender" required><option value="">Choose…</option><option value="Woman">👩 Woman</option><option value="Man">👨 Man</option><option value="Non-binary">🧑 Non-binary</option><option value="Prefer not to say">🤐 Prefer not to say</option></select><p class="error" id="gender-error"></p></div>
       </div>
+      <label class="check"><input id="agree" name="agree" type="checkbox" required><span>I am 18 or older, and I agree to the <a href="privacy.html" target="_blank" rel="noopener">privacy notice</a>.</span></label>
+      <p class="error" id="agree-error"></p>
+      <button class="btn large" type="button" id="join-continue">Continue →</button>
+      <p class="join-reassure">✅ Free · no card needed · 🔒 Your email is never shown</p>
+      </div>
+
+      <div id="join-step-2" class="hidden">
+      <button class="link-button join-back" type="button" id="join-back">← Back</button>
+      <p class="step-title"><span class="step-num">3</span>📍 Where you live</p>
       <div class="field" id="location-field"><label for="location">🌍 Country you live in</label><select id="location" name="location" required autocomplete="country-name"><option value="">Choose your country…</option></select><span class="hint hidden" id="location-guess">Filled in from your phone's time zone. Change it if it is wrong.</span><p class="error" id="location-error"></p></div>
       <div class="field"><label for="city">📍 City or general area</label><input id="city" name="city" required maxlength="100" autocomplete="address-level2" placeholder="e.g. Kampala, Gaborone, Nairobi, London"><span class="hint">No street address, please.</span><p class="error" id="city-error"></p></div>
 
+
       <!-- The photo has its own always-visible step: most members never opened it while it was folded away. -->
-      <p class="step-title"><span class="step-num">3</span>📸 Your photo <span class="optional">(you can add it later)</span></p>
+      <p class="step-title"><span class="step-num">4</span>📸 Your photo <span class="optional">(optional)</span></p>
       <div class="photo-badge" id="photo-badge" role="note">
-        <p class="photo-badge-title" id="photo-badge-title">📸 Add your photo — it's the most important step!</p>
+        <p class="photo-badge-title" id="photo-badge-title">📸 Add a photo to stand out</p>
         <ul id="photo-badge-points">
-          <li>💌 Members with a photo get many more messages and replies.</li>
-          <li>✅ A photo shows you are a real, genuine person.</li>
-          <li>⚠️ Profiles without a photo may be removed.</li>
+          <li>💌 Profiles with a clear photo get many more messages.</li>
+          <li>😊 A friendly photo helps people feel they know you.</li>
+          <li>⏭️ No photo handy? Skip it and add one later in My Profile.</li>
         </ul>
         <div class="field"><label for="photo">📷 Choose a clear photo of your face</label>
           <div class="photo-pick"><img id="photo-preview" class="hidden" alt="Preview of your chosen photo"><input id="photo" name="photo" type="file" accept="image/*"></div>
-          <span class="hint">🔒 Stored privately: only signed-in, approved members can see it. Large phone photos are resized automatically.</span><p class="error" id="photo-error"></p></div>
+          <span class="hint">🔒 Stored privately: only signed-in members can see it. Large phone photos are resized automatically.</span><p class="error" id="photo-error"></p></div>
       </div>
 
       <!-- Optional extras stay folded so the form looks short on a phone; members can add them later. -->
@@ -84,11 +95,11 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
         <div class="field"><label for="bio">💬 A little about you <span class="optional">(optional)</span></label><textarea id="bio" name="bio" rows="3" maxlength="500" placeholder="What makes you smile? What are you hoping to find?"></textarea><span class="hint"><span id="bio-count">0</span>/500 · you can add or change this later</span><p class="error" id="bio-error"></p></div>
       </details>
 
-      <div class="notice small" id="privacy-notice"><strong>🔒 Your privacy:</strong> your profile stays hidden until our team reviews and approves it. After approval, other signed-in approved members can see your display name, age, gender, country, city, profession, goal, biography and photo. Your email address is never shown. Photos are stored privately. <a href="privacy.html" target="_blank" rel="noopener">Read the full privacy notice</a>.</div>
-      <label class="check"><input id="agree" name="agree" type="checkbox" required><span>I am 18 or older, and I agree to the privacy notice.</span></label>
-      <p class="error" id="agree-error"></p>
+      <div class="notice small" id="privacy-notice"><strong>🔒 Your privacy:</strong> other signed-in members can see your display name, age, gender, country, city, profession, goal, biography and photo. Your email address is never shown, and photos are stored privately. You can block or report anyone, and we remove accounts that break the rules. <a href="privacy.html" target="_blank" rel="noopener">Read the full privacy notice</a>.</div>
       <p class="almost-there">🎉 That's it! One tap and you're in.</p>
       <button class="btn large" type="submit">💖 Create my account</button>
+      <p class="join-reassure">✅ Free · no card needed · 🛡️ We never ask for money in messages</p>
+      </div>
       <p id="status" class="status notice" role="status" aria-live="polite"></p>
     </form>
     <p class="muted small" style="margin-top:16px">Already have an account? <a href="login.html" style="font-weight:700">Log in</a></p>
@@ -97,14 +108,14 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
 
   <section id="success-view" class="card success hidden" aria-labelledby="success-title" tabindex="-1">
     <div class="icon" aria-hidden="true">💌</div>
-    <h1 id="success-title">You're almost there!</h1>
+    <!-- Shown only if email confirmation is ever switched back on in Supabase. -->
+    <h1 id="success-title">Check your email to finish</h1>
     <p id="success-message">We have sent a confirmation link to your email address.</p>
     <ol style="text-align:left;max-width:440px;margin:16px auto">
-      <li>Open the confirmation email we sent you and tap the link (check your spam folder if you don't see it).</li>
-      <li>Log in with your email address and password.</li>
-      <li>Our team reviews your profile. Once approved, you can browse and message other approved members.</li>
+      <li>Open the email we sent you and tap the link (check your spam folder if you don't see it).</li>
+      <li>Log in with your email address and password, and start meeting people.</li>
     </ol>
-    <p id="success-photo-note" class="notice small hidden">You chose a photo — please add it from your profile after you log in. It could not be saved before your email is confirmed.</p>
+    <p id="success-photo-note" class="notice small hidden">You chose a photo. Please add it from My Profile after you log in.</p>
     <a class="btn" href="login.html">Go to log in</a>
   </section>
 
@@ -201,6 +212,29 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     push("photo", photo && !window.FYP.photoTypeOf(photo).startsWith("image/") ? "Choose a photo (JPEG, PNG or WebP), or leave this empty." : "", form.elements.photo);
     return errors;
   }
+  // Two short steps: the account basics first, then where you live and an optional photo.
+  const STEP_ONE = ["email", "password", "first_name", "age", "gender", "agree"];
+  function showStep(n) {
+    document.getElementById("join-step-1").classList.toggle("hidden", n !== 1);
+    document.getElementById("join-step-2").classList.toggle("hidden", n !== 2);
+    form.dataset.step = String(n);
+    const focus = n === 2 ? document.getElementById("location").value ? document.getElementById("city") : document.getElementById("location") : document.getElementById("email");
+    if (focus) focus.focus({ preventScroll: false });
+  }
+  document.getElementById("join-continue").addEventListener("click", () => {
+    form.dataset.tried = "1";
+    const errors = validate().filter(key => STEP_ONE.includes(key));
+    // Questions on the next step are not marked as missing until the person gets there.
+    ["location", "city", "photo"].forEach(key => setError(key, ""));
+    if (errors.length) {
+      say("Please check the highlighted answers.");
+      const first = document.querySelector("#join-step-1 [aria-invalid=true]");
+      if (first) first.focus();
+      return;
+    }
+    say(""); delete form.dataset.tried; showStep(2);
+  });
+  document.getElementById("join-back").addEventListener("click", () => showStep(1));
   form.addEventListener("change", event => { if (form.dataset.tried) validate(); if (event.target.name === "photo") previewPhoto(); });
   // Also re-check while typing: a message that only vanished when the field lost focus moved
   // the form up mid-tap, so the next chip or button tapped was missed.
@@ -213,7 +247,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     document.getElementById("photo-badge").classList.toggle("done", chosen);
     document.getElementById("photo-badge-title").textContent = chosen
       ? "✅ Great — your photo will be added to your profile!"
-      : "📸 Add your photo — it's the most important step!";
+      : "📸 Add a photo to stand out";
     document.getElementById("photo-badge-points").classList.toggle("hidden", chosen);
     if (!chosen) { preview.classList.add("hidden"); return; }
     preview.src = URL.createObjectURL(file); preview.classList.remove("hidden");
@@ -228,20 +262,22 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     if (saved.error || !saved.data) { await db.storage.from("profile-photos").remove([path]); throw saved.error || new Error("not linked"); }
   }
 
-  async function finishSignIn(user, photo) {
+  async function finishSignIn(user, photo, options = {}) {
     if (finishing) return finishing;
     finishing = (async () => {
       try {
         say("Signed in. Loading your profile…");
-        // Reuses the linked profile, or creates one pending profile from this person's own
-        // signup details. Never links or guesses a legacy registration.
+        // Reuses the linked profile, or creates one from this person's own signup details (new
+        // profiles are approved straight away). Never links or guesses a legacy registration.
         const profile = await window.FYP.ensureOwnProfile(db, user);
         if (profile && photo) {
           say("Saving your photo…");
           try { await uploadPhoto(user, photo); }
           catch (error) { sessionStorage.setItem("fyp_photo_notice", "1"); }
         }
-        window.location.replace(window.FYP.destinationFor(profile));
+        const destination = window.FYP.destinationFor(profile);
+        // First visit after joining: a short welcome on Discover.
+        window.location.replace(options.welcome && destination === "discover.html" ? "discover.html?welcome=1" : destination);
       } catch (error) {
         say((error && error.message) || "Your account is signed in, but the private profile could not be loaded.");
       } finally { finishing = null; }
@@ -256,6 +292,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     const errors = validate();
     if (errors.length) {
       say("Please check the highlighted answers.");
+      if (errors.some(key => STEP_ONE.includes(key))) showStep(1);
       const first = form.querySelector("[aria-invalid=true]");
       // Unfold the optional section whenever one of its answers needs attention.
       if (form.querySelector("#more-about-you [aria-invalid=true]")) document.getElementById("more-about-you").open = true;
@@ -293,9 +330,15 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
       if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
         throw Object.assign(new Error("already registered"), { code: "user_already_exists" });
       }
-      if (data.session && data.user) {
-        say("Account created. Saving your profile…");
-        await finishSignIn(data.user, photo);
+      let session = data.session;
+      if (!session) {
+        // Email confirmation is switched off, so the new account can sign in straight away.
+        const signedIn = await db.auth.signInWithPassword({ email, password: form.elements.password.value });
+        if (!signedIn.error) session = signedIn.data.session;
+      }
+      if (session && session.user) {
+        say("🎉 Welcome! Setting up your profile…");
+        await finishSignIn(session.user, photo, { welcome: true });
         return;
       }
       document.getElementById("success-message").textContent = "We have sent a confirmation link to " + email + ".";

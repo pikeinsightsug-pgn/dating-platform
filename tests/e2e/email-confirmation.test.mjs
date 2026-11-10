@@ -1,4 +1,5 @@
-// A new member registers, opens the confirmation link from their email and can then log in.
+// If email confirmation is ever switched back on in Supabase: a new member registers, opens the
+// confirmation link from their email, is approved straight away and can then log in.
 // Covers Supabase's default email link, a link straight to the website (token_hash), a link
 // that was already used, and a resent email. Every person here is invented.
 import test from "node:test";
@@ -8,6 +9,7 @@ import { setup, PNG, SUPABASE } from "./harness.mjs";
 test("the email confirmation link completes registration", async (t) => {
   const env = await setup("e2e_email_confirmation");
   t.after(() => env.close());
+  env.gateway.options.requireEmailConfirmation = true;
 
   const register = async (name, email) => {
     const page = await env.newPage({ mobile: true });
@@ -21,26 +23,26 @@ test("the email confirmation link completes registration", async (t) => {
     const mail = env.gateway.confirmationEmail(email);
     return `${SUPABASE}/auth/v1/verify?token=${mail.token}&type=signup&redirect_to=${encodeURIComponent(mail.redirect)}`;
   };
-  const pending = async page => {
-    await page.waitForURL(/dashboard\.html$/);
-    await page.waitForFunction(() => /awaiting manual review/.test(document.getElementById("approval-status").textContent));
+  const welcomed = async page => {
+    await page.waitForURL(/discover\.html/);
+    await page.waitForSelector("#profiles, #status");
   };
   const profileRow = async email => (await env.sql(
     "select m.approved, u.email_confirmed_at is not null as confirmed from auth.users u left join public.members m on m.user_id = u.id where u.email = $1", [email])).rows[0];
 
-  await t.test("Supabase's default link: opened from the email app, the member lands signed in and pending", async () => {
+  await t.test("Supabase's default link: opened from the email app, the member lands signed in and approved", async () => {
     await register("Nakato", "nakato@test.invalid");
     const link = defaultLink("nakato@test.invalid");
     assert.match(env.gateway.confirmationEmail("nakato@test.invalid").redirect, /\/account\.html$/, "the email returns to the join page");
     const fromEmail = await env.newPage({ mobile: true }); // a different browser tab, as an email app opens
     await fromEmail.goto(link);
-    await pending(fromEmail);
-    assert.deepEqual(await profileRow("nakato@test.invalid"), { approved: false, confirmed: true });
+    await welcomed(fromEmail);
+    assert.deepEqual(await profileRow("nakato@test.invalid"), { approved: true, confirmed: true });
 
     // Logging in afterwards works and never asks to confirm again.
     const later = await env.newPage();
     await env.login(later, "nakato@test.invalid");
-    await pending(later);
+    await welcomed(later);
 
     // Opening the same link a second time explains it was already used.
     const again = await env.newPage();
@@ -53,8 +55,8 @@ test("the email confirmation link completes registration", async (t) => {
     const { token } = env.gateway.confirmationEmail("achieng@test.invalid");
     const page = await env.newPage({ mobile: true });
     await page.goto(env.base + "?token_hash=" + token + "&type=signup"); // the homepage forwards it
-    await pending(page);
-    assert.deepEqual(await profileRow("achieng@test.invalid"), { approved: false, confirmed: true });
+    await welcomed(page);
+    assert.deepEqual(await profileRow("achieng@test.invalid"), { approved: true, confirmed: true });
   });
 
   await t.test("a template link to a page that does not exist (…/auth/confirm) still confirms the account", async () => {
@@ -62,8 +64,8 @@ test("the email confirmation link completes registration", async (t) => {
     const { token } = env.gateway.confirmationEmail("neo@test.invalid");
     const page = await env.newPage({ mobile: true });
     await page.goto(env.base + "auth/confirm?token_hash=" + token + "&type=email");
-    await pending(page);
-    assert.deepEqual(await profileRow("neo@test.invalid"), { approved: false, confirmed: true });
+    await welcomed(page);
+    assert.deepEqual(await profileRow("neo@test.invalid"), { approved: true, confirmed: true });
 
     // The same link again: a clear message, not a silent return to the form.
     const again = await env.newPage();
@@ -89,6 +91,6 @@ test("the email confirmation link completes registration", async (t) => {
 
     const fresh = await env.newPage();
     await fresh.goto(defaultLink("mosa@test.invalid"));
-    await pending(fresh);
+    await welcomed(fresh);
   });
 });
