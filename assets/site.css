@@ -131,7 +131,15 @@ fieldset{border:0;margin:0;padding:0}
 .join-back{justify-self:start;font-size:15px}
 
 /* About page: a short note from the founder. */
-.founder{display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:18px;align-items:center;margin:22px 0;padding:16px;border-radius:20px;background:#fff;border:1px solid #f3c6d8;box-shadow:0 10px 24px #8f1e5114}
-.founder img{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:16px;display:block}
-.founder h2{margin:0 0 8px}.founder p{margin:0 0 8px}.founder-sign{font-weight:700;color:#a0124b}
-@media (max-width:520px){.founder{grid-template-columns:1fr}.founder img{max-width:240px;margin:0 auto}}
+.founder{display:grid;grid-template-columns:minmax(150px,230px) 1fr;gap:28px;align-items:center;margin:26px 0;padding:24px;border-radius:24px;background:linear-gradient(135deg,#fff 0%,#fff6fa 60%,#fde9f1 100%);border:1px solid #f3c6d8;box-shadow:0 18px 40px #8f1e511a}
+.founder-photo{position:relative;margin:0}
+.founder-photo img{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:20px;display:block;border:4px solid #fff;box-shadow:0 12px 28px #4a0a2633}
+.founder-photo figcaption{position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);padding:5px 14px;border-radius:999px;background:linear-gradient(135deg,#d81b60,#8f1e51);color:#fff;font-size:13px;font-weight:700;letter-spacing:.04em;white-space:nowrap;box-shadow:0 6px 14px #8f1e5140}
+.founder-eyebrow{margin:0 0 6px;font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#d81b60}
+.doc .founder h2{margin:0;font-size:34px;line-height:1.1;letter-spacing:-.5px}
+.founder-role{margin:2px 0 14px;color:#6b5560;font-size:15px}
+.founder blockquote{margin:0 0 16px;padding:0 0 0 16px;border-left:4px solid #d81b60;font-size:18px;line-height:1.55;font-style:italic;color:#3a2430}
+.founder-points{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:8px}
+.doc .founder-points li{margin:0;padding:8px 12px;border-radius:12px;background:#fff;border:1px solid #f6d5e2;font-size:15px}
+.founder-whatsapp{background:#1fa855}.founder-whatsapp:hover{background:#178a45}
+@media (max-width:560px){.founder{grid-template-columns:1fr;padding:20px;gap:26px;text-align:left}.founder-photo{max-width:230px;margin:0 auto}.doc .founder h2{font-size:30px}.founder blockquote{font-size:17px}.founder-whatsapp{width:100%;text-align:center}}
