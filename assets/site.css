@@ -129,3 +129,9 @@ fieldset{border:0;margin:0;padding:0}
 #join-step-1,#join-step-2{display:grid;gap:14px}#join-step-1.hidden,#join-step-2.hidden{display:none}
 .join-reassure{margin:-4px 0 0;text-align:center;font-size:14px;font-weight:600;color:var(--muted)}
 .join-back{justify-self:start;font-size:15px}
+
+/* About page: a short note from the founder. */
+.founder{display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:18px;align-items:center;margin:22px 0;padding:16px;border-radius:20px;background:#fff;border:1px solid #f3c6d8;box-shadow:0 10px 24px #8f1e5114}
+.founder img{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:16px;display:block}
+.founder h2{margin:0 0 8px}.founder p{margin:0 0 8px}.founder-sign{font-weight:700;color:#a0124b}
+@media (max-width:520px){.founder{grid-template-columns:1fr}.founder img{max-width:240px;margin:0 auto}}
