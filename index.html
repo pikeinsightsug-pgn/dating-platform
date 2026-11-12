@@ -83,6 +83,13 @@
 .contact-card{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#2b1723,#5a1d3c);color:#fff;border-radius:26px;padding:30px}
 .contact-card h2{color:#fff}.contact-card p{color:#f3dbe6;margin:0}
 .contact-card a.mail{color:#fff;font-weight:800;font-size:18px;overflow-wrap:anywhere}
+.founder{display:grid;grid-template-columns:minmax(0,360px) 1fr;gap:40px;align-items:center}
+.founder-photo{position:relative}
+.founder-photo img{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:28px;box-shadow:0 26px 60px #5c183040;display:block}
+.founder-photo .badge{position:absolute;left:14px;bottom:14px;background:#fff;border-radius:999px;padding:8px 14px;box-shadow:var(--shadow);font-weight:800;font-size:14px}
+.founder-letter p{font-size:17px;margin:0 0 14px}
+.founder-letter .sign{font-weight:800;font-size:19px;margin-top:20px}
+.founder-letter .sign span{display:block;font-weight:600;font-size:15px;color:var(--muted)}
 .final{text-align:center}
 .final .cta{justify-content:center}
 @media (max-width:900px){.steps{grid-template-columns:1fr 1fr}}
@@ -93,7 +100,8 @@
   .hero-photo img{aspect-ratio:16/9;max-height:210px;object-position:center 30%}
   .hero h1{font-size:34px;margin:12px 0 10px}
   .hero-photo .badge{left:10px;bottom:10px}
-  .split,.countries{grid-template-columns:1fr}
+  .split,.countries,.founder{grid-template-columns:1fr}
+  .founder{gap:22px}.founder-photo{max-width:300px}
 }
 @media (max-width:420px){.steps{grid-template-columns:1fr}.cta .btn{flex:1 1 100%}}
 </style>
@@ -174,6 +182,24 @@
       <li><span class="ico" aria-hidden="true">📸</span><div><strong>Photos are protected</strong><span>Photos are stored privately and shown only to signed-in members.</span></div></li>
       <li><span class="ico" aria-hidden="true">🚫</span><div><strong>Block and report</strong><span>Block anyone at any time, and report profiles that seem fake or unsafe.</span></div></li>
     </ul>
+  </div>
+</section>
+
+<section class="section" id="founder">
+  <div class="wrap founder">
+    <div class="founder-photo">
+      <img src="assets/founder-pike.jpg" width="640" height="800" loading="lazy" alt="Pike, the founder of P.K CONNECT, smiling in a purple shirt">
+      <span class="badge">✅ Pike – Founder</span>
+    </div>
+    <div class="founder-letter">
+      <span class="eyebrow">A personal welcome</span>
+      <h2>Hello, I'm Pike — the founder of P.K CONNECT.</h2>
+      <p>I'm a pharmacist from Uganda, living and working in Botswana. Too many people give up on online dating because of fake profiles, scams and people who were never serious.</p>
+      <p>So I built P.K CONNECT to be different: a small, respectful community where real adults can meet for friendship, a serious relationship or marriage. Our team checks profiles and every report, and removes fake or abusive accounts. Your email address is never shown, and you can block or report anyone at any time.</p>
+      <p><strong>Joining is free, and we will never ask you for money in a private message.</strong> My official account, <strong>Pike – Founder ✅</strong>, is the only one that speaks for P.K CONNECT. If anything worries you, message me there or email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a>, and I will reply personally.</p>
+      <p>Wherever you are in the world, I hope you find your person here.</p>
+      <p class="sign">With warm wishes, Pike <span>Founder, P.K CONNECT – Find Your Person</span></p>
+    </div>
   </div>
 </section>
 
