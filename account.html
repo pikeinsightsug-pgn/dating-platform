@@ -56,7 +56,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
         <div class="field"><label for="age">🎂 Your age</label><input id="age" name="age" type="number" required min="18" max="120" inputmode="numeric"><p class="error" id="age-error"></p></div>
         <div class="field"><label for="gender">🙋 Gender</label><select id="gender" name="gender" required><option value="">Choose…</option><option value="Woman">👩 Woman</option><option value="Man">👨 Man</option><option value="Non-binary">🧑 Non-binary</option><option value="Prefer not to say">🤐 Prefer not to say</option></select><p class="error" id="gender-error"></p></div>
       </div>
-      <label class="check"><input id="agree" name="agree" type="checkbox" required><span>I am 18 or older, and I agree to the <a href="privacy.html" target="_blank" rel="noopener">privacy notice</a>.</span></label>
+      <label class="check"><input id="agree" name="agree" type="checkbox" required><span>I am 18 or older, and I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Use</a> and <a href="privacy.html" target="_blank" rel="noopener">privacy notice</a>.</span></label>
       <p class="error" id="agree-error"></p>
       <button class="btn large" type="button" id="join-continue">Continue →</button>
       <p class="join-reassure">✅ Free · no card needed · 🔒 Your email is never shown</p>
@@ -129,7 +129,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     </form>
     <p id="recovery-status" class="status notice" role="status" aria-live="polite"></p>
   </section>
-  <p class="help" style="margin-top:20px">Need help? Email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a> · <a href="privacy.html">Privacy notice</a></p>
+  <p class="help" style="margin-top:20px">Need help? Email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a> · <a href="privacy.html">Privacy notice</a> · <a href="terms.html">Terms of Use</a></p>
 </main>
 <script>
 // On a slow connection the main scripts below can take several seconds to arrive. Until they

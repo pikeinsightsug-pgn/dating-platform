@@ -425,3 +425,14 @@ test("links shared on Facebook and WhatsApp show a proper preview, and newcomers
   assert.match(await read("login.html"), /href="account\.html" class="new-here"/, "the login page offers a clear way to join");
   assert.match(await read("index.html"), /30 seconds/, "the homepage matches the quick join");
 });
+
+test("Terms of Use page exists, is adults-only and is linked from sign-up and every footer", async () => {
+  const terms = await read("terms.html");
+  assert.match(terms, /<h1>Terms of Use<\/h1>/);
+  assert.match(terms, /18 years or older/);
+  assert.match(terms, /never ask you for money in a private message/);
+  assert.match(await read("account.html"), /I agree to the <a href="terms\.html"[^>]*>Terms of Use<\/a>/);
+  for (const path of ["index.html", "about.html", "safety.html", "privacy.html", "terms.html"]) {
+    assert.match(await read(path), /<a href="terms\.html">Terms of Use<\/a>/, path + " footer links to the Terms of Use");
+  }
+});
