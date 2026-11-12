@@ -83,6 +83,27 @@
 .contact-card{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#2b1723,#5a1d3c);color:#fff;border-radius:26px;padding:30px}
 .contact-card h2{color:#fff}.contact-card p{color:#f3dbe6;margin:0}
 .contact-card a.mail{color:#fff;font-weight:800;font-size:18px;overflow-wrap:anywhere}
+@font-face{font-family:"PK Signature";src:url(assets/fonts/great-vibes.woff2) format("woff2");font-display:swap}
+.founder-band{background:linear-gradient(180deg,#fbf3ff,#f6eaff);border-top:1px solid #efdcf8;border-bottom:1px solid #efdcf8}
+.founder{display:grid;grid-template-columns:minmax(0,400px) 1fr;gap:48px;align-items:center}
+.founder-photo{position:relative}
+.founder-photo img{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:26px;box-shadow:0 26px 60px #4a0f6333;display:block}
+.founder-kicker{display:inline-block;font-weight:800;font-size:17px;color:#3b0d52}
+.founder-kicker:after{content:"";display:block;width:64px;height:4px;border-radius:2px;background:#e23fc8;margin-top:8px}
+.founder-letter .founder-hello{font-size:46px;font-weight:900;line-height:1.05;color:#111;margin:18px 0 6px}
+.founder-letter h2{font-size:40px;font-weight:900;letter-spacing:-.5px;line-height:1.08;color:#3b0d52;margin:0 0 18px}
+.founder-letter h2 span{color:#e01fb4}
+.founder-letter p{font-size:18px;margin:0 0 14px;color:#2a1433}
+.founder-letter p b{color:#3b0d52}
+.founder-foot{display:flex;flex-wrap:wrap;align-items:flex-end;gap:20px;margin-top:22px}
+.founder-sign .sig{display:block;font-family:"PK Signature","Brush Script MT","Segoe Script",cursive;font-size:58px;font-weight:400;line-height:1;color:#4a0f63}
+.founder-sign .sig-role{display:block;border-left:4px solid #e23fc8;padding-left:10px;font-weight:800;font-size:16px;color:#2a1433;margin-top:6px}
+.founder-tiles{display:flex;gap:10px;margin-left:auto}
+.founder-tiles div{width:120px;min-height:96px;background:#ead6f9;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;font-weight:700;font-size:14px;line-height:1.15;color:#2a1433;padding:10px 6px}
+.founder-tiles svg{width:30px;height:30px;fill:#4a0f63}
+.founder-cta{margin-top:24px}
+.founder-cta .btn{background:linear-gradient(180deg,#f03fd0,#c81ea8);border:0;box-shadow:0 10px 24px #e01fb455}
+.founder-official{font-size:15px!important;color:var(--muted)!important;margin-top:14px!important}
 .final{text-align:center}
 .final .cta{justify-content:center}
 @media (max-width:900px){.steps{grid-template-columns:1fr 1fr}}
@@ -93,7 +114,10 @@
   .hero-photo img{aspect-ratio:16/9;max-height:210px;object-position:center 30%}
   .hero h1{font-size:34px;margin:12px 0 10px}
   .hero-photo .badge{left:10px;bottom:10px}
-  .split,.countries{grid-template-columns:1fr}
+  .split,.countries,.founder{grid-template-columns:1fr}
+  .founder{gap:22px}.founder-photo{max-width:320px}
+  .founder-tiles{margin-left:0;width:100%}.founder-tiles div{flex:1;width:auto}
+  .founder-letter .founder-hello{font-size:38px}.founder-letter h2{font-size:32px}
 }
 @media (max-width:420px){.steps{grid-template-columns:1fr}.cta .btn{flex:1 1 100%}}
 </style>
@@ -174,6 +198,31 @@
       <li><span class="ico" aria-hidden="true">📸</span><div><strong>Photos are protected</strong><span>Photos are stored privately and shown only to signed-in members.</span></div></li>
       <li><span class="ico" aria-hidden="true">🚫</span><div><strong>Block and report</strong><span>Block anyone at any time, and report profiles that seem fake or unsafe.</span></div></li>
     </ul>
+  </div>
+</section>
+
+<section class="section founder-band" id="founder">
+  <div class="wrap founder">
+    <div class="founder-photo">
+      <img src="assets/founder-pike.jpg" width="640" height="800" loading="lazy" alt="Pike, the founder of P.K CONNECT, smiling in a purple shirt">
+    </div>
+    <div class="founder-letter">
+      <span class="founder-kicker">A Message from the Founder</span>
+      <p class="founder-hello">Hello, I'm Pike.</p>
+      <h2>Welcome to <span>P.K CONNECT</span></h2>
+      <p>I founded P.K CONNECT with a simple vision: to help <b>genuine people around the world</b> meet, connect and build meaningful relationships — <b>safely, privately and without scams.</b></p>
+      <p>Join our caring community today. Friendship, love and real connection are waiting for you.</p>
+      <div class="founder-foot">
+        <div class="founder-sign"><span class="sig">Pike</span><span class="sig-role">Founder, P.K CONNECT</span></div>
+        <div class="founder-tiles">
+          <div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4-6.3 6.3z"/></svg>Real People</div>
+          <div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 9V7a5 5 0 0 0-10 0v2H5v13h14V9h-2zM9 7a3 3 0 0 1 6 0v2H9V7zm4 9.7V19h-2v-2.3a2 2 0 1 1 2 0z"/></svg>Your Privacy Matters</div>
+          <div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 2c-2.7 0-8 1.3-8 4v3h10v-3c0-1.1.4-2.1 1.2-2.9C10 13.4 8.8 13 8 13zm8 0c-2.7 0-8 1.3-8 4v3h16v-3c0-2.7-5.3-4-8-4z"/></svg>A Respectful Community</div>
+        </div>
+      </div>
+      <div class="cta founder-cta"><a class="btn large" href="account.html">Join P.K CONNECT Today ›</a></div>
+      <p class="founder-official">My only official account is <strong>Pike – Founder ✅</strong>. We will never ask you for money in a private message. Questions? Email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a>.</p>
+    </div>
   </div>
 </section>
 
