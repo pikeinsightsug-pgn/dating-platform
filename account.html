@@ -222,7 +222,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     push("gender", !v("gender") ? "Choose your gender." : "");
     push("location", !v("location") ? "Choose the country you live in." : "");
     push("city", !v("city") ? "Enter your city or general area." : "");
-    push("agree", !form.elements.agree.checked ? "Please confirm you are 18 or older and agree to the privacy notice." : "", form.elements.agree);
+    push("agree", !form.elements.agree.checked ? "Please confirm you are 18 or older and agree to the Terms of Use and privacy notice." : "", form.elements.agree);
     const photo = form.elements.photo.files[0];
     push("photo", photo && !window.FYP.photoTypeOf(photo).startsWith("image/") ? "Choose a photo (JPEG, PNG or WebP), or leave this empty." : "", form.elements.photo);
     return errors;
