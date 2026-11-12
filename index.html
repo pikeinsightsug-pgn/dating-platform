@@ -92,7 +92,9 @@
 .founder-letter h2{font-family:Georgia,"Times New Roman",serif;font-weight:800;font-size:52px;letter-spacing:-.5px;line-height:1.05;margin:10px 0 18px;color:#2a1433}
 .founder-letter h2 .hi{display:block;font-family:"PK Signature","Brush Script MT",cursive;font-weight:400;font-size:66px;line-height:.95;letter-spacing:0;color:#7b2c8f;margin-left:-2px}
 .founder-letter h2 .bar{display:block;width:90px;height:4px;border-radius:2px;background:#7b2c8f;margin-top:14px}
-.founder-letter blockquote{margin:0 0 20px;padding:4px 0 4px 20px;border-left:5px solid #e2b35c;font-family:Georgia,"Times New Roman",serif;font-style:italic;font-size:22px;line-height:1.4;color:#2a1433}
+.founder-letter blockquote{position:relative;margin:30px 0 24px;padding:30px 28px 24px;background:linear-gradient(135deg,#3a1a4f,#2a1433);border:3px solid #e2b35c;border-radius:22px;box-shadow:0 14px 34px #2a143340,0 0 0 6px #e2b35c22;font-family:Georgia,"Times New Roman",serif;font-style:italic;font-weight:700;font-size:26px;line-height:1.35;color:#fff}
+.founder-letter blockquote:before{content:"\201C";position:absolute;top:-26px;left:22px;width:50px;height:50px;border-radius:50%;background:#e2b35c;color:#2a1433;font-size:58px;line-height:72px;text-align:center;font-style:normal}
+.founder-letter blockquote em{color:#f6c75f}
 .founder-letter p{font-size:17px;margin:0 0 14px}
 .founder-promises{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:10px}
 .founder-promises li{position:relative;padding-left:38px;font-size:16px}
@@ -112,7 +114,7 @@
   .hero-photo .badge{left:10px;bottom:10px}
   .split,.countries,.founder{grid-template-columns:1fr}
   .founder{gap:22px}.founder-photo{max-width:300px}
-  .founder-letter h2{font-size:42px}.founder-letter h2 .hi{font-size:56px}.founder-letter blockquote{font-size:19px}
+  .founder-letter h2{font-size:42px}.founder-letter h2 .hi{font-size:56px}.founder-letter blockquote{font-size:21px;padding:28px 20px 20px}
 }
 @media (max-width:420px){.steps{grid-template-columns:1fr}.cta .btn{flex:1 1 100%}}
 </style>
@@ -205,7 +207,7 @@
     <div class="founder-letter">
       <span class="founder-kicker">A personal welcome from our founder</span>
       <h2><span class="hi">Hello,</span> I'm Pike.<span class="bar" aria-hidden="true"></span></h2>
-      <blockquote>I built P.K CONNECT so genuine people can meet safely — without fake profiles, scams or pressure.</blockquote>
+      <blockquote>I built P.K CONNECT so <em>real people can find real love</em> — safely, privately and <em>without scams.</em></blockquote>
       <p>Too many people give up on online dating because they meet fake profiles and people who were never serious. P.K CONNECT is a respectful community where real adults can meet for friendship, a serious relationship or marriage.</p>
       <ul class="founder-promises">
         <li><b>Profiles and reports are checked</b> by our team, and fake or abusive accounts are removed.</li>
@@ -215,6 +217,7 @@
       </ul>
       <p>My official account, <strong>Pike – Founder ✅</strong>, is the only one that speaks for P.K CONNECT. If anything worries you, message me there or email <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a>, and I will reply personally.</p>
       <p class="sign"><span class="sig">Pike</span><span class="sig-role">Founder, P.K CONNECT – Find Your Person</span></p>
+      <div class="cta" style="margin-top:18px"><a class="btn large" href="account.html">❤️ Join free today</a></div>
     </div>
   </div>
 </section>
