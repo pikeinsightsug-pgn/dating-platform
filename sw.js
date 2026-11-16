@@ -1,6 +1,9 @@
 // P.K CONNECT app helper. Pages always load fresh from the network, so members never see
 // out-of-date pages; the only thing kept offline is a small "you are offline" page.
 // Supabase requests (logins, profiles, messages, photos) are never touched.
+// Phone pop-up notifications for new messages (OneSignal). If it cannot load, the rest of
+// this helper still works.
+try { importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js"); } catch (error) { /* optional */ }
 const CACHE = "pk-connect-offline-v1";
 const OFFLINE = "offline.html";
 
