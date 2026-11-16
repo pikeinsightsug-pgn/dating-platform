@@ -436,3 +436,27 @@ test("Terms of Use page exists, is adults-only and is linked from sign-up and ev
     assert.match(await read(path), /<a href="terms\.html">Terms of Use<\/a>/, path + " footer links to the Terms of Use");
   }
 });
+
+test("message pop-up notifications: members only, unlinked on sign-out, never the message text", async () => {
+  const push = await read("assets/push-notifications.js");
+  assert.match(push, /profile\.approved !== true/, "only approved members are asked");
+  assert.match(push, /OneSignal\.login\(String\(profile\.id\)\)/, "the browser is linked to the member id");
+  assert.match(push, /OneSignal\.logout\(\)/, "signing out unlinks the browser");
+  const core = await read("assets/member-core.js");
+  assert.match(core, /root\.FYPPush\.start\(profile\)/, "starts from the signed-in member pages");
+  for (const path of ["dashboard.html", "discover.html", "messages.html"]) {
+    const html = await read(path);
+    assert.ok(html.indexOf("assets/push-notifications.js") < html.indexOf("assets/member-core.js"), path + " loads push before member-core");
+    assert.match(html, /FYPPush\.stop\(\)[\s\S]{0,80}db\.auth\.signOut\(\)/, path + " unlinks notifications before signing out");
+    assert.match(html, /script-src [^;]*https:\/\/cdn\.onesignal\.com/, path + " allows the OneSignal library");
+  }
+  for (const path of ["index.html", "account.html", "login.html"]) {
+    assert.doesNotMatch(await read(path), /onesignal/i, path + " (public page) never asks visitors for notifications");
+  }
+  assert.match(await read("sw.js"), /importScripts\("https:\/\/cdn\.onesignal\.com\/sdks\/web\/v16\/OneSignalSDK\.sw\.js"\)/);
+  const sql = await read("supabase/push_notifications.sql");
+  assert.match(sql, /vault\.decrypted_secrets/, "the OneSignal key lives in Vault, not in the repository");
+  assert.doesNotMatch(sql, /'contents'[^\n]*new\.body/, "the message text is never sent to OneSignal");
+  assert.match(sql, /interval '10 minutes'/, "at most one pop-up per conversation every 10 minutes");
+  assert.match(sql, /exception when others then/, "a notification problem never blocks a message");
+});

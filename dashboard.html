@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cyvkpcwjkeifpvegwhpt.supabase.co; connect-src 'self' blob: data: https://cyvkpcwjkeifpvegwhpt.supabase.co wss://cyvkpcwjkeifpvegwhpt.supabase.co; font-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com; style-src 'self' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com; img-src 'self' data: blob: https://cyvkpcwjkeifpvegwhpt.supabase.co https://onesignal.com https://*.onesignal.com; connect-src 'self' blob: data: https://cyvkpcwjkeifpvegwhpt.supabase.co wss://cyvkpcwjkeifpvegwhpt.supabase.co https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com; font-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:">
 <meta name="referrer" content="same-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="manifest" href="manifest.webmanifest">
@@ -105,6 +105,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   <p><a class="btn secondary" href="index.html">Back to homepage</a></p>
 </main>
 <script src="assets/vendor/supabase-js-2.117.2.js"></script>
+<script src="assets/push-notifications.js"></script>
 <script src="assets/member-core.js"></script>
 <script src="assets/photo-cropper.js"></script>
 <script>
@@ -475,6 +476,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   signout.addEventListener("click", async () => {
     signout.disabled = true; signingOut = true;
     try {
+      if (window.FYPPush) await window.FYPPush.stop();
       const { error } = await db.auth.signOut();
       if (error) throw error;
       window.location.replace("login.html?signedout=1");
