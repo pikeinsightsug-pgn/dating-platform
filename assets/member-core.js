@@ -386,8 +386,8 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
 
   // Uploaded photos are kept small (about 150–300 KB) so storage and members' mobile data
   // last as the community grows; 1280 px is still sharp on any phone screen.
-  const PHOTO_MAX_EDGE = 1280;
-  const PHOTO_RECOMPRESS_BYTES = 400 * 1024;
+  const PHOTO_MAX_EDGE = 1080;
+  const PHOTO_RECOMPRESS_BYTES = 250 * 1024;
   const PHOTO_JPEG_QUALITY = 0.82;
 
   // Phones shoot 50–108 megapixel photos; opening one at full size needs 200–430 MB and

@@ -403,7 +403,11 @@ test("the installable app never keeps member data or old pages", async () => {
   const sw = (await read("sw.js")).replace(/^\s*\/\/.*$/gm, "");
   assert.match(sw, /request\.mode !== "navigate"/, "only page visits are handled");
   assert.match(sw, /fetch\(request\)\.catch\(\(\) => caches\.match\(OFFLINE\)\)/, "pages always come fresh from the network");
-  assert.doesNotMatch(sw, /supabase|cache\.put/i, "logins, profiles, messages and photos are never stored");
+  assert.doesNotMatch(sw, /supabase/i, "logins, profiles, messages and photos are never stored");
+  // Only the website's own unchanging files (library, fonts, site pictures) are kept for speed.
+  assert.equal((sw.match(/cache\.put/g) || []).length, 1, "a single, guarded place stores files");
+  assert.match(sw, /url\.origin === self\.location\.origin && !url\.search && \(isFixedFile\(url\.pathname\) \|\| isPicture\(url\.pathname\)\)/, "only this website's own files");
+  assert.match(sw, /path\.startsWith\("\/assets\/"\)/, "only files inside assets/");
   const manifest = JSON.parse(await read("manifest.webmanifest"));
   assert.equal(manifest.display, "standalone");
   for (const page of ["index.html", "account.html", "login.html", "dashboard.html", "discover.html", "messages.html", "about.html", "safety.html", "privacy.html"]) {
