@@ -517,4 +517,5 @@ test("founding-spots counter shows one number only and hides itself when unsure"
   assert.match(sql, /returns integer/);
   assert.match(sql, /is_test_account[\s\S]*is_official/, "test and official accounts never count");
   assert.match(sql, /grant execute on function public\.founding_spots_left\(\) to anon, authenticated/);
+  assert.match(await read("supabase/growth_dashboard.sql"), /grant select on public\.member_messages to service_role;/, "owner function can count messages");
 });
