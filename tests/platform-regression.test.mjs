@@ -470,7 +470,7 @@ test("owner growth dashboard counts genuine members and real conversations only"
   const now = Date.parse("2026-11-17T12:00:00Z");
   const ago = (h) => new Date(now - h * 3600e3).toISOString();
   const members = [
-    { id: "a", gender: "Female", location: "Uganda", city: "Kampala", created_at: ago(2), approved: true, profile_photo_url: "x" },
+    { id: "a", invited_by: "b", gender: "Female", location: "Uganda", city: "Kampala", created_at: ago(2), approved: true, profile_photo_url: "x" },
     { id: "b", gender: "Male", location: "Uganda", city: "Kampala", created_at: ago(30), approved: true },
     { id: "c", gender: "Male", location: "Botswana", city: "Gaborone", created_at: ago(24 * 10), approved: false },
     { id: "founder", gender: "Male", location: "Botswana", created_at: ago(24 * 40), is_official: true },
@@ -488,6 +488,7 @@ test("owner growth dashboard counts genuine members and real conversations only"
   assert.equal(g.members.new_today, 1);
   assert.equal(g.members.new_7_days, 2);
   assert.equal(g.members.with_photo, 1);
+  assert.equal(g.members.joined_by_invite, 1);
   assert.equal(g.members.daily.length, 14);
   assert.deepEqual(g.members.countries[0], { label: "Uganda", count: 2 });
   assert.equal(g.messages.total, 3, "founder welcomes and test messages are left out");
@@ -518,4 +519,24 @@ test("founding-spots counter shows one number only and hides itself when unsure"
   assert.match(sql, /is_test_account[\s\S]*is_official/, "test and official accounts never count");
   assert.match(sql, /grant execute on function public\.founding_spots_left\(\) to anon, authenticated/);
   assert.match(await read("supabase/growth_dashboard.sql"), /grant select on public\.member_messages to service_role;/, "owner function can count messages");
+});
+
+test("invite links: remembered from the link, claimed once, members see only their own", async () => {
+  const js = await read("assets/invite.js");
+  assert.match(js, /\/\^\[a-z0-9\]\{6,12\}\$\//, "only short plain codes are accepted");
+  assert.match(js, /rpc\("claim_invite"/);
+  assert.match(js, /rpc\("my_invite"\)/);
+  assert.match(await read("assets/member-core.js"), /root\.FYPInvite\.claim\(db\)/, "claimed after sign-in on member pages");
+  for (const page of ["index.html", "account.html", "dashboard.html", "discover.html", "messages.html"]) {
+    assert.match(await read(page), /<script src="assets\/invite\.js"( defer)?><\/script>/, page + " remembers invite links");
+  }
+  const dash = await read("dashboard.html");
+  assert.match(dash, /id="invite-card" class="[^"]*hidden"/, "card stays hidden until the link is ready");
+  assert.match(dash, /FYPInvite\.render\(db\)/);
+  const sql = await read("supabase/invites.sql");
+  assert.match(sql, /revoke update \(invite_code, invited_by\) on public\.members from public, anon, authenticated/, "members cannot set who invited them");
+  assert.match(sql, /me\.invited_by is not null or me\.created_at < now\(\) - interval '7 days'/, "claimed once, only by new members");
+  assert.match(sql, /id <> me\.id/, "nobody invites themselves");
+  assert.match(sql, /grant execute on function public\.claim_invite\(text\) to authenticated;/);
+  assert.doesNotMatch(sql, /grant execute on function public\.(my_invite|claim_invite)[^;]*anon/, "visitors who are not signed in cannot call them");
 });

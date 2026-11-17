@@ -316,6 +316,7 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
     if (typeof document === "undefined" || !db || !profile || profile.approved !== true) return;
     unreadDb = db; unreadBanner = options.banner !== false;
     if (root.FYPPush) root.FYPPush.start(profile);
+    if (root.FYPInvite) root.FYPInvite.claim(db);
     if (!document.getElementById("unread-style")) {
       const style = document.createElement("style"); style.id = "unread-style"; style.textContent = UNREAD_STYLE; document.head.append(style);
     }

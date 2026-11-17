@@ -27,6 +27,8 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:12px 0}h2{margin-
 .checklist-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.checklist-head h2{margin:0;font-size:20px}
 #checklist-progress{font-weight:800;color:#b32663;white-space:nowrap}
 .checklist-bar{height:10px;border-radius:999px;background:#fde8f0;margin:10px 0 8px;overflow:hidden}.checklist-bar span{display:block;height:100%;background:linear-gradient(90deg,#e91e63,#b32663);border-radius:999px}
+.invite-link{display:flex;gap:8px;margin:8px 0}.invite-link input{flex:1;min-width:0;font:inherit;font-size:14px;padding:10px 12px;border:1px solid #e5cbd7;border-radius:12px;background:#fff8fb}
+.invite-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.invite-actions .btn{flex:1 1 180px;text-align:center}
 .checklist-note{margin:0 0 8px;font-size:14px;color:#75666e}
 #checklist-items{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 #checklist-items li a,#checklist-items li span{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;text-decoration:none;font-weight:700}
@@ -72,6 +74,13 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       <p class="checklist-note">Complete profiles get many more messages. It only takes a minute.</p>
       <ul id="checklist-items"></ul>
     </section>
+    <section id="invite-card" class="profile-checklist invite-card hidden" aria-labelledby="invite-title">
+      <div class="checklist-head"><h2 id="invite-title">💌 Invite your friends</h2><span id="invite-count"></span></div>
+      <p class="checklist-note">Know someone single and serious? Send them your personal link. Every friend who joins makes P.K Connect better for you too.</p>
+      <div class="invite-link"><input id="invite-link" readonly aria-label="Your personal invite link"><button id="invite-copy" class="btn small" type="button">Copy</button></div>
+      <div class="invite-actions"><a id="invite-whatsapp" class="btn" target="_blank" rel="noopener">💬 Share on WhatsApp</a><a id="invite-facebook" class="btn secondary" target="_blank" rel="noopener">Share on Facebook</a><button id="invite-share" class="btn secondary hidden" type="button">More ways to share</button></div>
+      <p id="invite-status" class="checklist-note" role="status" aria-live="polite"></p>
+    </section>
     <div id="official-self" class="official-box hidden" role="note"><p>✅ This is the official P.K Connect account. Members see it pinned at the top of Discover with an Official badge, never as a dating profile. Keep the name and bio clearly official.</p></div>
     <div id="official-contact" class="official-box hidden"><p id="official-contact-text">Questions, problems or ideas? Message our founder directly.</p><a id="official-contact-link" class="btn" href="messages.html">Message Pike ✅</a></div>
     <section class="photo-actions" aria-labelledby="photo-title"><h2 id="photo-title">Profile photo</h2><p class="photo-note">Choose a clear photo of yourself, then zoom and position it in the frame. JPEG, PNG and WebP photos from phones and computers are accepted and resized automatically. Photos are private and shown only to approved members.</p><img id="photo-preview" class="photo-preview hidden" alt="Preview of your profile photo"><p id="photo-empty" class="photo-note">No profile photo uploaded yet.</p><label for="photo-file">Upload or replace photo<input id="photo-file" type="file" accept="image/*"></label><button id="upload-photo" type="button" disabled>Upload photo</button><p id="photo-status" class="photo-note" role="status" aria-live="polite"></p></section>
@@ -107,6 +116,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
 </main>
 <script src="assets/vendor/supabase-js-2.117.2.js"></script>
 <script src="assets/push-notifications.js"></script>
+<script src="assets/invite.js"></script>
 <script src="assets/member-core.js"></script>
 <script src="assets/photo-cropper.js"></script>
 <script>
@@ -197,6 +207,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     showOfficial(profile);
     window.FYP.showSignedIn(profile, user);
     window.FYP.startUnreadAlerts(db, profile);
+    if (window.FYPInvite) window.FYPInvite.render(db);
     loadPhotoPreview(profile.profile_photo_url);
     loadExtraPhotos();
     showChecklist();

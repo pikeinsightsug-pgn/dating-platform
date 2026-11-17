@@ -17,7 +17,7 @@ function topCounts(values, limit) {
     .map(([label, count]) => ({ label, count }));
 }
 
-// members: [{ id, gender, location, city, created_at, approved, is_test_account, is_official, profile_photo_url }]
+// members: [{ id, invited_by, gender, location, city, created_at, approved, is_test_account, is_official, profile_photo_url }]
 // messages: [{ sender_member_id, recipient_member_id, created_at }]
 export function growthStats(members, messages, now = Date.now()) {
   const excluded = new Set(members.filter((m) => m.is_test_account || m.is_official).map((m) => m.id));
@@ -58,6 +58,7 @@ export function growthStats(members, messages, now = Date.now()) {
       new_7_days: genuine.filter(since(7)).length,
       new_30_days: genuine.filter(since(30)).length,
       with_photo: genuine.filter((m) => !!m.profile_photo_url).length,
+      joined_by_invite: genuine.filter((m) => !!m.invited_by).length,
       daily,
       gender: topCounts(genuine.map((m) => m.gender), 6),
       countries: topCounts(genuine.map((m) => m.location), 8),

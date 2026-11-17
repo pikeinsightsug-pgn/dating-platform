@@ -5,7 +5,7 @@ import { growthStats } from "../_shared/growth-stats.js";
 
 // Bump when this function changes; the owner console compares it with the version it expects,
 // so the owner can see whether the deployed function is current without opening Supabase.
-const FUNCTION_VERSION = "2026-11-17";
+const FUNCTION_VERSION = "2026-11-17b";
 
 // Lists are read in pages so the console keeps showing everyone as the community grows
 // (a single request returns at most 1000 rows). `page` builds the query for one range.
@@ -160,7 +160,7 @@ Deno.serve(async (req: Request) => {
       .select("sender_member_id, recipient_member_id, created_at").order("created_at").order("id").range(from, to));
     if (messageError) return json({ error: "Could not load message activity.", detail: messageError.message }, 500);
     const members = (memberRows || []).map((m) => ({
-      id: m.id, gender: m.gender, location: m.location, city: m.city, created_at: m.created_at,
+      id: m.id, invited_by: m.invited_by ?? null, gender: m.gender, location: m.location, city: m.city, created_at: m.created_at,
       approved: m.approved === true, is_test_account: m.is_test_account === true, is_official: m.is_official === true,
       profile_photo_url: m.profile_photo_url,
     }));

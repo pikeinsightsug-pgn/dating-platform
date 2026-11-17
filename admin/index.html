@@ -114,7 +114,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     return data;
   }
   // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
-  const EXPECTED_FUNCTION_VERSION = "2026-11-17";
+  const EXPECTED_FUNCTION_VERSION = "2026-11-17b";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
@@ -196,7 +196,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
       $("g-total").textContent = m.total;
       $("g-spots").textContent = g.founding_spots_left > 0 ? g.founding_spots_left + " of 100 founding spots left" : "All 100 founding spots taken";
       $("g-today").textContent = m.new_today;
-      $("g-week").textContent = m.new_7_days + " this week · " + m.new_30_days + " in 30 days";
+      $("g-week").textContent = m.new_7_days + " this week · " + m.new_30_days + " in 30 days" + (m.joined_by_invite ? " · " + m.joined_by_invite + " via invites" : "");
       $("g-msgs").textContent = x.last_7_days;
       $("g-senders").textContent = x.active_senders_7_days + " members sent messages";
       $("g-reply").textContent = x.reply_rate_percent == null ? "—" : x.reply_rate_percent + "%";
