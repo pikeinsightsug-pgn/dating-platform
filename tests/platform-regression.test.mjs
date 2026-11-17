@@ -509,6 +509,7 @@ test("founding-spots counter shows one number only and hides itself when unsure"
   assert.match(js, /rpc\/founding_spots_left/);
   assert.match(js, /left <= 0 \|\| left > 100\) return/, "nothing shown when full or the number is odd");
   assert.doesNotMatch(js, /service_role|sb_secret/i);
+  assert.doesNotMatch(js, /free|paid|payment/i, "the counter makes no promise about price");
   for (const page of ["index.html", "account.html"]) {
     const html = await read(page);
     assert.match(html, /data-founding-spots hidden/, page + " counter starts hidden");
