@@ -1,5 +1,5 @@
 // "74 members have joined so far. Be one of our first 100 founding members.", updated
-// automatically from the database. It makes no promise about payment (registration is free).
+// automatically from the database. It makes no promise about price.
 // It asks Supabase for one number only (supabase/founding_spots.sql). If that number cannot be
 // read, or all spots are taken, nothing is shown, so the page never displays a wrong count.
 (function () {
