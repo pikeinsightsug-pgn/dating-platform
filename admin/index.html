@@ -18,6 +18,12 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 #add-status{white-space:pre-wrap;font-weight:650;color:#8f1e51}#add-status.ok{color:#1d6b3a}
 @media(max-width:650px){#add-member .pair{grid-template-columns:1fr}}
 .admin-photo{display:block;width:min(100%,360px);max-height:320px;object-fit:cover;border-radius:14px;margin:12px 0;background:#fde8f0}.hidden{display:none!important}@media(max-width:650px){.grid{grid-template-columns:1fr}.wrap{padding:14px}}
+#growth .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}#growth .metric .num{font-size:30px}
+#growth .bars{display:flex;align-items:flex-end;gap:4px;height:90px;margin:8px 0 2px}#growth .bars div{flex:1;background:#e7a3c0;border-radius:5px 5px 0 0;min-height:3px;position:relative}
+#growth .bars div span{position:absolute;top:-18px;left:0;right:0;text-align:center;font-size:11px;color:#766772}
+#growth .lists{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}#growth ol{margin:6px 0 0;padding-left:20px}#growth li{margin:2px 0}
+#growth .tip{background:#fff3f8;border-left:4px solid #b32663;border-radius:10px;padding:10px 12px;margin-top:12px}
+@media(max-width:650px){#growth .g4,#growth .lists{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body><main class="wrap">
@@ -33,6 +39,19 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <section id="app" class="hidden">
 <p id="function-version" role="status" class="muted"></p>
 <div class="grid"><div class="metric">Profiles<div class="num" id="total">—</div><div class="muted" id="test-count"></div></div><div class="metric">Genuine approved<div class="num" id="approved">—</div><div class="muted">Excludes your test accounts</div></div><div class="metric">Pending review<div class="num" id="pending">—</div></div></div>
+<div class="panel" id="growth"><div class="row"><h2>📈 Growth dashboard</h2><span class="muted" id="growth-updated"></span></div>
+<p class="muted" id="growth-status">Loading growth numbers…</p>
+<div id="growth-body" class="hidden">
+<div class="g4">
+<div class="metric">Genuine members<div class="num" id="g-total">—</div><div class="muted" id="g-spots"></div></div>
+<div class="metric">New today<div class="num" id="g-today">—</div><div class="muted" id="g-week"></div></div>
+<div class="metric">Messages (7 days)<div class="num" id="g-msgs">—</div><div class="muted" id="g-senders"></div></div>
+<div class="metric">Reply rate<div class="num" id="g-reply">—</div><div class="muted" id="g-convs"></div></div>
+</div>
+<p class="muted" style="margin:14px 0 0">New members per day (last 14 days)</p><div class="bars" id="g-daily"></div>
+<div class="lists"><div><b>Gender</b><ol id="g-gender"></ol></div><div><b>Countries</b><ol id="g-countries"></ol></div><div><b>Cities</b><ol id="g-cities"></ol></div></div>
+<div class="tip" id="g-tip"></div>
+</div></div>
 <div class="panel" id="recovery"><h2>Safely link a verified existing profile</h2>
 <p class="muted">Use only after independently verifying the person against their original registration information. Select an existing email-confirmed Auth account; linking changes only the profile's user ID. It does not approve the profile. Never match by name or an unverified email.</p>
 <div id="recovery-status" role="status" class="muted">Load registrations to see eligible unlinked accounts.</div></div>
@@ -95,7 +114,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     return data;
   }
   // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
-  const EXPECTED_FUNCTION_VERSION = "2026-11-07";
+  const EXPECTED_FUNCTION_VERSION = "2026-11-17";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
@@ -151,11 +170,55 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     $("legacy-toggle").textContent = hidden ? "Show" : "Hide";
   };
 
+
+  // Growth dashboard: counts only. A short tip says what to do next, so ads can be run
+  // without working out numbers by hand.
+  function growthTip(g) {
+    const m = g.members, x = g.messages;
+    const women = m.gender.filter(r => /^(female|woman|women)$/i.test(r.label)).reduce((a, r) => a + r.count, 0);
+    const men = m.gender.filter(r => /^(male|man|men)$/i.test(r.label)).reduce((a, r) => a + r.count, 0);
+    if (men > 0 && women * 2 < men) return "⚖️ Many more men than women. Aim your next ads at women (Facebook audience: Women, 22–45) until it is closer to even.";
+    if (x.reply_rate_percent != null && x.reply_rate_percent < 35 && x.conversations >= 10) return "💬 Most first messages get no reply. Remind members (Facebook post) to tap Allow for message alerts and to reply; keep new ads aimed at women.";
+    if (m.new_7_days === 0) return "📣 No new members this week. Check that your Facebook ad is still running and approved.";
+    if (g.founding_spots_left <= 10 && g.founding_spots_left > 0) return "🔥 Only " + g.founding_spots_left + " founding spots left. Decide your price and payment method now, before spot 100.";
+    if (g.founding_spots_left === 0) return "✅ All 100 founding spots are taken. The homepage counter is hidden; switch on paid membership when you are ready.";
+    return "✅ Healthy week. Keep the current ad running; change its picture every 2 weeks so people do not get tired of it.";
+  }
+  function fillList(id, rows) {
+    const el = $(id); el.textContent = "";
+    rows.forEach(r => { const li = document.createElement("li"); li.textContent = r.label + " — " + r.count; el.append(li); });
+    if (!rows.length) el.textContent = "—";
+  }
+  async function loadGrowth() {
+    try {
+      const data = await invoke("growth");
+      const g = data.growth, m = g.members, x = g.messages;
+      $("g-total").textContent = m.total;
+      $("g-spots").textContent = g.founding_spots_left > 0 ? g.founding_spots_left + " of 100 founding spots left" : "All 100 founding spots taken";
+      $("g-today").textContent = m.new_today;
+      $("g-week").textContent = m.new_7_days + " this week · " + m.new_30_days + " in 30 days";
+      $("g-msgs").textContent = x.last_7_days;
+      $("g-senders").textContent = x.active_senders_7_days + " members sent messages";
+      $("g-reply").textContent = x.reply_rate_percent == null ? "—" : x.reply_rate_percent + "%";
+      $("g-convs").textContent = x.two_way_conversations + " of " + x.conversations + " chats got a reply";
+      const max = Math.max(1, ...m.daily.map(d => d.count));
+      const bars = $("g-daily"); bars.textContent = "";
+      m.daily.forEach(d => { const b = document.createElement("div"); b.style.height = Math.round((d.count / max) * 100) + "%"; b.title = d.date + ": " + d.count;
+        const n = document.createElement("span"); n.textContent = d.count || ""; b.append(n); bars.append(b); });
+      fillList("g-gender", m.gender); fillList("g-countries", m.countries); fillList("g-cities", m.cities);
+      $("g-tip").textContent = growthTip(g);
+      $("growth-updated").textContent = "Updated " + new Date().toLocaleString();
+      $("growth-status").classList.add("hidden"); $("growth-body").classList.remove("hidden");
+    } catch (e) {
+      $("growth-status").textContent = notDeployed(e);
+    }
+  }
   async function load() {
     say("Loading registrations…");
     const data = await invoke("list");
     profiles = data.members || [];
     const [accountResult] = await Promise.allSettled([invoke("list_unlinked_accounts")]);
+    loadGrowth();
     loadReports().catch(e => { $("reports").textContent = notDeployed(e); });
     loadLegacy().catch(e => { $("legacy-summary").textContent = notDeployed(e); });
     const m = data.metrics;

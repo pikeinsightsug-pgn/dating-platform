@@ -464,3 +464,57 @@ test("message pop-up notifications: members only, unlinked on sign-out, never th
   assert.match(sql, /interval '10 minutes'/, "at most one pop-up per conversation every 10 minutes");
   assert.match(sql, /exception when others then/, "a notification problem never blocks a message");
 });
+
+test("owner growth dashboard counts genuine members and real conversations only", async () => {
+  const { growthStats } = await import("../supabase/functions/_shared/growth-stats.js");
+  const now = Date.parse("2026-11-17T12:00:00Z");
+  const ago = (h) => new Date(now - h * 3600e3).toISOString();
+  const members = [
+    { id: "a", gender: "Female", location: "Uganda", city: "Kampala", created_at: ago(2), approved: true, profile_photo_url: "x" },
+    { id: "b", gender: "Male", location: "Uganda", city: "Kampala", created_at: ago(30), approved: true },
+    { id: "c", gender: "Male", location: "Botswana", city: "Gaborone", created_at: ago(24 * 10), approved: false },
+    { id: "founder", gender: "Male", location: "Botswana", created_at: ago(24 * 40), is_official: true },
+    { id: "test", gender: "Male", location: "Uganda", created_at: ago(1), is_test_account: true },
+  ];
+  const messages = [
+    { sender_member_id: "b", recipient_member_id: "a", created_at: ago(5) },
+    { sender_member_id: "a", recipient_member_id: "b", created_at: ago(4) },
+    { sender_member_id: "c", recipient_member_id: "a", created_at: ago(24 * 9) },
+    { sender_member_id: "founder", recipient_member_id: "c", created_at: ago(3) },
+    { sender_member_id: "test", recipient_member_id: "a", created_at: ago(1) },
+  ];
+  const g = growthStats(members, messages, now);
+  assert.equal(g.members.total, 3, "test and official accounts are not counted");
+  assert.equal(g.members.new_today, 1);
+  assert.equal(g.members.new_7_days, 2);
+  assert.equal(g.members.with_photo, 1);
+  assert.equal(g.members.daily.length, 14);
+  assert.deepEqual(g.members.countries[0], { label: "Uganda", count: 2 });
+  assert.equal(g.messages.total, 3, "founder welcomes and test messages are left out");
+  assert.equal(g.messages.conversations, 2);
+  assert.equal(g.messages.two_way_conversations, 1);
+  assert.equal(g.messages.reply_rate_percent, 50);
+  assert.equal(g.messages.last_7_days, 2);
+  assert.equal(g.founding_spots_left, 97);
+  const fn = await read("supabase/functions/admin-members/index.ts");
+  assert.match(fn, /body\.action === "growth"/);
+  assert.match(fn, /select\("sender_member_id, recipient_member_id, created_at"\)/, "message text is never read for the dashboard");
+  const version = fn.match(/const FUNCTION_VERSION = "([^"]+)"/)[1];
+  assert.match(await read("admin/index.html"), new RegExp('EXPECTED_FUNCTION_VERSION = "' + version + '"'), "console and function versions match");
+});
+
+test("founding-spots counter shows one number only and hides itself when unsure", async () => {
+  const js = await read("assets/founding-spots.js");
+  assert.match(js, /rpc\/founding_spots_left/);
+  assert.match(js, /left <= 0 \|\| left > 100\) return/, "nothing shown when full or the number is odd");
+  assert.doesNotMatch(js, /service_role|sb_secret/i);
+  for (const page of ["index.html", "account.html"]) {
+    const html = await read(page);
+    assert.match(html, /data-founding-spots hidden/, page + " counter starts hidden");
+    assert.match(html, /<script src="assets\/founding-spots\.js" defer><\/script>/, page);
+  }
+  const sql = await read("supabase/founding_spots.sql");
+  assert.match(sql, /returns integer/);
+  assert.match(sql, /is_test_account[\s\S]*is_official/, "test and official accounts never count");
+  assert.match(sql, /grant execute on function public\.founding_spots_left\(\) to anon, authenticated/);
+});
