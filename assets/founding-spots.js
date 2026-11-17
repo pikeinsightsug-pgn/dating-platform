@@ -1,4 +1,5 @@
-// "Only N of 100 free founding spots left", updated automatically from the database.
+// "74 members have joined so far. Be one of our first 100 founding members.", updated
+// automatically from the database. It makes no promise about payment (registration is free).
 // It asks Supabase for one number only (supabase/founding_spots.sql). If that number cannot be
 // read, or all spots are taken, nothing is shown, so the page never displays a wrong count.
 (function () {
@@ -12,7 +13,7 @@
     .then(left => {
       if (typeof left !== "number" || left <= 0 || left > 100) return;
       targets.forEach(el => {
-        el.textContent = "🔥 Only " + left + " of 100 free founding-member spots left";
+        el.textContent = "🎉 " + (100 - left) + " members have joined so far. Be one of our first 100 founding members.";
         el.hidden = false;
       });
     })
