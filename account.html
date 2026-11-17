@@ -38,6 +38,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
   <section id="register-view" aria-labelledby="register-title">
     <div class="signup-hero" aria-hidden="true"><span>💖</span><span>🌍</span><span>💬</span></div>
     <h1 id="register-title">Join in 30 seconds ✨</h1>
+    <p class="founding-spots" data-founding-spots hidden style="font-weight:800;color:#a0124b;background:#fff0f5;border:1px solid #f4c6d7;border-radius:12px;padding:8px 12px;display:inline-block;margin:10px 0 0"></p>
     <p class="muted">Just the basics now. You can add the rest after you're in.</p>
     <ul class="trust-strip" aria-label="Why join">
       <li>✅ 100% free · no card needed</li><li>🔒 Private</li><li>🛡️ Report &amp; block anytime</li><li>🔞 Adults 18+</li>
@@ -464,6 +465,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
   })().catch(() => say("The account service is temporarily unavailable. Refresh and try again."));
 })();
 </script>
+<script src="assets/founding-spots.js" defer></script>
 <script src="assets/app-install.js" defer></script>
 </body>
 </html>
