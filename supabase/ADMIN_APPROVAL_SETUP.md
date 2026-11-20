@@ -176,3 +176,14 @@ country in the shared list (`supabase/functions/_shared/countries.js`, mirrored 
 `assets/member-core.js` and the SQL file; a test keeps the three identical). Existing members and
 every other rule (18+, owner approval, private profiles) are unchanged. Diagnostics line 39 shows
 whether it is applied. The owner function (version 2026-10-26) redeploys automatically on merge.
+
+## Smarter Discover Members (November 2026)
+
+Apply `supabase/smart_discovery.sql` in the SQL Editor after the files above. It is additive and
+safe to rerun. Discover Members then lists the best fits first: same city (so "FRANCISTOWN" and
+"Gulu city" count as Francistown and Gulu), then same country, then members with a photo, then
+recently active members, then the newest. Profiles show "🟢 Active today" or "🟢 Active this week";
+exact sign-in and message times are never shown. The Gender filter now starts on the gender the
+member said they are looking for (with a note explaining it), and the member can change it to
+"Any". Nobody new becomes visible and every existing rule (18+, approval, blocking) is unchanged.
+Until the SQL is applied, the site keeps working with the old newest-first order and no labels.
