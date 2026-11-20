@@ -28,6 +28,8 @@ h1{font-size:clamp(32px,6vw,48px);letter-spacing:-1.5px;margin:24px 0 8px}p{line
 .card button.open{all:unset;cursor:pointer;display:block}.card button.open:focus-visible{outline:3px solid #b32663;outline-offset:-3px}
 .photo{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#f7e8ee}.no-photo{display:grid;place-items:center;width:100%;aspect-ratio:4/3;background:#fde8f0;color:#a21f59;font-size:44px}
 .body{padding:18px 20px}.body h2{margin:0 0 6px;font-size:22px}.details{font-size:14px;color:#75666e;margin:0 0 8px}.bio{white-space:pre-wrap;overflow-wrap:anywhere}
+.active{display:inline-block;margin:0 0 8px;padding:3px 10px;border-radius:999px;background:#e6f6ec;color:#1d6b3a;font-size:13px;font-weight:700}
+.filter-note{margin:-6px 0 14px;font-size:14px;color:#75666e}
 .clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .more{display:flex;justify-content:center;margin:26px 0}
 dialog{border:0;border-radius:22px;padding:0;width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 24px);box-shadow:0 20px 60px #0004}
@@ -79,6 +81,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     <label>Looking for<select name="goal"><option value="">Any goal</option><option>Serious relationship</option><option>Marriage</option><option>Friendship</option><option>Exploring connections</option></select></label>
     <button type="submit">Apply filters</button>
   </form>
+  <p id="filter-note" class="filter-note hidden" role="note"></p>
   <p id="official-self" class="self-note hidden" role="note">You are signed in as the official P.K Connect account ✅. Members see you pinned at the top of their Discover page, never as a dating profile. Open a member below and press Message to welcome them.</p>
   <section id="official" class="official hidden" aria-label="Official P.K Connect account"></section>
   <p id="status" role="status" aria-live="polite">Checking your account…</p>
@@ -162,6 +165,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     const body = document.createElement("div"); body.className = "body";
     addText(body, "h2", profile.first_name + ", " + profile.age);
     addText(body, "p", detailsLine(profile), "details");
+    if (profile.activity) addText(body, "p", "🟢 " + profile.activity, "active");
     if (profile.profession) addText(body, "p", "💼 " + profile.profession, "details");
     if (profile.relationship_goal) addText(body, "p", "Looking for: " + profile.relationship_goal);
     if (profile.bio) addText(body, "p", profile.bio, "bio clamp");
@@ -178,6 +182,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     document.getElementById("dialog-name").textContent = current.first_name + ", " + current.age;
     document.getElementById("dialog-details").textContent = detailsLine(current);
     const text = document.getElementById("dialog-text"); text.replaceChildren();
+    if (current.activity) addText(text, "p", "🟢 " + current.activity, "active");
     if (current.profession) addText(text, "p", "💼 " + current.profession);
     if (current.relationship_goal) addText(text, "p", "Looking for: " + current.relationship_goal);
     if (current.bio) addText(text, "p", current.bio, "bio");
@@ -266,6 +271,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
       if (!window.FYP.isMissingFunction(error)) throw error;
       legacyMode = true; // The newest migration is not applied yet: use the earlier discovery function.
       filters.classList.add("hidden");
+      document.getElementById("filter-note").classList.add("hidden");
     }
     const { data, error } = await db.rpc("browse_approved_profiles");
     if (error) throw error;
@@ -281,6 +287,16 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     } catch (error) { /* optional detail */ }
     return found;
   }
+  // "Active today" / "Active this week" labels come from their own optional function too.
+  async function activityFor(rows) {
+    const found = new Map();
+    if (!rows.length) return found;
+    try {
+      const { data, error } = await db.rpc("member_activity", { p_member_ids: rows.map(row => row.id) });
+      if (!error) (data || []).forEach(item => found.set(item.id, item.activity));
+    } catch (error) { /* optional detail */ }
+    return found;
+  }
   async function loadPage(reset) {
     if (loading) return;
     loading = true; loadMore.disabled = true; filters.querySelector("button").disabled = true;
@@ -288,9 +304,10 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     try {
       const rows = await fetchPage();
       if (!legacyMode) filters.classList.remove("hidden");
-      const [urls, professions] = await Promise.all([
-        window.FYP.signedPhotoUrls(db, rows.map(row => row.profile_photo_path)), professionsFor(rows)]);
-      rows.forEach(row => showCard({ ...row, profession: professions.get(row.id) || row.profession || null }, urls.get(row.profile_photo_path) || null));
+      const [urls, professions, activity] = await Promise.all([
+        window.FYP.signedPhotoUrls(db, rows.map(row => row.profile_photo_path)), professionsFor(rows), activityFor(rows)]);
+      rows.forEach(row => showCard({ ...row, profession: professions.get(row.id) || row.profession || null,
+        activity: activity.get(row.id) || null }, urls.get(row.profile_photo_path) || null));
       total = rows.length ? Number(rows[0].total_count) || rows.length : (reset ? 0 : total);
       offset += rows.length;
       const more = !legacyMode && offset < total && rows.length > 0;
@@ -309,6 +326,17 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     } finally {
       loading = false; loadMore.disabled = false; filters.querySelector("button").disabled = false;
     }
+  }
+  const SEEKING_TO_GENDER = { Men: "Man", Women: "Woman" };
+  function applySeekingDefault(profile) {
+    const gender = SEEKING_TO_GENDER[profile && profile.seeking_gender];
+    const note = document.getElementById("filter-note");
+    if (!gender || profile.is_official === true) return;
+    filters.elements.gender.value = gender;
+    note.textContent = "Showing " + (gender === "Man" ? "men" : "women") +
+      " because your profile says you are looking for " + (gender === "Man" ? "men" : "women") +
+      ". Members in your city are shown first. Change the Gender filter to “Any” to see everyone.";
+    note.classList.remove("hidden");
   }
   function hasActiveFilters() {
     const f = filterValues();
@@ -390,9 +418,10 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     document.getElementById("welcome-close").addEventListener("click", () => document.getElementById("welcome-new").classList.add("hidden"));
     document.getElementById("official-self").classList.toggle("hidden", profile.is_official !== true);
     if (profile.approved === true && profile.is_official !== true) showOfficial();
-    // Everyone starts with every approved member visible (any gender, ages 18–120, all
-    // countries, any goal). The member's saved preferences no longer narrow the list
-    // silently; members choose their own filters and press "Apply filters".
+    // Members start with every approved member of the gender they said they are looking for
+    // (shown openly in the Gender filter, with a note), any age, all countries and any goal.
+    // Best fits come first: same city, same country, with a photo, recently active.
+    applySeekingDefault(profile);
     await loadPage(true);
   })().catch(error => say(failureMessage(error)));
 })();

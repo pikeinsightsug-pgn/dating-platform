@@ -26,7 +26,8 @@ for file in \
   supabase/member_profession.sql \
   supabase/everyone_visible.sql \
   supabase/instant_approval.sql \
-  supabase/instant_approval.sql; do
+  supabase/smart_discovery.sql \
+  supabase/smart_discovery.sql; do
   # The newest migration runs twice to prove it is safe to rerun.
   PGOPTIONS="-c client_min_messages=warning" psql_q -d "$DB" -f "$file"
 done

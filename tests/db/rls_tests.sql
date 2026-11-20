@@ -79,6 +79,9 @@ select t_assert((select count(*) = 1 from browse_member_profiles(p_min_age => 30
 select t_assert((select count(*) = 1 from browse_member_profiles(p_relationship_goal => 'Friendship')), 'relationship goal filter');
 select t_assert((select count(*) = 1 and max(total_count) = 2 from browse_member_profiles(p_limit => 1)), 'pagination returns total_count with a page');
 select t_assert((select count(*) = 1 from browse_member_profiles(p_limit => 1, p_offset => 1)), 'second page');
+select t_assert((select first_name = 'TestE' from browse_member_profiles() limit 1), 'smart discovery: A (Uganda) sees same-country E before B (Botswana)');
+select t_assert((select count(*) = 0 from member_activity(array['cccccccc-0000-4000-8000-000000000003'::uuid, 'aaaaaaaa-0000-4000-8000-000000000001'::uuid])), 'activity labels never cover pending members or self');
+select t_assert(public.normalized_city(' GULU city ') = 'gulu' and public.normalized_city('Francistown') = public.normalized_city('FRANCISTOWN'), 'city names compare without capitals or a trailing "city"');
 select t_assert((select count(*) = 1 from get_member_profile(:'b_id')), 'A can open B''s profile details');
 select t_assert((select count(*) = 0 from get_member_profile(:'c_id')), 'A cannot open pending C''s profile');
 -- RLS hides other members' rows rather than raising, so assert on what is visible.
