@@ -5,7 +5,7 @@
 -- Sends through Brevo (brevo.com), where pkconnectonline.com is already authenticated.
 -- One-time setup (see supabase/ADMIN_APPROVAL_SETUP.md, "Unread-message emails"):
 --   1. In Brevo, check Senders, Domains & Dedicated IPs: pkconnectonline.com is authenticated
---      and noreply@pkconnectonline.com is listed as a sender (add it if not).
+--      and no-reply@pkconnectonline.com is listed as a sender (add it if not).
 --   2. In Brevo, SMTP & API -> API keys -> Generate a new API key, and store it in Supabase
 --      Vault, never here:
 --        select vault.create_secret('PASTE-BREVO-API-KEY', 'brevo_api_key');
@@ -152,7 +152,7 @@ begin
           'api-key', api_key
         ),
         body := jsonb_build_object(
-          'sender', jsonb_build_object('name', 'P.K Connect', 'email', 'noreply@pkconnectonline.com'),
+          'sender', jsonb_build_object('name', 'P.K Connect', 'email', 'no-reply@pkconnectonline.com'),
           'to', jsonb_build_array(jsonb_build_object('email', r.email)),
           'replyTo', jsonb_build_object('email', 'pikeinsightsug@gmail.com'),
           'subject', subject,
