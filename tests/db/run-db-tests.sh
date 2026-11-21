@@ -36,6 +36,16 @@ PGOPTIONS="-c client_min_messages=notice" psql -v ON_ERROR_STOP=1 -X -q -d "$DB"
   | sed -n 's/^psql:[^ ]* NOTICE:  //p; s/^psql:.*ERROR:  /ERROR: /p'
 status=${PIPESTATUS[0]}
 
+# Unread-message emails need pg_net, Vault and pg_cron; local stand-ins replace them here.
+psql_q -d "$DB" -c "set client_min_messages = warning" -f tests/db/unread_email_stub.sql
+for run in 1 2; do
+  sed '/^create extension if not exists pg_\(net\|cron\)/d' supabase/unread_message_emails.sql \
+    | PGOPTIONS="-c client_min_messages=warning" psql_q -d "$DB"
+done
+PGOPTIONS="-c client_min_messages=notice" psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f tests/db/unread_email_tests.sql 2>&1 \
+  | sed -n 's/^psql:[^ ]* NOTICE:  //p; s/^psql:.*ERROR:  /ERROR: /p'
+[ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+
 # The read-only diagnostics must run on the fully migrated database and on one where
 # none of the setup files were applied.
 psql_q -d "$DB" -f supabase/diagnostics_readonly.sql > /dev/null && echo "PASS: diagnostics run on the migrated database" || status=1

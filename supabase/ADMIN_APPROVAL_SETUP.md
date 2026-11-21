@@ -188,3 +188,24 @@ exact sign-in and message times are never shown. The Gender filter now starts on
 member said they are looking for (with a note explaining it), and the member can change it to
 "Any". Nobody new becomes visible and every existing rule (18+, approval, blocking) is unchanged.
 Until the SQL is applied, the site keeps working with the old newest-first order and no labels.
+
+## Unread-message emails (November 2026)
+
+Members who have a message waiting unread for over an hour get one email, "Naledi sent you a
+message 💬", with a button to their messages. The message text is never in the email. At most one
+email per member every 20 hours, at most 80 an hour, and every email has a one-tap unsubscribe link
+(`unsubscribe.html`). The official account, unconfirmed emails and blocked senders are skipped.
+
+One-time setup:
+
+1. Create a free account at resend.com. Under **Domains**, add `pkconnectonline.com` and copy the
+   DNS records it shows into the place where you bought the domain. Wait until Resend says
+   **Verified** (from minutes up to a day).
+2. Under **API Keys**, create a key with **Sending access**. In the Supabase SQL Editor run
+   `select vault.create_secret('PASTE-RESEND-API-KEY', 'resend_api_key');` and close that tab
+   without saving it.
+3. Run `supabase/unread_message_emails.sql` in the SQL Editor. Safe to rerun.
+
+Check it: `select status_code, left(content::text, 120), created from net._http_response order by created desc limit 10;`
+(200 = sent). Switch off: `select cron.unschedule('pk-unread-message-emails');`
+
