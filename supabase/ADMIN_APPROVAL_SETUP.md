@@ -199,7 +199,7 @@ email per member every 20 hours, at most 80 an hour, and every email has a one-t
 One-time setup (emails go through Brevo, where pkconnectonline.com is already authenticated):
 
 1. In Brevo, open **Senders, Domains & Dedicated IPs**. Check `pkconnectonline.com` shows as
-   authenticated and `noreply@pkconnectonline.com` is in the Senders list (add it if not).
+   authenticated and `no-reply@pkconnectonline.com` is in the Senders list (add it if not).
 2. In Brevo, open **SMTP & API → API keys → Generate a new API key**. In the Supabase SQL Editor run
    `select vault.create_secret('PASTE-BREVO-API-KEY', 'brevo_api_key');` and close that tab
    without saving it.
