@@ -420,7 +420,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     if (profile.approved === true && profile.is_official !== true) showOfficial();
     // Members start with every approved member of the gender they said they are looking for
     // (shown openly in the Gender filter, with a note), any age, all countries and any goal.
-    // Best fits come first: same city, same country, with a photo, recently active.
+    // Members with a photo always come first; then same city, same country, recently active.
     applySeekingDefault(profile);
     await loadPage(true);
   })().catch(error => say(failureMessage(error)));

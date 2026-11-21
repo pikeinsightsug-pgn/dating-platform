@@ -180,9 +180,10 @@ whether it is applied. The owner function (version 2026-10-26) redeploys automat
 ## Smarter Discover Members (November 2026)
 
 Apply `supabase/smart_discovery.sql` in the SQL Editor after the files above. It is additive and
-safe to rerun. Discover Members then lists the best fits first: same city (so "FRANCISTOWN" and
-"Gulu city" count as Francistown and Gulu), then same country, then members with a photo, then
-recently active members, then the newest. Profiles show "🟢 Active today" or "🟢 Active this week";
+safe to rerun. Discover Members then lists members with a profile photo first, always ahead of
+members without one. Within each group the best fits come first: same city (so "FRANCISTOWN" and
+"Gulu city" count as Francistown and Gulu), then same country, then recently active members, then
+the newest. Profiles show "🟢 Active today" or "🟢 Active this week";
 exact sign-in and message times are never shown. The Gender filter now starts on the gender the
 member said they are looking for (with a note explaining it), and the member can change it to
 "Any". Nobody new becomes visible and every existing rule (18+, approval, blocking) is unchanged.
