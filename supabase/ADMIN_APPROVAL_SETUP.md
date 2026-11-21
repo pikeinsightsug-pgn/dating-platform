@@ -196,13 +196,12 @@ message 💬", with a button to their messages. The message text is never in the
 email per member every 20 hours, at most 80 an hour, and every email has a one-tap unsubscribe link
 (`unsubscribe.html`). The official account, unconfirmed emails and blocked senders are skipped.
 
-One-time setup:
+One-time setup (emails go through Brevo, where pkconnectonline.com is already authenticated):
 
-1. Create a free account at resend.com. Under **Domains**, add `pkconnectonline.com` and copy the
-   DNS records it shows into the place where you bought the domain. Wait until Resend says
-   **Verified** (from minutes up to a day).
-2. Under **API Keys**, create a key with **Sending access**. In the Supabase SQL Editor run
-   `select vault.create_secret('PASTE-RESEND-API-KEY', 'resend_api_key');` and close that tab
+1. In Brevo, open **Senders, Domains & Dedicated IPs**. Check `pkconnectonline.com` shows as
+   authenticated and `noreply@pkconnectonline.com` is in the Senders list (add it if not).
+2. In Brevo, open **SMTP & API → API keys → Generate a new API key**. In the Supabase SQL Editor run
+   `select vault.create_secret('PASTE-BREVO-API-KEY', 'brevo_api_key');` and close that tab
    without saving it.
 3. Run `supabase/unread_message_emails.sql` in the SQL Editor. Safe to rerun.
 
