@@ -14,14 +14,14 @@ insert into member_messages (sender_member_id, recipient_member_id, body, create
  (:s_id, :r_id, 'SECRET-MESSAGE-TEXT', now() - interval '2 hours'),
  (:s_id, :f_id, 'too new', now() - interval '10 minutes');
 
-select t_assert(send_unread_message_emails() = 0 and not exists (select 1 from net.sent), 'nothing is sent before the Resend key is stored');
-insert into vault.decrypted_secrets values ('resend_api_key', 'test-key');
+select t_assert(send_unread_message_emails() = 0 and not exists (select 1 from net.sent), 'nothing is sent before the Brevo key is stored');
+insert into vault.decrypted_secrets values ('brevo_api_key', 'test-key');
 select t_assert(send_unread_message_emails() = 1, 'one email for the message unread over an hour; none for the 10-minute-old one');
-select t_assert((select body->'to'->>0 from net.sent order by id desc limit 1) = 'mail-reader@test.invalid', 'sent to the recipient''s email');
-select t_assert((select headers->>'Authorization' from net.sent order by id desc limit 1) = 'Bearer test-key', 'uses the stored key');
+select t_assert((select body->'to'->0->>'email' from net.sent order by id desc limit 1) = 'mail-reader@test.invalid', 'sent to the recipient''s email');
+select t_assert((select headers->>'api-key' from net.sent order by id desc limit 1) = 'test-key', 'uses the stored key');
 select t_assert((select body::text not like '%SECRET-MESSAGE-TEXT%' from net.sent order by id desc limit 1), 'message text is never in the email');
-select t_assert((select body->>'html' like '%&lt;b&gt;Naledi&lt;/b&gt;%' and body->>'html' not like '%<b><b>Naledi%' from net.sent order by id desc limit 1), 'sender names are HTML-escaped');
-select t_assert((select body->>'html' like '%unsubscribe.html?t=%' from net.sent order by id desc limit 1), 'email has an unsubscribe link');
+select t_assert((select body->>'htmlContent' like '%&lt;b&gt;Naledi&lt;/b&gt;%' and body->>'htmlContent' not like '%<b><b>Naledi%' from net.sent order by id desc limit 1), 'sender names are HTML-escaped');
+select t_assert((select body->>'htmlContent' like '%unsubscribe.html?t=%' from net.sent order by id desc limit 1), 'email has an unsubscribe link');
 select t_assert(send_unread_message_emails() = 0, 'no second email within 20 hours');
 -- A day later: the same old unread message must not be emailed about again.
 update unread_email_state set last_emailed_at = now() - interval '21 hours';

@@ -1,12 +1,14 @@
 -- "You have an unread message" reminder emails (November 2026).
 -- Apply after push_notifications.sql and smart_discovery.sql. Additive and safe to rerun: no
--- member row or message is changed, and nothing is sent until the Resend key is stored.
+-- member row or message is changed, and nothing is sent until the Brevo key is stored.
 --
+-- Sends through Brevo (brevo.com), where pkconnectonline.com is already authenticated.
 -- One-time setup (see supabase/ADMIN_APPROVAL_SETUP.md, "Unread-message emails"):
---   1. Create a free Resend account (resend.com), add the domain pkconnectonline.com and add
---      the DNS records Resend shows until the domain says "Verified".
---   2. Create a Resend API key ("Sending access") and store it in Supabase Vault, never here:
---        select vault.create_secret('PASTE-RESEND-API-KEY', 'resend_api_key');
+--   1. In Brevo, check Senders, Domains & Dedicated IPs: pkconnectonline.com is authenticated
+--      and noreply@pkconnectonline.com is listed as a sender (add it if not).
+--   2. In Brevo, SMTP & API -> API keys -> Generate a new API key, and store it in Supabase
+--      Vault, never here:
+--        select vault.create_secret('PASTE-BREVO-API-KEY', 'brevo_api_key');
 --      Then close that query tab without saving it.
 --   3. Run this file in the Supabase SQL Editor.
 --
@@ -15,7 +17,7 @@
 --     (and is less than 7 days old), and emails them "Naledi sent you a message 💬" with a
 --     button to messages.html. The message text itself is never put in the email (privacy).
 --   * At most one email per member every 20 hours, only for messages newer than the last
---     email, and at most 80 emails an hour (Resend's free plan allows 100 a day).
+--     email, and at most 80 emails an hour (Brevo's free plan allows 300 a day).
 --   * Every email has a one-tap unsubscribe link (unsubscribe.html). Unsubscribed members,
 --     unconfirmed email addresses, blocked senders and the official account are skipped.
 --   * Any sending problem is logged as a warning and skipped; messaging is never affected.
@@ -73,7 +75,7 @@ declare
   queued integer := 0;
 begin
   select ds.decrypted_secret into api_key
-  from vault.decrypted_secrets ds where ds.name = 'resend_api_key' limit 1;
+  from vault.decrypted_secrets ds where ds.name = 'brevo_api_key' limit 1;
   if api_key is null then
     return 0;
   end if;
@@ -143,22 +145,24 @@ begin
         || '</div></div>';
 
       perform net.http_post(
-        url := 'https://api.resend.com/emails',
+        url := 'https://api.brevo.com/v3/smtp/email',
         headers := jsonb_build_object(
           'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || api_key
+          'Accept', 'application/json',
+          'api-key', api_key
         ),
         body := jsonb_build_object(
-          'from', 'P.K Connect <alerts@pkconnectonline.com>',
-          'to', jsonb_build_array(r.email),
-          'reply_to', 'pikeinsightsug@gmail.com',
+          'sender', jsonb_build_object('name', 'P.K Connect', 'email', 'noreply@pkconnectonline.com'),
+          'to', jsonb_build_array(jsonb_build_object('email', r.email)),
+          'replyTo', jsonb_build_object('email', 'pikeinsightsug@gmail.com'),
           'subject', subject,
-          'html', html,
-          'text', 'Hi ' || greeting || ', you have ' || r.unread || ' unread message(s) from ' || names
+          'htmlContent', html,
+          'textContent', 'Hi ' || greeting || ', you have ' || r.unread || ' unread message(s) from ' || names
                   || ' on P.K Connect. Read them: https://pkconnectonline.com/messages.html'
                   || E'\n\nUnsubscribe: ' || unsubscribe_url,
           'headers', jsonb_build_object(
-            'List-Unsubscribe', '<' || unsubscribe_url || '>')
+            'List-Unsubscribe', '<' || unsubscribe_url || '>'),
+          'tags', jsonb_build_array('unread-message')
         )
       );
 
