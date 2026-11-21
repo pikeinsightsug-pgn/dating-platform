@@ -6,9 +6,10 @@
 -- What it does:
 --   * browse_member_profiles keeps the same filters, visibility rules and returned columns,
 --     but lists the best fits first instead of only the newest members:
---       1. same city (ignoring capitals and a trailing "city", so "FRANCISTOWN" and
---          "Gulu city" match "Francistown" and "Gulu"), 2. same country,
---       3. members with a profile photo, 4. recently active members, 5. newest members.
+--       1. members with a profile photo (always before members without one),
+--       2. same city (ignoring capitals and a trailing "city", so "FRANCISTOWN" and
+--          "Gulu city" match "Francistown" and "Gulu"), 3. same country,
+--       4. recently active members, 5. newest members.
 --   * member_activity(ids) returns only a coarse label ("Active today" / "Active this week")
 --     for members the caller is already allowed to see. Exact sign-in or message times are
 --     never returned.
@@ -104,10 +105,10 @@ begin
          count(*) over ()
   from visible v
   order by
+    (v.photo_path is not null) desc,
     (my_city is not null and v.location = my_country
       and public.normalized_city(v.city) = my_city) desc,
     (v.location = my_country) desc,
-    (v.photo_path is not null) desc,
     v.last_active desc nulls last,
     v.created_at desc,
     v.id
