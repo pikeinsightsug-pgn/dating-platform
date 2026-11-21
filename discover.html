@@ -53,6 +53,35 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
 .welcome-new{margin:14px 0;padding:18px;border-radius:20px;color:#fff;background:radial-gradient(120% 140% at 0% 0%,#d81b60 0%,#8f1e51 60%,#4a0a26 100%);box-shadow:0 14px 30px #8f1e5133}
 .welcome-new h2{margin:0 0 6px;font-size:22px;color:#fff}.welcome-new p{margin:0 0 6px;color:#ffe6f0}.welcome-new .welcome-tip{font-size:14px}
 .welcome-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}.welcome-new .btn{background:#fff;color:#a0124b}.welcome-new .secondary{background:transparent;color:#fff;border:1px solid #ffffff80}
+/* Framed photos on member cards */
+.card{border:0;border-radius:26px;background:#fff;box-shadow:0 10px 30px #5c183014;transition:transform .18s ease,box-shadow .18s ease}
+.card:hover{transform:translateY(-4px);box-shadow:0 18px 40px #8f1e5126}
+.frame{position:relative;margin:12px 12px 0;padding:5px;border-radius:20px;background:linear-gradient(135deg,#f3a6c6 0%,#d81b60 45%,#f6c453 100%);box-shadow:0 8px 20px #8f1e5126}
+.frame>.photo,.frame>.no-photo{aspect-ratio:4/5;border-radius:15px;border:4px solid #fff;background:#fde8f0}
+.frame .on-photo{position:absolute;left:16px;bottom:16px;margin:0;background:#ffffffeb;color:#1d6b3a;box-shadow:0 2px 8px #0002}
+.card .body{padding:14px 18px 18px}.card .body h2{font-size:21px}
+/* Profile view */
+dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))}
+.dialog-top{position:relative;padding:14px 14px 0}
+.dialog-top .gallery{padding:6px;border-radius:24px;background:linear-gradient(135deg,#f3a6c6 0%,#d81b60 45%,#f6c453 100%);box-shadow:0 12px 28px #8f1e5133}
+#dialog-photo .photo,#dialog-photo .no-photo{aspect-ratio:4/5;max-height:62vh;border-radius:18px;border:5px solid #fff;background:#fde8f0}
+.x{position:absolute;top:24px;right:24px;z-index:2;width:40px;height:40px;padding:0;border-radius:50%;background:#241b23b3;color:#fff;font-size:22px;line-height:1}
+.gallery .count{bottom:18px;right:18px}.gallery .prev{left:16px}.gallery .next{right:16px}
+.thumbs{padding:12px 14px 0}.thumbs button{border-radius:10px;border:2px solid #fff;box-shadow:0 2px 8px #0002}
+.dialog-body{padding:16px 22px 22px}
+#dialog-name{margin:0;font-size:30px;letter-spacing:-.5px;color:#241b23}
+#dialog-details{font-size:15px;margin:4px 0 12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.chips li{padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #f0d3e0;color:#5c2140;font-size:14px;font-weight:650}
+.chips li.green{background:#e6f6ec;border-color:#cdebd7;color:#1d6b3a}
+.section{background:#fff;border:1px solid #f0dfe7;border-radius:18px;padding:14px 16px;margin:0 0 12px}
+.section h3{margin:0 0 6px;font-size:13px;letter-spacing:.6px;text-transform:uppercase;color:#b32663}
+.section p{margin:0;color:#3d3039}
+.section .chips{margin:4px 0 0}
+.dialog-actions.main{margin-top:16px}
+.dialog-actions.main .btn{flex:1 1 200px;padding:15px 20px;font-size:17px;background:linear-gradient(135deg,#d81b60,#8f1e51);box-shadow:0 10px 24px #b3266355}
+.dialog-actions.small{justify-content:center;margin-top:10px}.dialog-actions.small button{padding:8px 14px;font-size:14px}
+@media (prefers-reduced-motion:reduce){.card,.card:hover{transition:none;transform:none}}
 </style>
 </head>
 <body>
@@ -90,20 +119,23 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   <p class="help">Need help? Email us at <a href="mailto:pikeinsightsug@gmail.com">pikeinsightsug@gmail.com</a></p>
 </main>
 <dialog id="profile-dialog" aria-labelledby="dialog-name">
+  <div class="dialog-top">
+  <button id="dialog-x" class="x" type="button" aria-label="Close profile">×</button>
   <div class="gallery"><div id="dialog-photo"></div>
     <button id="photo-prev" class="nav prev hidden" type="button" aria-label="Previous photo">‹</button>
     <button id="photo-next" class="nav next hidden" type="button" aria-label="Next photo">›</button>
     <span id="photo-count" class="count hidden"></span></div>
+  </div>
   <div id="dialog-thumbs" class="thumbs hidden" aria-label="More photos"></div>
   <div class="dialog-body">
     <h2 id="dialog-name"></h2>
     <p id="dialog-details" class="details"></p>
     <div id="dialog-text"></div>
-    <div class="dialog-actions">
-      <a id="dialog-message" class="btn" href="messages.html">Send a private message</a>
+    <div class="dialog-actions main">
+      <a id="dialog-message" class="btn" href="messages.html">💬 Send a message</a>
       <button id="dialog-close" class="secondary" type="button">Close</button>
     </div>
-    <div class="dialog-actions">
+    <div class="dialog-actions small">
       <button id="dialog-block" class="quiet" type="button">Block</button>
       <button id="dialog-report-toggle" class="quiet" type="button">Report</button>
     </div>
@@ -161,11 +193,13 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     const card = document.createElement("article"); card.className = "card";
     const open = document.createElement("button"); open.type = "button"; open.className = "open";
     open.setAttribute("aria-label", "View profile of " + profile.first_name);
-    open.append(photoNode(profile, url));
+    const frame = document.createElement("div"); frame.className = "frame";
+    frame.append(photoNode(profile, url));
+    if (profile.activity) addText(frame, "p", "🟢 " + profile.activity, "active on-photo");
+    open.append(frame);
     const body = document.createElement("div"); body.className = "body";
     addText(body, "h2", profile.first_name + ", " + profile.age);
-    addText(body, "p", detailsLine(profile), "details");
-    if (profile.activity) addText(body, "p", "🟢 " + profile.activity, "active");
+    addText(body, "p", "📍 " + detailsLine(profile), "details");
     if (profile.profession) addText(body, "p", "💼 " + profile.profession, "details");
     if (profile.relationship_goal) addText(body, "p", "Looking for: " + profile.relationship_goal);
     if (profile.bio) addText(body, "p", profile.bio, "bio clamp");
@@ -180,13 +214,25 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
     showGalleryPhoto(0);
     loadMorePhotos(current);
     document.getElementById("dialog-name").textContent = current.first_name + ", " + current.age;
-    document.getElementById("dialog-details").textContent = detailsLine(current);
+    document.getElementById("dialog-details").textContent = "📍 " + detailsLine(current);
     const text = document.getElementById("dialog-text"); text.replaceChildren();
-    if (current.activity) addText(text, "p", "🟢 " + current.activity, "active");
-    if (current.profession) addText(text, "p", "💼 " + current.profession);
-    if (current.relationship_goal) addText(text, "p", "Looking for: " + current.relationship_goal);
-    if (current.bio) addText(text, "p", current.bio, "bio");
-    if (current.interests) addText(text, "p", "Interests: " + current.interests, "bio");
+    const chips = document.createElement("ul"); chips.className = "chips";
+    if (current.activity) addText(chips, "li", "🟢 " + current.activity, "green");
+    if (current.profession) addText(chips, "li", "💼 " + current.profession);
+    if (current.relationship_goal) addText(chips, "li", "💞 Looking for: " + current.relationship_goal);
+    if (chips.children.length) text.append(chips);
+    if (current.bio) {
+      const about = document.createElement("section"); about.className = "section";
+      addText(about, "h3", "About me"); addText(about, "p", current.bio, "bio"); text.append(about);
+    }
+    if (current.interests) {
+      const box = document.createElement("section"); box.className = "section";
+      addText(box, "h3", "Interests");
+      const list = document.createElement("ul"); list.className = "chips";
+      current.interests.split(/[,;\n]+/).map(item => item.trim()).filter(Boolean).slice(0, 20)
+        .forEach(item => addText(list, "li", item));
+      box.append(list); text.append(box);
+    }
     document.getElementById("dialog-message").href = "messages.html?member=" + encodeURIComponent(current.id);
     document.getElementById("report-form").classList.add("hidden");
     document.getElementById("dialog-block").classList.toggle("hidden", legacyMode);
@@ -241,6 +287,7 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
   });
   function closeDialog() { if (typeof dialog.close === "function") dialog.close(); else dialog.removeAttribute("open"); }
   document.getElementById("dialog-close").addEventListener("click", closeDialog);
+  document.getElementById("dialog-x").addEventListener("click", closeDialog);
   dialog.addEventListener("click", event => { if (event.target === dialog) closeDialog(); });
 
   function filterValues() {
