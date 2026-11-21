@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cyvkpcwjkeifpvegwhpt.supabase.co; connect-src 'self' blob: data: https://cyvkpcwjkeifpvegwhpt.supabase.co wss://cyvkpcwjkeifpvegwhpt.supabase.co; font-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Email settings | P.K CONNECT – Find Your Person</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#fff8fb;color:#241b23;text-align:center}
+.box{max-width:440px;background:#fff;border:1px solid #f0dfe7;border-radius:22px;padding:28px 24px;box-shadow:0 10px 30px #5c183014}
+.brand{display:inline-flex;flex-direction:column;align-items:center;line-height:1.1;font-weight:900;font-size:24px;color:#241b23;text-decoration:none}.brand .brand-main span{color:#b32663}.brand .brand-sub{font-size:13px;font-weight:700;letter-spacing:.4px;color:#75666e;margin-top:4px}
+h1{font-size:24px;margin:22px 0 10px}p{color:#6a5b64;line-height:1.55}
+a.btn{display:inline-block;margin-top:14px;padding:13px 26px;border-radius:999px;background:#b32663;color:#fff;font-weight:800;text-decoration:none}
+</style>
+</head>
+<body>
+<main class="box">
+  <a class="brand" href="index.html"><span class="brand-main">P.K <span>CONNECT</span> ❤️</span><span class="brand-sub">Find Your Person</span></a>
+  <h1 id="title">Updating your email settings…</h1>
+  <p id="text" role="status" aria-live="polite">One moment, please.</p>
+  <a class="btn" href="messages.html">Go to my messages</a>
+</main>
+<script src="assets/vendor/supabase-js-2.117.2.js"></script>
+<script src="assets/member-core.js"></script>
+<script>
+// One-tap unsubscribe from the "you have an unread message" emails. The link carries a private
+// token only; no sign-in is needed and nothing else about the account changes.
+(async function () {
+  "use strict";
+  const title = document.getElementById("title"), text = document.getElementById("text");
+  function show(heading, message) { title.textContent = heading; text.textContent = message; }
+  const token = new URLSearchParams(location.search).get("t") || "";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)) {
+    show("This link is incomplete", "Please tap the Unsubscribe link in the email again, or email pikeinsightsug@gmail.com and we will turn the emails off for you.");
+    return;
+  }
+  const db = window.FYP && window.FYP.createClient();
+  try {
+    if (!db) throw new Error("offline");
+    const { data, error } = await db.rpc("unsubscribe_unread_emails", { p_token: token });
+    if (error) throw error;
+    if (data === true) show("You're unsubscribed ✅", "You will no longer get emails about unread messages. Your account and messages are unchanged, and you can still see new messages when you log in.");
+    else show("This link has expired", "Please email pikeinsightsug@gmail.com and we will turn the emails off for you.");
+  } catch (error) {
+    show("Something went wrong", "Please check your internet connection and open the link again, or email pikeinsightsug@gmail.com.");
+  }
+})();
+</script>
+</body>
+</html>
