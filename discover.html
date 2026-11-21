@@ -23,7 +23,7 @@ h1{font-size:clamp(32px,6vw,48px);letter-spacing:-1.5px;margin:24px 0 8px}p{line
 #status{padding:14px 16px;border-radius:13px;background:#fde8f0;color:#8f1e51;white-space:pre-wrap}#status:empty{display:none}
 .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end;background:#fff;border:1px solid #f0dfe7;border-radius:18px;padding:16px;margin:18px 0}
 .filters label{font-weight:650;font-size:14px}.filters select,.filters input{display:block;width:100%;padding:11px;border:1px solid #e7ccd8;border-radius:11px;margin-top:6px;font:inherit;font-size:16px;background:#fff}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px;margin-top:22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px;margin-top:22px}
 .card{overflow:hidden;background:#fff;border:1px solid #f0dfe7;border-radius:22px;box-shadow:0 8px 30px #5c18300b;display:flex;flex-direction:column}
 .card button.open{all:unset;cursor:pointer;display:block}.card button.open:focus-visible{outline:3px solid #b32663;outline-offset:-3px}
 .photo{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#f7e8ee}.no-photo{display:grid;place-items:center;width:100%;aspect-ratio:4/3;background:#fde8f0;color:#a21f59;font-size:44px}
@@ -56,15 +56,15 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
 /* Framed photos on member cards */
 .card{border:0;border-radius:26px;background:#fff;box-shadow:0 10px 30px #5c183014;transition:transform .18s ease,box-shadow .18s ease}
 .card:hover{transform:translateY(-4px);box-shadow:0 18px 40px #8f1e5126}
-.frame{position:relative;margin:12px 12px 0;padding:5px;border-radius:20px;background:linear-gradient(135deg,#f3a6c6 0%,#d81b60 45%,#f6c453 100%);box-shadow:0 8px 20px #8f1e5126}
-.frame>.photo,.frame>.no-photo{aspect-ratio:4/5;border-radius:15px;border:4px solid #fff;background:#fde8f0}
+.frame{position:relative;margin:10px 10px 0;padding:4px;border-radius:20px;background:linear-gradient(135deg,#f3a6c6 0%,#d81b60 45%,#f6c453 100%);box-shadow:0 8px 20px #8f1e5126}
+.frame>.photo,.frame>.no-photo{aspect-ratio:1/1;border-radius:15px;border:3px solid #fff;background:#fde8f0}
 .frame .on-photo{position:absolute;left:16px;bottom:16px;margin:0;background:#ffffffeb;color:#1d6b3a;box-shadow:0 2px 8px #0002}
 .card .body{padding:14px 18px 18px}.card .body h2{font-size:21px}
 /* Profile view */
 dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))}
 .dialog-top{position:relative;padding:14px 14px 0}
 .dialog-top .gallery{padding:6px;border-radius:24px;background:linear-gradient(135deg,#f3a6c6 0%,#d81b60 45%,#f6c453 100%);box-shadow:0 12px 28px #8f1e5133}
-#dialog-photo .photo,#dialog-photo .no-photo{aspect-ratio:4/5;max-height:62vh;border-radius:18px;border:5px solid #fff;background:#fde8f0}
+#dialog-photo .photo,#dialog-photo .no-photo{aspect-ratio:1/1;max-height:46vh;border-radius:18px;border:5px solid #fff;background:#fde8f0}
 .x{position:absolute;top:24px;right:24px;z-index:2;width:40px;height:40px;padding:0;border-radius:50%;background:#241b23b3;color:#fff;font-size:22px;line-height:1}
 .gallery .count{bottom:18px;right:18px}.gallery .prev{left:16px}.gallery .next{right:16px}
 .thumbs{padding:12px 14px 0}.thumbs button{border-radius:10px;border:2px solid #fff;box-shadow:0 2px 8px #0002}
@@ -81,6 +81,13 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
 .dialog-actions.main{margin-top:16px}
 .dialog-actions.main .btn{flex:1 1 200px;padding:15px 20px;font-size:17px;background:linear-gradient(135deg,#d81b60,#8f1e51);box-shadow:0 10px 24px #b3266355}
 .dialog-actions.small{justify-content:center;margin-top:10px}.dialog-actions.small button{padding:8px 14px;font-size:14px}
+@media (max-width:600px){
+ .grid{grid-template-columns:1fr 1fr;gap:12px}
+ .frame{margin:8px 8px 0;padding:3px;border-radius:16px}.frame>.photo,.frame>.no-photo{border-radius:13px;border-width:2px}
+ .frame .on-photo{left:9px;bottom:9px;padding:2px 7px;font-size:11px}
+ .card{border-radius:20px}.card .body{padding:10px 12px 14px}.card .body h2{font-size:17px;margin-bottom:4px}
+ .card .details,.card .body p{font-size:13px;margin:0 0 4px}.card .clamp{-webkit-line-clamp:2}
+}
 @media (prefers-reduced-motion:reduce){.card,.card:hover{transition:none;transform:none}}
 </style>
 </head>
