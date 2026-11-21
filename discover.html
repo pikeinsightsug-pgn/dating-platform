@@ -89,6 +89,21 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
  .card .details,.card .body p{font-size:13px;margin:0 0 4px}.card .clamp{-webkit-line-clamp:2}
 }
 @media (prefers-reduced-motion:reduce){.card,.card:hover{transition:none;transform:none}}
+.daily-question{margin:16px 0;padding:18px;border-radius:20px;background:#fff;border:2px solid #f6c3d7;box-shadow:0 8px 22px #b3266314}
+.dq-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.dq-head h2{margin:0;font-size:18px;color:#8f1e51}
+#dq-count{font-size:13px;font-weight:700;color:#75666e}
+#dq-question{margin:8px 0 12px;font-size:clamp(19px,4vw,24px);font-weight:800;color:#241b23;line-height:1.3}
+.dq-form{display:flex;gap:8px;flex-wrap:wrap}.dq-form input{flex:1 1 220px;min-width:0;font:inherit;font-size:16px;padding:11px 13px;border:1px solid #e5cbd7;border-radius:12px;background:#fff8fb}
+.dq-mine{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-radius:12px;background:#fff4f8;color:#5a1d3c}
+.dq-mine strong{white-space:nowrap}#dq-mine-text{flex:1 1 160px;margin:0;color:#5a1d3c;font-style:italic}
+.dq-mine button{padding:6px 12px;font-size:13px}
+.dq-answers{display:grid;gap:8px;margin-top:12px;max-height:420px;overflow-y:auto}
+.dq-answer{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid #f0dfe7;border-radius:14px;background:#fffafd}
+.dq-official{border-color:#cdebd7;background:#f3fbf6}
+.dq-avatar{flex:none;width:44px;height:44px;border-radius:50%;object-fit:cover;background:#fde8f0;display:grid;place-items:center;font-size:18px}
+.dq-body{flex:1;min-width:0}.dq-body p{margin:0}.dq-who{font-size:13px;font-weight:700;color:#75666e}.dq-text{color:#241b23;overflow-wrap:anywhere}
+.dq-message{flex:none;padding:8px 12px;font-size:13px}
+.dq-note{margin:6px 0 0;font-size:14px;color:#75666e}
 </style>
 </head>
 <body>
@@ -109,6 +124,15 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
   </section>
   <h1>Discover members</h1>
   <p>Adult members only, with fake accounts removed by our team. Contact details are never shown — use private messages to get to know someone.</p>
+  <section id="daily-question" class="daily-question hidden" aria-labelledby="dq-title">
+    <div class="dq-head"><h2 id="dq-title">💬 Question of the Day</h2><span id="dq-count"></span></div>
+    <p id="dq-question"></p>
+    <form id="dq-form" class="dq-form hidden"><input id="dq-input" aria-label="Your answer" placeholder="Your answer in a few words…" autocomplete="off"><button id="dq-save" type="submit">Answer &amp; see others</button></form>
+    <p id="dq-status" class="dq-note" role="status" aria-live="polite"></p>
+    <div id="dq-mine" class="dq-mine hidden"><strong>Your answer:</strong><p id="dq-mine-text"></p><button id="dq-edit" class="secondary" type="button">Change</button></div>
+    <div id="dq-answers" class="dq-answers hidden" aria-label="Other members' answers"></div>
+    <p class="dq-note">A new question every day. Like an answer? Tap Reply to start a conversation.</p>
+  </section>
   <form id="filters" class="filters hidden" aria-label="Filter profiles">
     <label>Country<select name="country"><option value="">All countries</option></select></label>
     <label>Gender<select name="gender"><option value="">Any</option><option>Woman</option><option>Man</option><option>Non-binary</option></select></label>
@@ -158,6 +182,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
 <script src="assets/push-notifications.js"></script>
 <script src="assets/invite.js"></script>
 <script src="assets/member-core.js"></script>
+<script src="assets/daily-question.js"></script>
 <script>
 (() => {
   const PAGE_SIZE = 50; // the database allows at most 50 per request
@@ -472,6 +497,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     document.getElementById("welcome-close").addEventListener("click", () => document.getElementById("welcome-new").classList.add("hidden"));
     document.getElementById("official-self").classList.toggle("hidden", profile.is_official !== true);
     if (profile.approved === true && profile.is_official !== true) showOfficial();
+    if (profile.approved === true && window.FYPDailyQuestion) window.FYPDailyQuestion.render(db);
     // Members start with every approved member of the gender they said they are looking for
     // (shown openly in the Gender filter, with a note), any age, all countries and any goal.
     // Members with a photo always come first; then same city, same country, recently active.

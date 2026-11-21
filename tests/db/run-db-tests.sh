@@ -27,7 +27,8 @@ for file in \
   supabase/everyone_visible.sql \
   supabase/instant_approval.sql \
   supabase/smart_discovery.sql \
-  supabase/smart_discovery.sql; do
+  supabase/daily_question.sql \
+  supabase/daily_question.sql; do
   # The newest migration runs twice to prove it is safe to rerun.
   PGOPTIONS="-c client_min_messages=warning" psql_q -d "$DB" -f "$file"
 done
@@ -35,6 +36,10 @@ done
 PGOPTIONS="-c client_min_messages=notice" psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f tests/db/rls_tests.sql 2>&1 \
   | sed -n 's/^psql:[^ ]* NOTICE:  //p; s/^psql:.*ERROR:  /ERROR: /p'
 status=${PIPESTATUS[0]}
+
+PGOPTIONS="-c client_min_messages=notice" psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f tests/db/daily_question_tests.sql 2>&1 \
+  | sed -n 's/^psql:[^ ]* NOTICE:  //p; s/^psql:.*ERROR:  /ERROR: /p'
+[ "${PIPESTATUS[0]}" -eq 0 ] || status=1
 
 # Unread-message emails need pg_net, Vault and pg_cron; local stand-ins replace them here.
 psql_q -d "$DB" -c "set client_min_messages = warning" -f tests/db/unread_email_stub.sql
