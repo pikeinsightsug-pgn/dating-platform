@@ -342,6 +342,8 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
   function startUnreadAlerts(db, profile, options = {}) {
     if (typeof document === "undefined" || !db || !profile || profile.approved !== true) return;
     unreadDb = db; unreadBanner = options.banner !== false;
+    // "Active today / this week" and Discover order count real visits, not only sign-ins.
+    db.rpc("touch_member_presence").then(() => {}, () => {});
     if (root.FYPPush) root.FYPPush.start(profile);
     if (root.FYPInvite) root.FYPInvite.claim(db);
     if (!document.getElementById("unread-style")) {
