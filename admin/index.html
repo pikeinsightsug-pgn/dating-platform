@@ -178,11 +178,26 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     const women = m.gender.filter(r => /^(female|woman|women)$/i.test(r.label)).reduce((a, r) => a + r.count, 0);
     const men = m.gender.filter(r => /^(male|man|men)$/i.test(r.label)).reduce((a, r) => a + r.count, 0);
     if (men > 0 && women * 2 < men) return "⚖️ Many more men than women. Aim your next ads at women (Facebook audience: Women, 22–45) until it is closer to even.";
-    if (x.reply_rate_percent != null && x.reply_rate_percent < 35 && x.conversations >= 10) return "💬 Most first messages get no reply. Remind members (Facebook post) to tap Allow for message alerts and to reply; keep new ads aimed at women.";
-    if (m.new_7_days === 0) return "📣 No new members this week. Check that your Facebook ad is still running and approved.";
+    if (women > 0 && men * 2 < women) return "⚖️ Many more women than men. Aim your next ads at men (Facebook audience: Men, 25–50) until it is closer to even.";
     if (g.founding_spots_left <= 10 && g.founding_spots_left > 0) return "🔥 Only " + g.founding_spots_left + " founding spots left. Decide your price and payment method now, before spot 100.";
+    const adTip = women < men ? " Lean your next ads slightly towards women." : women > men ? " Lean your next ads slightly towards men." : "";
+    if (x.reply_rate_percent != null && x.reply_rate_percent < 35 && x.conversations >= 10) return "💬 Most first messages get no reply. Post on Facebook: \"You may have a message waiting — log in, reply, and tap Allow for message alerts.\"" + adTip;
+    if (m.new_7_days === 0) return "📣 No new members this week. Check that your Facebook ad is still running and approved.";
     if (g.founding_spots_left === 0) return "✅ All 100 founding spots are taken. The homepage counter is hidden; switch on paid membership when you are ready.";
     return "✅ Healthy week. Keep the current ad running; change its picture every 2 weeks so people do not get tired of it.";
+  }
+  // "FRANCISTOWN", "Francistown " and "Gulu city" are counted with "Francistown" and "Gulu".
+  function mergeCities(rows) {
+    const byKey = new Map();
+    rows.forEach(r => {
+      const raw = String(r.label || "").trim();
+      const key = raw.toLowerCase().replace(/\s+/g, " ").replace(/\s+city$/, "") || raw.toLowerCase();
+      const pretty = key.replace(/\b\w/g, c => c.toUpperCase());
+      const label = /^not given$/i.test(raw) ? raw : pretty;
+      const hit = byKey.get(key);
+      if (hit) hit.count += r.count; else byKey.set(key, { label, count: r.count });
+    });
+    return [...byKey.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
   }
   function fillList(id, rows) {
     const el = $(id); el.textContent = "";
@@ -205,7 +220,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
       const bars = $("g-daily"); bars.textContent = "";
       m.daily.forEach(d => { const b = document.createElement("div"); b.style.height = Math.round((d.count / max) * 100) + "%"; b.title = d.date + ": " + d.count;
         const n = document.createElement("span"); n.textContent = d.count || ""; b.append(n); bars.append(b); });
-      fillList("g-gender", m.gender); fillList("g-countries", m.countries); fillList("g-cities", m.cities);
+      fillList("g-gender", m.gender); fillList("g-countries", m.countries); fillList("g-cities", mergeCities(m.cities));
       $("g-tip").textContent = growthTip(g);
       $("growth-updated").textContent = "Updated " + new Date().toLocaleString();
       $("growth-status").classList.add("hidden"); $("growth-body").classList.remove("hidden");
