@@ -471,7 +471,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
           ? "There are no other approved member profiles yet. You are one of our first members — check back soon as more people are approved."
           : "No approved members match these filters. Try a wider age range, “All countries” or “Any” gender.");
       } else {
-        say("Showing " + shown.size + " of " + total + " approved member " + (total === 1 ? "profile." : "profiles."));
+        say("");
       }
     } catch (error) {
       say(failureMessage(error));
