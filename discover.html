@@ -88,7 +88,18 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
  .card{border-radius:20px}.card .body{padding:10px 12px 14px}.card .body h2{font-size:17px;margin-bottom:4px}
  .card .details,.card .body p{font-size:13px;margin:0 0 4px}.card .clamp{-webkit-line-clamp:2}
 }
-@media (prefers-reduced-motion:reduce){.card,.card:hover{transition:none;transform:none}}
+.qotd{margin:14px 0 18px;padding:18px 20px;border-radius:22px;background:#fff;border:2px solid #f2c4d7;box-shadow:0 10px 26px #8f1e5114}
+.qotd .q-label{display:inline-block;margin:0 0 8px;padding:4px 12px;border-radius:999px;background:#fde8f0;color:#a0124b;font-size:13px;font-weight:800}
+.qotd h2{margin:0 0 12px;font-size:20px;line-height:1.3;color:#241b23}
+.qotd .q-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:9px}
+.qotd .q-opt{position:relative;overflow:hidden;display:flex;justify-content:space-between;gap:10px;align-items:center;width:100%;padding:12px 14px;border-radius:14px;border:1.5px solid #ecc6d6;background:#fffafd;color:#3d1f30;font:inherit;font-weight:700;text-align:left;cursor:pointer}
+.qotd .q-opt:hover{border-color:#d81b60}.qotd .q-opt.mine{border-color:#d81b60;background:#fff1f6}
+.qotd .q-fill{position:absolute;inset:0 auto 0 0;background:#fbd6e4;transition:width .5s ease}
+.qotd .q-opt span{position:relative}.qotd .q-opt span:not(.q-pct):not(.q-fill){flex:1;text-align:left}.qotd .q-opt span.q-fill{position:absolute}.qotd .q-pct{color:#8f1e51;font-size:14px}
+.qotd .q-note{margin:10px 0 0;font-size:14px;color:#75666e}
+.section.answer .same{margin:6px 0 0;color:#1d6b3a;font-weight:800}
+.section.answer .btn{margin-top:10px;display:inline-block}
+@media (prefers-reduced-motion:reduce){.card,.card:hover{transition:none;transform:none}.qotd .q-fill{transition:none}}
 </style>
 </head>
 <body>
@@ -120,6 +131,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
   <p id="filter-note" class="filter-note hidden" role="note"></p>
   <p id="official-self" class="self-note hidden" role="note">You are signed in as the official P.K Connect account ✅. Members see you pinned at the top of their Discover page, never as a dating profile. Open a member below and press Message to welcome them.</p>
   <section id="official" class="official hidden" aria-label="Official P.K Connect account"></section>
+  <section id="qotd" class="qotd hidden" aria-labelledby="qotd-q"></section>
   <p id="status" role="status" aria-live="polite">Checking your account…</p>
   <section id="profiles" class="grid" aria-label="Approved member profiles"></section>
   <div class="more"><button id="load-more" class="secondary hidden" type="button">Show more profiles</button></div>
@@ -241,12 +253,68 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
       box.append(list); text.append(box);
     }
     document.getElementById("dialog-message").href = "messages.html?member=" + encodeURIComponent(current.id);
+    if (!legacyMode) showTheirAnswer(current);
     document.getElementById("report-form").classList.add("hidden");
     document.getElementById("dialog-block").classList.toggle("hidden", legacyMode);
     document.getElementById("dialog-report-toggle").classList.toggle("hidden", legacyMode);
     document.getElementById("dialog-message").classList.toggle("hidden", legacyMode);
     dialogStatus.textContent = legacyMode ? "Messaging, blocking and reporting open once the administrator finishes the latest database setup." : "";
     if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
+  }
+  // Question of the day: one fun question for everyone each day. Members see how everyone
+  // answered (percentages only), and each profile shows that member's answer with a ready-made
+  // first message. Hidden quietly if the database part is not set up yet.
+  async function loadQuestion() {
+    const box = document.getElementById("qotd");
+    const { data, error } = await db.rpc("today_question");
+    if (error || !data || !data.length) { box.classList.add("hidden"); return; }
+    const q = data[0];
+    const answered = q.my_answer !== null && q.my_answer !== undefined;
+    const label = document.createElement("p"); label.className = "q-label"; label.textContent = "❓ Question of the day";
+    const title = document.createElement("h2"); title.id = "qotd-q"; title.textContent = q.question;
+    const list = document.createElement("div"); list.className = "q-options";
+    q.options.forEach((option, i) => {
+      const button = document.createElement("button"); button.type = "button"; button.className = "q-opt" + (answered && q.my_answer === i ? " mine" : "");
+      const pct = answered && q.answer_percents ? q.answer_percents[i] || 0 : null;
+      if (pct !== null) { const fill = document.createElement("span"); fill.className = "q-fill"; fill.style.width = pct + "%"; button.append(fill); }
+      const text = document.createElement("span"); text.textContent = option + (answered && q.my_answer === i ? " ✓" : "");
+      button.append(text);
+      if (pct !== null) { const p = document.createElement("span"); p.className = "q-pct"; p.textContent = pct + "%"; button.append(p); }
+      button.setAttribute("aria-pressed", String(answered && q.my_answer === i));
+      button.addEventListener("click", async () => {
+        list.querySelectorAll("button").forEach(b => { b.disabled = true; });
+        const { error: answerError } = await db.rpc("answer_today_question", { p_option: i });
+        if (answerError) { note.textContent = "Your answer could not be saved. Check your connection and try again."; list.querySelectorAll("button").forEach(b => { b.disabled = false; }); return; }
+        loadQuestion();
+      });
+      list.append(button);
+    });
+    const note = document.createElement("p"); note.className = "q-note";
+    note.textContent = answered
+      ? "✨ " + q.total_answers + (q.total_answers === 1 ? " member has" : " members have") + " answered. Your answer shows on your profile today. Open a profile to see what others picked. New question tomorrow!"
+      : "Tap your answer to see what everyone else picked. Your answer shows on your profile today.";
+    box.replaceChildren(label, title, list, note);
+    box.classList.remove("hidden");
+  }
+  async function showTheirAnswer(profile) {
+    const { data, error } = await db.rpc("member_today_answer", { p_member_id: profile.id });
+    if (error || !data || !data.length || current !== profile) return;
+    const a = data[0];
+    const first = profile.first_name.split(/\s/)[0];
+    const box = document.createElement("section"); box.className = "section answer";
+    addText(box, "h3", "❓ Question of the day");
+    addText(box, "p", a.question);
+    addText(box, "p", first + " picked: “" + a.their_answer + "”", "bio");
+    if (a.my_answer && a.my_answer === a.their_answer) addText(box, "p", "🎉 You both picked the same answer!", "same");
+    const draft = a.my_answer === a.their_answer && a.my_answer
+      ? "We both picked “" + a.their_answer + "” for today's question 😄 What made you choose it?"
+      : a.my_answer
+        ? "You picked “" + a.their_answer + "” and I picked “" + a.my_answer + "” for today's question 😄 Tell me why you chose yours!"
+        : "I saw you picked “" + a.their_answer + "” for today's question 😊 Why that one?";
+    const ask = document.createElement("a"); ask.className = "btn"; ask.textContent = "💬 Ask " + first + " about it";
+    ask.href = "messages.html?member=" + encodeURIComponent(profile.id) + "&draft=" + encodeURIComponent(draft);
+    box.append(ask);
+    document.getElementById("dialog-text").append(box);
   }
   // Profile photo plus the member's extra photos: tap the arrows or thumbnails, or swipe.
   let gallery = [];
@@ -472,6 +540,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     document.getElementById("welcome-close").addEventListener("click", () => document.getElementById("welcome-new").classList.add("hidden"));
     document.getElementById("official-self").classList.toggle("hidden", profile.is_official !== true);
     if (profile.approved === true && profile.is_official !== true) showOfficial();
+    if (profile.approved === true) loadQuestion().catch(() => document.getElementById("qotd").classList.add("hidden"));
     // Members start with every approved member of the gender they said they are looking for
     // (shown openly in the Gender filter, with a note), any age, all countries and any goal.
     // Members with a photo always come first; then same city, same country, recently active.
