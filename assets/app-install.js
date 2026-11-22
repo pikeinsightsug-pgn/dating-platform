@@ -10,6 +10,9 @@
     navigator.serviceWorker.register("sw.js").catch(() => { /* the website works without it */ });
   }
   const installed = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  // window.PKInstall.open() shows the install steps on demand (the button in the founder's
+  // "install the app" message), even if "Maybe later" was tapped recently.
+  window.PKInstall = { installed, open() {} };
   if (installed) return;
 
   const ua = navigator.userAgent || "";
@@ -48,14 +51,12 @@
   // Automatic "pin the app" pop-up on the member pages, phones and tablets only.
   const page = (location.pathname.split("/").pop() || "").toLowerCase();
   if (!["dashboard.html", "discover.html", "messages.html"].includes(page)) return;
-  if (!ios && !android) return;
+  const phone = ios || android;
 
   const KEY = "pk-pin-popup-until";
   const DAY = 24 * 60 * 60 * 1000;
   function hiddenUntil() { try { return Number(localStorage.getItem(KEY)) || 0; } catch (error) { return 0; } }
   function hideFor(days) { try { localStorage.setItem(KEY, String(Date.now() + days * DAY)); } catch (error) { /* shown again next visit */ } }
-  if (hiddenUntil() > Date.now()) return;
-
   const STYLE = `
 .pkpin{position:fixed;left:0;right:0;bottom:0;z-index:1000;display:flex;justify-content:center;padding:0 10px calc(10px + env(safe-area-inset-bottom));animation:pkpin-up .35s ease-out}
 .pkpin-card{width:100%;max-width:460px;background:#fff;color:#241b23;border-radius:22px;box-shadow:0 -6px 40px #5c183040;border:1px solid #f0dfe7;padding:18px 18px 16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45}
@@ -75,6 +76,10 @@
 @media (prefers-reduced-motion:reduce){.pkpin{animation:none}}`;
 
   function steps() {
+    if (!phone) {
+      return { done: "OK", note: "💻 You are on a computer. Open pkconnectonline.com on your phone to add the app.",
+        list: ["<b>Android:</b> open it in <b>Chrome</b> → <b>⋮</b> → <b>Add to Home screen</b> (or <b>Install app</b>)", "<b>iPhone:</b> open it in <b>Safari</b> → <b>Share ⬆️</b> → <b>Add to Home Screen</b> → <b>Add</b>"] };
+    }
     if (inAppBrowser) {
       return {
         note: "⚠️ You opened P.K CONNECT inside another app (WhatsApp, Facebook…). It can only be pinned from " + (ios ? "Safari" : "Chrome") + ".",
@@ -99,12 +104,12 @@
     const note = sheet.querySelector(".pkpin-note");
     note.hidden = !s.note; note.textContent = s.note || "";
     const main = sheet.querySelector(".pkpin-main");
-    main.textContent = s.install ? "📲 Install now" : "✅ Done";
+    main.textContent = s.install ? "📲 Install now" : (s.done || "✅ Done");
     main.dataset.install = s.install ? "1" : "";
   }
 
-  function show() {
-    if (sheet || hiddenUntil() > Date.now()) return;
+  function show(force) {
+    if (sheet || (!force && hiddenUntil() > Date.now())) return;
     if (!document.getElementById("pkpin-style")) {
       const style = document.createElement("style"); style.id = "pkpin-style"; style.textContent = STYLE;
       document.head.appendChild(style);
@@ -136,7 +141,10 @@
 
   listeners.push(() => { if (sheet) render(); });
   window.addEventListener("appinstalled", () => close(365));
+  window.PKInstall.open = () => show(true);
   // Give the page a moment to load first so the pop-up does not cover it straight away.
-  const start = () => setTimeout(show, 4000);
-  if (document.readyState === "complete") start(); else window.addEventListener("load", start);
+  if (phone) {
+    const start = () => setTimeout(() => show(false), 4000);
+    if (document.readyState === "complete") start(); else window.addEventListener("load", start);
+  }
 })();
