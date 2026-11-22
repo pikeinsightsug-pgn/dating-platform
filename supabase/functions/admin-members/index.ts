@@ -5,7 +5,7 @@ import { growthStats } from "../_shared/growth-stats.js";
 
 // Bump when this function changes; the owner console compares it with the version it expects,
 // so the owner can see whether the deployed function is current without opening Supabase.
-const FUNCTION_VERSION = "2026-11-17b";
+const FUNCTION_VERSION = "2026-11-22a";
 
 // Lists are read in pages so the console keeps showing everyone as the community grows
 // (a single request returns at most 1000 rows). `page` builds the query for one range.
@@ -157,14 +157,19 @@ Deno.serve(async (req: Request) => {
       .select("*").order("created_at").order("id").range(from, to));
     if (memberError) return json({ error: "Could not load growth numbers.", detail: memberError.message }, 500);
     const { data: messageRows, error: messageError } = await readAllRows((from, to) => db.from("member_messages")
-      .select("sender_member_id, recipient_member_id, created_at").order("created_at").order("id").range(from, to));
+      .select("sender_member_id, recipient_member_id, created_at, read_at").order("created_at").order("id").range(from, to));
     if (messageError) return json({ error: "Could not load message activity.", detail: messageError.message }, 500);
+    // Last visits (member_presence, from smart_discovery.sql). Optional: older databases lack it.
+    const lastSeen: Record<string, string> = {};
+    const { data: presenceRows } = await readAllRows((from, to) => db.from("member_presence")
+      .select("member_id, last_seen_at").order("member_id").range(from, to));
+    for (const row of presenceRows || []) lastSeen[row.member_id] = row.last_seen_at;
     const members = (memberRows || []).map((m) => ({
       id: m.id, invited_by: m.invited_by ?? null, gender: m.gender, location: m.location, city: m.city, created_at: m.created_at,
       approved: m.approved === true, is_test_account: m.is_test_account === true, is_official: m.is_official === true,
       profile_photo_url: m.profile_photo_url,
     }));
-    return json({ function_version: FUNCTION_VERSION, growth: growthStats(members, messageRows || []) });
+    return json({ function_version: FUNCTION_VERSION, growth: growthStats(members, messageRows || [], Date.now(), lastSeen) });
   }
 
   const uuid = /^[0-9a-f-]{36}$/i;

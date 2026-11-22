@@ -499,7 +499,19 @@ test("owner growth dashboard counts genuine members and real conversations only"
   assert.equal(g.founding_spots_left, 97);
   const fn = await read("supabase/functions/admin-members/index.ts");
   assert.match(fn, /body\.action === "growth"/);
-  assert.match(fn, /select\("sender_member_id, recipient_member_id, created_at"\)/, "message text is never read for the dashboard");
+  assert.match(fn, /select\("sender_member_id, recipient_member_id, created_at, read_at"\)/, "message text is never read for the dashboard");
+  assert.doesNotMatch(fn, /member_messages"\)[\s\S]{0,40}select\("[^"]*body/, "message bodies never leave the database for the dashboard");
+  // By-country comparison: approved genuine members only; activity from visits and messages.
+  const uganda = g.by_country.find(r => r.label === "Uganda");
+  assert.equal(g.by_country.some(r => r.label === "Botswana"), false, "pending and official members are not in the country table");
+  assert.equal(uganda.members, 2);
+  assert.equal(uganda.active_7_days, 2, "sending a message counts as active");
+  assert.equal(uganda.chats_started, 1);
+  assert.equal(uganda.reply_rate_percent, 100);
+  assert.equal(uganda.returning_base, 0, "nobody in Uganda joined over a week ago");
+  const seen = growthStats([{ id: "old", location: "Kenya", created_at: ago(24 * 20), approved: true }], [], now, { old: ago(24) });
+  assert.equal(seen.by_country[0].active_7_days, 1, "a recent visit counts as active");
+  assert.equal(seen.by_country[0].returning_percent, 100, "an older member who visited this week is coming back");
   const version = fn.match(/const FUNCTION_VERSION = "([^"]+)"/)[1];
   assert.match(await read("admin/index.html"), new RegExp('EXPECTED_FUNCTION_VERSION = "' + version + '"'), "console and function versions match");
 });
