@@ -338,7 +338,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       photoMessage("Uploading your private photo…");
       const path = user.id + "/" + window.FYP.randomId() + "." + prepared.extension;
       const { error: uploadError } = await db.storage.from("profile-photos")
-        .upload(path, prepared.blob, { upsert: false, contentType: prepared.type });
+        .upload(path, prepared.blob, { upsert: false, contentType: prepared.type, cacheControl: "604800" });
       if (uploadError) throw uploadError;
       stage = "profile";
       const { data, error: saveError } = await db.from("members")
@@ -466,7 +466,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     const path = user.id + "/" + window.FYP.randomId() + "." + prepared.extension;
     const add = async () => {
       const { error: uploadError } = await db.storage.from("profile-photos")
-        .upload(path, prepared.blob, { upsert: false, contentType: prepared.type });
+        .upload(path, prepared.blob, { upsert: false, contentType: prepared.type, cacheControl: "604800" });
       if (uploadError) throw uploadError;
       const { error } = await db.rpc("add_member_photo", { p_storage_path: path });
       if (error) { await db.storage.from("profile-photos").remove([path]); throw error; }
@@ -488,6 +488,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
   signout.addEventListener("click", async () => {
     signout.disabled = true; signingOut = true;
     try {
+      if (window.FYP.forgetPhotoUrls) window.FYP.forgetPhotoUrls();
       if (window.FYPPush) await window.FYPPush.stop();
       const { error } = await db.auth.signOut();
       if (error) throw error;
