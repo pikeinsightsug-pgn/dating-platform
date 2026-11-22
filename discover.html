@@ -102,6 +102,23 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
 .qotd .q-note{margin:10px 0 0;font-size:14px;color:#75666e}
 .section.answer .same{margin:6px 0 0;color:#1d6b3a;font-weight:800}
 .section.answer .btn{margin-top:10px;display:inline-block}
+.card{position:relative}
+.like-btn{position:absolute;top:18px;right:18px;z-index:2;width:46px;height:46px;padding:0;border-radius:50%;border:0;background:#ffffffee;color:#b32663;font-size:22px;line-height:1;box-shadow:0 4px 14px #0003;cursor:pointer}
+.like-btn[aria-pressed="true"]{background:#d81b60;color:#fff}
+.likes-box{margin:14px 0;padding:16px 18px;border-radius:22px;background:#fff;border:2px solid #f2c4d7;box-shadow:0 10px 26px #8f1e5114}
+.likes-box h2{margin:0 0 4px;font-size:19px;color:#241b23}.likes-box .muted{margin:0 0 10px}
+.mini-row{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(170px,1fr);gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+.mini{scroll-snap-align:start;position:relative;background:#fffafd;border:1px solid #f0d3e0;border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.mini .open{all:unset;cursor:pointer;display:block}.mini .photo,.mini .no-photo{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;display:grid;place-items:center;background:#fde8f0;font-size:34px}
+.mini h3{margin:2px 0 0;font-size:15px}.mini ul{margin:0;padding:0;list-style:none;font-size:12px;color:#8f1e51;line-height:1.35}
+.mini .mini-actions{display:flex;gap:6px;margin-top:auto}.mini .mini-actions button{flex:1;padding:8px 6px;font-size:13px;border-radius:999px}
+.mini .like-small{background:#b32663;color:#fff;border:0}.mini .like-small[aria-pressed="true"]{background:#1d6b3a}
+.likes-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;margin:14px 0;padding:12px 16px;border-radius:16px;background:#fde8f0;border:1px solid #f2a3c2;font-weight:800;color:#8f1e51}
+.match-pop{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px;background:#3b0a24cc}
+.match-card{max-width:380px;width:100%;text-align:center;background:#fff;border-radius:26px;padding:26px 22px;box-shadow:0 20px 60px #0006}
+.match-card h2{margin:6px 0;font-size:28px;color:#b32663}.match-card .btn{display:block;margin:14px 0 8px}
+.match-pics{display:flex;justify-content:center;margin-bottom:6px}.match-pics span{width:84px;height:84px;border-radius:50%;border:4px solid #fff;box-shadow:0 4px 14px #0003;background:#fde8f0 center/cover;display:grid;place-items:center;font-size:34px}
+.match-pics span+span{margin-left:-18px}
 @media (prefers-reduced-motion:reduce){.card,.card:hover{transition:none;transform:none}.qotd .q-fill{transition:none}}
 </style>
 </head>
@@ -135,6 +152,9 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
   <p id="official-self" class="self-note hidden" role="note">You are signed in as the official P.K Connect account ✅. Members see you pinned at the top of their Discover page, never as a dating profile. Open a member below and press Message to welcome them.</p>
   <aside id="hello-nudge" class="hello-nudge hidden" role="note"><span class="hn-text"><strong id="hello-title"></strong><span id="hello-text"></span></span><button type="button" id="hello-close">Got it</button></aside>
   <section id="official" class="official hidden" aria-label="Official P.K Connect account"></section>
+  <div id="likes-banner" class="likes-banner hidden" role="status"></div>
+  <section id="liked-you" class="likes-box hidden" aria-labelledby="liked-you-title"></section>
+  <section id="matches-today" class="likes-box hidden" aria-labelledby="matches-title"></section>
   <section id="qotd" class="qotd hidden" aria-labelledby="qotd-q"></section>
   <p id="status" role="status" aria-live="polite">Checking your account…</p>
   <section id="profiles" class="grid" aria-label="Approved member profiles"></section>
@@ -155,6 +175,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     <p id="dialog-details" class="details"></p>
     <div id="dialog-text"></div>
     <div class="dialog-actions main">
+      <button id="dialog-like" class="secondary hidden" type="button" aria-pressed="false">❤️ Like</button>
       <a id="dialog-message" class="btn" href="messages.html">💬 Send a message</a>
       <button id="dialog-close" class="secondary" type="button">Close</button>
     </div>
@@ -228,7 +249,9 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     if (profile.bio) addText(body, "p", profile.bio, "bio clamp");
     open.append(body);
     open.addEventListener("click", () => openProfile(profile.id));
-    card.append(open); root.append(card);
+    card.append(open);
+    if (likesReady) card.append(likeButton(profile, "like-btn"));
+    root.append(card);
   }
   function openProfile(id) {
     const entry = shown.get(id); if (!entry) return;
@@ -257,6 +280,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
       box.append(list); text.append(box);
     }
     document.getElementById("dialog-message").href = "messages.html?member=" + encodeURIComponent(current.id);
+    syncDialogLike();
     if (!legacyMode) showTheirAnswer(current);
     document.getElementById("report-form").classList.add("hidden");
     document.getElementById("dialog-block").classList.toggle("hidden", legacyMode);
@@ -264,6 +288,149 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     document.getElementById("dialog-message").classList.toggle("hidden", legacyMode);
     dialogStatus.textContent = legacyMode ? "Messaging, blocking and reporting open once the administrator finishes the latest database setup." : "";
     if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
+  }
+  // ❤️ Likes and matches. A like is private unless it is mutual (then both are invited to chat);
+  // the person who was liked sees "X people liked you". Daily matches never use city or country.
+  let likesReady = false;
+  const likedByMe = new Set();
+  const registered = new Map(); // profiles shown in the likes boxes, so they open like any card
+  function register(profile, url) { if (!shown.has(profile.id)) shown.set(profile.id, { profile, url }); registered.set(profile.id, true); }
+  async function likeStatusFor(rows) {
+    if (!likesReady || !rows.length) return;
+    const { data, error } = await db.rpc("like_status", { p_member_ids: rows.map(r => r.id) });
+    if (!error) (data || []).forEach(r => { if (r.i_liked) likedByMe.add(r.id); });
+  }
+  function paintLike(button, liked, big) {
+    button.setAttribute("aria-pressed", String(liked));
+    button.textContent = big ? (liked ? "❤️ Liked" : "🤍 Like") : (liked ? "❤️" : "🤍");
+    if (button.classList.contains("like-small")) button.textContent = liked ? "❤️ Liked" : "❤️ Like";
+  }
+  function refreshLikeButtons(id) {
+    document.querySelectorAll('[data-like-id="' + id + '"]').forEach(b => paintLike(b, likedByMe.has(id), b.id === "dialog-like"));
+    if (current && current.id === id) syncDialogLike();
+  }
+  async function toggleLike(profile) {
+    const liked = likedByMe.has(profile.id);
+    if (liked) {
+      const { error } = await db.rpc("unlike_member", { p_member_id: profile.id });
+      if (!error) { likedByMe.delete(profile.id); refreshLikeButtons(profile.id); }
+      return;
+    }
+    const { data, error } = await db.rpc("like_member", { p_member_id: profile.id });
+    if (error) { say(error.code === "54000" ? error.message : "That like could not be saved. Please try again."); return; }
+    likedByMe.add(profile.id); refreshLikeButtons(profile.id);
+    if (data && data[0] && data[0].matched) showMatch(profile);
+    loadLikes().catch(() => {});
+  }
+  function likeButton(profile, className) {
+    const b = document.createElement("button"); b.type = "button"; b.className = className;
+    b.dataset.likeId = profile.id; b.setAttribute("aria-label", "Like " + profile.first_name);
+    paintLike(b, likedByMe.has(profile.id), false);
+    b.addEventListener("click", event => { event.stopPropagation(); toggleLike(profile); });
+    return b;
+  }
+  function syncDialogLike() {
+    const b = document.getElementById("dialog-like");
+    if (!likesReady || !current) { b.classList.add("hidden"); return; }
+    b.classList.remove("hidden"); b.dataset.likeId = current.id; paintLike(b, likedByMe.has(current.id), true);
+  }
+  async function showMatch(profile) {
+    const first = profile.first_name.split(/\s/)[0];
+    const pop = document.createElement("div"); pop.className = "match-pop"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-label", "It's a match");
+    const card = document.createElement("div"); card.className = "match-card";
+    const pics = document.createElement("div"); pics.className = "match-pics";
+    const them = document.createElement("span"); const entry = shown.get(profile.id);
+    if (entry && entry.url) them.style.backgroundImage = 'url("' + entry.url.replace(/"/g, "%22") + '")'; else them.textContent = "❤️";
+    const heart = document.createElement("span"); heart.textContent = "💞";
+    pics.append(heart, them);
+    card.append(pics);
+    addText(card, "h2", "It's a match! 🎉");
+    addText(card, "p", "You and " + first + " liked each other. Say hello while it's fresh!", "muted");
+    const hello = document.createElement("a"); hello.className = "btn"; hello.textContent = "💬 Say hello to " + first;
+    hello.href = "messages.html?member=" + encodeURIComponent(profile.id) + "&draft=" + encodeURIComponent("Hi " + first + "! 😊 We matched on P.K Connect. How is your day going?");
+    const later = document.createElement("button"); later.type = "button"; later.className = "secondary"; later.textContent = "Keep browsing";
+    later.addEventListener("click", () => pop.remove());
+    card.append(hello, later); pop.append(card);
+    pop.addEventListener("click", event => { if (event.target === pop) pop.remove(); });
+    document.body.append(pop); hello.focus();
+  }
+  function miniCard(profile, url, reasons, actionLabel) {
+    register(profile, url);
+    const box = document.createElement("article"); box.className = "mini";
+    const open = document.createElement("button"); open.type = "button"; open.className = "open";
+    open.setAttribute("aria-label", "View profile of " + profile.first_name);
+    open.append(photoNode(profile, url));
+    addText(open, "h3", profile.first_name + ", " + profile.age);
+    open.addEventListener("click", () => openProfile(profile.id));
+    box.append(open);
+    if (reasons && reasons.length) { const ul = document.createElement("ul"); reasons.forEach(r => addText(ul, "li", "✓ " + r)); box.append(ul); }
+    const actions = document.createElement("div"); actions.className = "mini-actions";
+    const like = likeButton(profile, "like-small"); paintLike(like, likedByMe.has(profile.id), false);
+    if (actionLabel && !likedByMe.has(profile.id)) like.textContent = actionLabel;
+    actions.append(like); box.append(actions);
+    return box;
+  }
+  async function loadLikes() {
+    const [liked, matches] = await Promise.all([db.rpc("list_likes", { p_kind: "liked_me" }), db.rpc("list_likes", { p_kind: "matches" })]);
+    if (liked.error || matches.error) return;
+    const likedRows = liked.data || [], matchRows = matches.data || [];
+    matchRows.forEach(r => likedByMe.add(r.id));
+    const urls = await window.FYP.signedPhotoUrls(db, likedRows.concat(matchRows).map(r => r.profile_photo_path));
+    const banner = document.getElementById("likes-banner");
+    const parts = [];
+    if (likedRows.length) parts.push("❤️ " + likedRows.length + (likedRows.length === 1 ? " person likes you" : " people like you"));
+    if (matchRows.length) parts.push("💞 " + matchRows.length + (matchRows.length === 1 ? " match" : " matches"));
+    banner.replaceChildren();
+    if (parts.length) {
+      addText(banner, "span", parts.join(" · "));
+      const see = document.createElement("button"); see.type = "button"; see.className = "btn"; see.textContent = "See who";
+      see.addEventListener("click", () => { const box = document.getElementById("liked-you"); box.classList.toggle("hidden"); if (!box.classList.contains("hidden")) box.scrollIntoView({ behavior: "smooth", block: "start" }); });
+      banner.append(see); banner.classList.remove("hidden");
+    } else banner.classList.add("hidden");
+    const box = document.getElementById("liked-you"); box.replaceChildren();
+    addText(box, "h2", "❤️ They like you").id = "liked-you-title";
+    if (likedRows.length) {
+      addText(box, "p", "Like them back to make a match, and you'll both be invited to chat.", "muted");
+      const row = document.createElement("div"); row.className = "mini-row";
+      likedRows.forEach(r => row.append(miniCard(r, urls.get(r.profile_photo_path) || null, ["Likes you ❤️"], "❤️ Like back")));
+      box.append(row);
+    }
+    if (matchRows.length) {
+      addText(box, "p", "💞 Your matches: say hello!", "muted");
+      const row = document.createElement("div"); row.className = "mini-row";
+      matchRows.forEach(r => {
+        const card = miniCard(r, urls.get(r.profile_photo_path) || null, ["It's a match 🎉"]);
+        const hello = document.createElement("a"); hello.className = "btn"; hello.textContent = "💬 Say hello";
+        hello.href = "messages.html?member=" + encodeURIComponent(r.id);
+        card.querySelector(".mini-actions").replaceChildren(hello); row.append(card);
+      });
+      box.append(row);
+    }
+    if (!likedRows.length && !matchRows.length) box.classList.add("hidden");
+  }
+  async function loadDailyMatches() {
+    const { data, error } = await db.rpc("daily_matches", { p_limit: 5 });
+    const box = document.getElementById("matches-today");
+    if (error || !data || !data.length) { box.classList.add("hidden"); return; }
+    const urls = await window.FYP.signedPhotoUrls(db, data.map(r => r.profile_photo_path));
+    box.replaceChildren();
+    addText(box, "h2", "💞 Your matches today").id = "matches-title";
+    addText(box, "p", "Picked for you from what you have in common. New picks every day.", "muted");
+    const row = document.createElement("div"); row.className = "mini-row";
+    data.forEach(r => row.append(miniCard(r, urls.get(r.profile_photo_path) || null, r.reasons)));
+    box.append(row); box.classList.remove("hidden");
+  }
+  async function startLikes() {
+    const probe = await db.rpc("like_status", { p_member_ids: [] });
+    if (probe.error) return; // likes_and_matches.sql not applied yet: nothing is shown
+    likesReady = true;
+    document.getElementById("dialog-like").addEventListener("click", () => { if (current) toggleLike(current); });
+    await Promise.all([loadLikes(), loadDailyMatches()]).catch(() => {});
+    if (new URLSearchParams(location.search).get("likes") === "1") {
+      const box = document.getElementById("liked-you");
+      if (box.children.length > 1) { box.classList.remove("hidden"); box.scrollIntoView({ block: "start" }); }
+      history.replaceState(null, "", "discover.html");
+    }
   }
   // Members who have not messaged anyone yet are reminded to say hello, in words that fit them.
   // Men are told the ladies cannot see they are here until they write; women are encouraged
@@ -459,7 +626,8 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
       const rows = await fetchPage();
       if (!legacyMode) filters.classList.remove("hidden");
       const [urls, professions, activity] = await Promise.all([
-        window.FYP.signedPhotoUrls(db, rows.map(row => row.profile_photo_path)), professionsFor(rows), activityFor(rows)]);
+        window.FYP.signedPhotoUrls(db, rows.map(row => row.profile_photo_path)), professionsFor(rows), activityFor(rows),
+        likeStatusFor(rows)]);
       rows.forEach(row => showCard({ ...row, profession: professions.get(row.id) || row.profession || null,
         activity: activity.get(row.id) || null }, urls.get(row.profile_photo_path) || null));
       total = rows.length ? Number(rows[0].total_count) || rows.length : (reset ? 0 : total);
@@ -576,6 +744,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     document.getElementById("official-self").classList.toggle("hidden", profile.is_official !== true);
     if (profile.approved === true && profile.is_official !== true) showOfficial();
     if (profile.approved === true && profile.is_official !== true) showHelloNudge(profile).catch(() => {});
+    if (profile.approved === true && !legacyMode) await startLikes().catch(() => {});
     if (profile.approved === true) loadQuestion().catch(() => document.getElementById("qotd").classList.add("hidden"));
     // Members start with every approved member of the gender they said they are looking for
     // (shown openly in the Gender filter, with a note), any age, all countries and any goal.
