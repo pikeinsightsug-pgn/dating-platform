@@ -24,6 +24,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 #growth .lists{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}#growth ol{margin:6px 0 0;padding-left:20px}#growth li{margin:2px 0}
 #growth .tip{background:#fff3f8;border-left:4px solid #b32663;border-radius:10px;padding:10px 12px;margin-top:12px}
 @media(max-width:650px){#growth .g4,#growth .lists{grid-template-columns:1fr 1fr}}
+.country-table{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}.country-table th,.country-table td{padding:8px 10px;border-bottom:1px solid #f0dfe7;text-align:right;white-space:nowrap}.country-table th:first-child,.country-table td:first-child{text-align:left}.country-table th{font-size:12px;color:#75666e;font-weight:700}.country-table .good{color:#1d6b3a;font-weight:800}.country-table .low{color:#a21f59;font-weight:800}
 </style>
 </head>
 <body><main class="wrap">
@@ -51,6 +52,11 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <p class="muted" style="margin:14px 0 0">New members per day (last 14 days)</p><div class="bars" id="g-daily"></div>
 <div class="lists"><div><b>Gender</b><ol id="g-gender"></ol></div><div><b>Countries</b><ol id="g-countries"></ol></div><div><b>Cities</b><ol id="g-cities"></ol></div></div>
 <div class="tip" id="g-tip"></div>
+<div id="g-country-box" class="hidden" style="margin-top:22px">
+<h3 style="margin:0 0 4px">🌍 By country: who stays, replies and pays</h3>
+<p class="muted" style="margin:0 0 10px">Approved members only. <b>Active</b> = visited, sent or opened a message in the last 7 days. <b>Coming back</b> = members who joined over a week ago and were active this week. <b>Reply rate</b> = chats they started that got an answer. Paying is added when payments start.</p>
+<div style="overflow-x:auto"><table class="country-table"><thead><tr><th>Country</th><th>Members</th><th>New (7d)</th><th>With photo</th><th>Active (7d)</th><th>Coming back</th><th>Messages (7d)</th><th>Reply rate</th><th>Paying</th></tr></thead><tbody id="g-country"></tbody></table></div>
+</div>
 </div></div>
 <div class="panel" id="recovery"><h2>Safely link a verified existing profile</h2>
 <p class="muted">Use only after independently verifying the person against their original registration information. Select an existing email-confirmed Auth account; linking changes only the profile's user ID. It does not approve the profile. Never match by name or an unverified email.</p>
@@ -114,7 +120,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     return data;
   }
   // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
-  const EXPECTED_FUNCTION_VERSION = "2026-11-17b";
+  const EXPECTED_FUNCTION_VERSION = "2026-11-22a";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
@@ -223,11 +229,34 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
         const n = document.createElement("span"); n.textContent = d.count || ""; b.append(n); bars.append(b); });
       fillList("g-gender", m.gender); fillList("g-countries", m.countries); fillList("g-cities", mergeCities(m.cities));
       $("g-tip").textContent = growthTip(g);
+      fillCountries(g.by_country);
       $("growth-updated").textContent = "Updated " + new Date().toLocaleString();
       $("growth-status").classList.add("hidden"); $("growth-body").classList.remove("hidden");
     } catch (e) {
       $("growth-status").textContent = notDeployed(e);
     }
+  }
+  // One row per country. Green/red marks show strong or weak numbers at a glance.
+  function fillCountries(rows) {
+    const box = $("g-country-box"), body = $("g-country");
+    if (!Array.isArray(rows) || !rows.length) { box.classList.add("hidden"); return; }
+    body.textContent = "";
+    const cell = (text, cls) => { const td = document.createElement("td"); td.textContent = text; if (cls) td.className = cls; return td; };
+    const pctCell = (value, good, low, base) => value == null ? cell("—") :
+      cell(value + "%" + (base != null ? " (of " + base + ")" : ""), value >= good ? "good" : value < low ? "low" : "");
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.append(cell(r.label), cell(String(r.members)), cell(String(r.new_7_days)),
+        pctCell(r.with_photo_percent, 70, 40),
+        cell(r.active_7_days + " (" + (r.active_7_days_percent == null ? "—" : r.active_7_days_percent + "%") + ")",
+          r.active_7_days_percent == null ? "" : r.active_7_days_percent >= 50 ? "good" : r.active_7_days_percent < 25 ? "low" : ""),
+        pctCell(r.returning_percent, 40, 15, r.returning_base),
+        cell(String(r.messages_7_days)),
+        r.chats_started ? pctCell(r.reply_rate_percent, 35, 15) : cell("—"),
+        cell("—"));
+      body.append(tr);
+    });
+    box.classList.remove("hidden");
   }
   async function load() {
     say("Loading registrations…");

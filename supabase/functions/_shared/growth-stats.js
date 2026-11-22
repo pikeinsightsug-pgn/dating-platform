@@ -18,8 +18,9 @@ function topCounts(values, limit) {
 }
 
 // members: [{ id, invited_by, gender, location, city, created_at, approved, is_test_account, is_official, profile_photo_url }]
-// messages: [{ sender_member_id, recipient_member_id, created_at }]
-export function growthStats(members, messages, now = Date.now()) {
+// messages: [{ sender_member_id, recipient_member_id, created_at, read_at? }]
+// lastSeen: optional { member_id: ISO time } from member_presence (last visit to a member page).
+export function growthStats(members, messages, now = Date.now(), lastSeen = {}) {
   const excluded = new Set(members.filter((m) => m.is_test_account || m.is_official).map((m) => m.id));
   const genuine = members.filter((m) => !excluded.has(m.id));
   const since = (days) => (row) => row.created_at && now - Date.parse(row.created_at) < days * DAY;
@@ -50,7 +51,62 @@ export function growthStats(members, messages, now = Date.now()) {
   const twoWay = [...pairs.values()].filter((senders) => senders.size === 2).length;
   const week = real.filter(since(7));
 
+  // Country comparison: which countries' members stay active, reply and (later) pay.
+  // A member counts as active when they visited a member page, sent or opened a message.
+  const lastActive = new Map();
+  const touch = (id, at) => {
+    const t = at ? Date.parse(at) : NaN;
+    if (id && !Number.isNaN(t) && t > (lastActive.get(id) || 0)) lastActive.set(id, t);
+  };
+  for (const [id, at] of Object.entries(lastSeen || {})) touch(id, at);
+  for (const x of messages) { touch(x.sender_member_id, x.created_at); touch(x.recipient_member_id, x.read_at); }
+  const activeWithin = (id, days) => (lastActive.get(id) || 0) > now - days * DAY;
+  const countryOf = new Map(genuine.map((m) => [m.id, (m.location == null ? "" : String(m.location)).trim() || "Not given"]));
+  // Who started each conversation, and did the other person ever answer?
+  const started = new Map();
+  for (const x of [...real].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))) {
+    const a = x.sender_member_id < x.recipient_member_id ? x.sender_member_id : x.recipient_member_id;
+    const key = a + "|" + (a === x.sender_member_id ? x.recipient_member_id : x.sender_member_id);
+    if (!started.has(key)) started.set(key, x.sender_member_id);
+  }
+  const approvedGenuine = genuine.filter((m) => m.approved === true);
+  const byCountryRows = new Map();
+  for (const m of approvedGenuine) {
+    const c = countryOf.get(m.id);
+    if (!byCountryRows.has(c)) byCountryRows.set(c, []);
+    byCountryRows.get(c).push(m);
+  }
+  const pct = (part, whole) => (whole ? Math.round((part / whole) * 100) : null);
+  const countryRow = (label, rows) => {
+    const ids = new Set(rows.map((m) => m.id));
+    const settled = rows.filter((m) => m.created_at && now - Date.parse(m.created_at) >= 7 * DAY);
+    let chats = 0, answered = 0;
+    for (const [key, starter] of started) {
+      if (!ids.has(starter)) continue;
+      chats++;
+      if ((pairs.get(key) || new Set()).size === 2) answered++;
+    }
+    return {
+      label,
+      members: rows.length,
+      new_7_days: rows.filter(since(7)).length,
+      with_photo_percent: pct(rows.filter((m) => !!m.profile_photo_url).length, rows.length),
+      active_7_days: rows.filter((m) => activeWithin(m.id, 7)).length,
+      active_7_days_percent: pct(rows.filter((m) => activeWithin(m.id, 7)).length, rows.length),
+      returning_percent: pct(settled.filter((m) => activeWithin(m.id, 7)).length, settled.length),
+      returning_base: settled.length,
+      messages_7_days: week.filter((x) => ids.has(x.sender_member_id)).length,
+      chats_started: chats,
+      reply_rate_percent: pct(answered, chats),
+    };
+  };
+  const ranked = [...byCountryRows.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  const by_country = ranked.slice(0, 8).map(([label, rows]) => countryRow(label, rows));
+  const rest = ranked.slice(8).flatMap(([, rows]) => rows);
+  if (rest.length) by_country.push(countryRow("Other countries", rest));
+
   return {
+    by_country,
     members: {
       total: genuine.length,
       approved: genuine.filter((m) => m.approved === true).length,
