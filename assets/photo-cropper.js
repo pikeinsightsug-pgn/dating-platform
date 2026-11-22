@@ -5,8 +5,8 @@
 (function (root) {
   "use strict";
 
-  const OUT_W = 1200;
-  const OUT_H = 900;
+  const OUT_W = 800; // 800x600 is sharp on phone screens and about 100 KB, which keeps downloads low
+  const OUT_H = 600;
   const MAX_ZOOM = 4;
   const MAX_BYTES = 5 * 1024 * 1024;
   const DECODE_MESSAGE = "This photo could not be opened on this device. If your phone saves photos as HEIC, change the camera setting to “Most compatible”, or take a screenshot of the photo and choose that.";
@@ -155,7 +155,7 @@
           const canvas = document.createElement("canvas");
           canvas.width = OUT_W; canvas.height = OUT_H;
           draw(canvas);
-          let blob = await encode(canvas, 0.82);
+          let blob = await encode(canvas, 0.78);
           if (blob && blob.size > MAX_BYTES) blob = await encode(canvas, 0.7);
           els.preview.disabled = false;
           output = blob;
