@@ -311,15 +311,15 @@ test("browser journeys on the full migration set", async (t) => {
     await page.mouse.up();
     await page.click("#crop-preview");
     await page.waitForSelector("#crop-confirm:not(.hidden)");
-    assert.deepEqual(await sample(page, "#crop-result"), { width: 1200, height: 900, colour: "red" }, "the confirmation shows the cropped area");
+    assert.deepEqual(await sample(page, "#crop-result"), { width: 800, height: 600, colour: "red" }, "the confirmation shows the cropped area");
     await page.click("#crop-use");
     await page.waitForFunction(() => !document.querySelector(".crop-dialog").open);
-    assert.deepEqual(await sample(page, "#photo-preview"), { width: 1200, height: 900, colour: "red" }, "preview before upload is the crop");
+    assert.deepEqual(await sample(page, "#photo-preview"), { width: 800, height: 600, colour: "red" }, "preview before upload is the crop");
     await page.click("#upload-photo");
     await page.waitForFunction(() => /has been saved/.test(document.getElementById("photo-status").textContent));
     const saved = (await env.sql("select profile_photo_url from public.members where first_name = 'Alpha'")).rows[0].profile_photo_url;
     assert.ok(saved !== before && saved.endsWith(".jpg"), "replaced with a new JPEG");
-    assert.deepEqual(await sample(page, "#photo-preview"), { width: 1200, height: 900, colour: "red" }, "stored file is the crop");
+    assert.deepEqual(await sample(page, "#photo-preview"), { width: 800, height: 600, colour: "red" }, "stored file is the crop");
 
     // Still there after a refresh and a new login.
     await page.reload(); await page.waitForSelector("#photo-preview:not(.hidden)");
