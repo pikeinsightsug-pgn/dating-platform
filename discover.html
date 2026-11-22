@@ -52,6 +52,9 @@ dialog::backdrop{background:#241b2380}.dialog-body{padding:20px 22px 24px}.dialo
 .thumbs button[aria-current=true]{outline-color:#b32663}.thumbs img{width:100%;height:100%;object-fit:cover;display:block}.thumbs button:focus-visible{outline-color:#241b23}
 .welcome-new{margin:14px 0;padding:18px;border-radius:20px;color:#fff;background:radial-gradient(120% 140% at 0% 0%,#d81b60 0%,#8f1e51 60%,#4a0a26 100%);box-shadow:0 14px 30px #8f1e5133}
 .welcome-new h2{margin:0 0 6px;font-size:22px;color:#fff}.welcome-new p{margin:0 0 6px;color:#ffe6f0}.welcome-new .welcome-tip{font-size:14px}
+.hello-nudge{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:14px 0;padding:16px 18px;border-radius:18px;background:#fff8e6;border:2px solid #f6c453;color:#4a3205}
+.hello-nudge strong{display:block;font-size:18px;color:#7a4b00}.hello-nudge .hn-text{flex:1 1 240px;line-height:1.5}
+.hello-nudge button{background:transparent;color:#7a4b00;border:1px solid #d9a93a}
 .welcome-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}.welcome-new .btn{background:#fff;color:#a0124b}.welcome-new .secondary{background:transparent;color:#fff;border:1px solid #ffffff80}
 /* Framed photos on member cards */
 .card{border:0;border-radius:26px;background:#fff;box-shadow:0 10px 30px #5c183014;transition:transform .18s ease,box-shadow .18s ease}
@@ -114,7 +117,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
   <p id="signed-in" class="signed-in hidden" role="status"></p>
   <section id="welcome-new" class="welcome-new hidden" aria-labelledby="welcome-title">
     <h2 id="welcome-title">🎉 Welcome to P.K CONNECT!</h2>
-    <p>You're in. Browse the members below and say hello to anyone you like. 💬</p>
+    <p id="welcome-hello">You're in. Browse the members below and say hello to anyone you like. 💬</p>
     <p class="welcome-tip">📸 Tip: members with a clear photo and a few words about themselves get many more replies.</p>
     <div class="welcome-actions"><a class="btn" href="dashboard.html#profile-panel">✨ Complete my profile</a><button class="secondary" type="button" id="welcome-close">Start browsing</button></div>
   </section>
@@ -130,6 +133,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
   </form>
   <p id="filter-note" class="filter-note hidden" role="note"></p>
   <p id="official-self" class="self-note hidden" role="note">You are signed in as the official P.K Connect account ✅. Members see you pinned at the top of their Discover page, never as a dating profile. Open a member below and press Message to welcome them.</p>
+  <aside id="hello-nudge" class="hello-nudge hidden" role="note"><span class="hn-text"><strong id="hello-title"></strong><span id="hello-text"></span></span><button type="button" id="hello-close">Got it</button></aside>
   <section id="official" class="official hidden" aria-label="Official P.K Connect account"></section>
   <section id="qotd" class="qotd hidden" aria-labelledby="qotd-q"></section>
   <p id="status" role="status" aria-live="polite">Checking your account…</p>
@@ -260,6 +264,34 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     document.getElementById("dialog-message").classList.toggle("hidden", legacyMode);
     dialogStatus.textContent = legacyMode ? "Messaging, blocking and reporting open once the administrator finishes the latest database setup." : "";
     if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
+  }
+  // Members who have not messaged anyone yet are reminded to say hello, in words that fit them.
+  // Men are told the ladies cannot see they are here until they write; women are encouraged
+  // not to wait. Everyone is reminded that a personal message gets more replies than "Hi".
+  function helloWords(profile) {
+    const g = String(profile.gender || "").toLowerCase();
+    if (/^(man|male|men)$/.test(g)) return { title: "👋 Let the ladies know you're here!",
+      text: "Many ladies are waiting to hear from a genuine man. Send a friendly hello to someone you like, and mention something from her profile so she knows you really read it. Polite, personal messages get the most replies." };
+    if (/^(woman|female|women)$/.test(g)) return { title: "👋 Don't wait to be found!",
+      text: "Many good men are shy about writing first. Say hello to someone whose profile you like. A short, friendly message about something on his profile is a great start." };
+    return { title: "👋 Say hello to someone!",
+      text: "Send a friendly message to someone you like, and mention something from their profile. Personal messages get many more replies than just “Hi”." };
+  }
+  async function showHelloNudge(profile) {
+    try { if (sessionStorage.getItem("fyp_hello_closed")) return; } catch (e) { /* storage blocked */ }
+    const { data, error } = await db.rpc("list_my_conversations");
+    if (error) return;
+    const official = new Set((await window.FYP.listOfficialAccounts(db)).map(a => a.id));
+    const chats = (data || []).filter(c => !official.has(c.other_member_id));
+    if (chats.length) return;
+    const words = helloWords(profile);
+    document.getElementById("hello-title").textContent = words.title;
+    document.getElementById("hello-text").textContent = words.text;
+    const box = document.getElementById("hello-nudge"); box.classList.remove("hidden");
+    document.getElementById("hello-close").onclick = () => {
+      box.classList.add("hidden");
+      try { sessionStorage.setItem("fyp_hello_closed", "1"); } catch (e) { /* storage blocked */ }
+    };
   }
   // Question of the day: one fun question for everyone each day. Members see how everyone
   // answered (percentages only), and each profile shows that member's answer with a ready-made
@@ -533,6 +565,8 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     window.FYP.showSignedIn(profile, data.session.user);
     window.FYP.startUnreadAlerts(db, profile);
     // First visit straight after joining.
+    const hello = helloWords(profile);
+    document.getElementById("welcome-hello").textContent = "You're in! " + hello.text;
     if (new URLSearchParams(location.search).get("welcome") === "1" && profile.approved === true) {
       document.getElementById("welcome-new").classList.remove("hidden");
       history.replaceState(null, "", "discover.html");
@@ -540,6 +574,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     document.getElementById("welcome-close").addEventListener("click", () => document.getElementById("welcome-new").classList.add("hidden"));
     document.getElementById("official-self").classList.toggle("hidden", profile.is_official !== true);
     if (profile.approved === true && profile.is_official !== true) showOfficial();
+    if (profile.approved === true && profile.is_official !== true) showHelloNudge(profile).catch(() => {});
     if (profile.approved === true) loadQuestion().catch(() => document.getElementById("qotd").classList.add("hidden"));
     // Members start with every approved member of the gender they said they are looking for
     // (shown openly in the Gender filter, with a note), any age, all countries and any goal.
