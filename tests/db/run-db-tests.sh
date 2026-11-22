@@ -45,6 +45,12 @@ done
 PGOPTIONS="-c client_min_messages=notice" psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f tests/db/unread_email_tests.sql 2>&1 \
   | sed -n 's/^psql:[^ ]* NOTICE:  //p; s/^psql:.*ERROR:  /ERROR: /p'
 [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+for run in 1 2; do
+  PGOPTIONS="-c client_min_messages=warning" psql_q -d "$DB" -f supabase/photo_reminder_emails.sql
+done
+PGOPTIONS="-c client_min_messages=notice" psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f tests/db/photo_reminder_tests.sql 2>&1 \
+  | sed -n 's/^psql:[^ ]* NOTICE:  //p; s/^psql:.*ERROR:  /ERROR: /p'
+[ "${PIPESTATUS[0]}" -eq 0 ] || status=1
 
 # The read-only diagnostics must run on the fully migrated database and on one where
 # none of the setup files were applied.
