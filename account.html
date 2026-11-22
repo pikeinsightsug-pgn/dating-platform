@@ -67,7 +67,7 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
       <button class="link-button join-back" type="button" id="join-back">← Back</button>
       <p class="step-title"><span class="step-num">3</span>📍 Where you live</p>
       <div class="field" id="location-field"><label for="location">🌍 Country you live in</label><select id="location" name="location" required autocomplete="country-name"><option value="">Choose your country…</option></select><span class="hint hidden" id="location-guess">Filled in from your phone's time zone. Change it if it is wrong.</span><p class="error" id="location-error"></p></div>
-      <div class="field"><label for="city">📍 City or general area</label><input id="city" name="city" required maxlength="100" autocomplete="address-level2" placeholder="e.g. Kampala, Gaborone, Nairobi, London"><span class="hint">No street address, please.</span><p class="error" id="city-error"></p></div>
+      <div class="field"><label for="city">📍 City or general area</label><input id="city" name="city" required maxlength="100" autocomplete="address-level2" placeholder="e.g. London, Nairobi, Toronto, Gaborone"><span class="hint">No street address, please.</span><p class="error" id="city-error"></p></div>
 
 
       <!-- The photo has its own always-visible step: most members never opened it while it was folded away. -->
