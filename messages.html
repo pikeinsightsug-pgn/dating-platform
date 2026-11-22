@@ -242,6 +242,10 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
         else name = found[0].first_name;
       }
       if (name) await openThread({ id: requested, first_name: name });
+      // A ready-made first message (from "Ask about it" on a profile), which the member can edit.
+      const draft = new URLSearchParams(location.search).get("draft");
+      if (name && draft && !body.value) { body.value = draft.slice(0, 500); body.focus(); }
+      if (draft) history.replaceState(null, "", "messages.html?member=" + encodeURIComponent(requested));
     }
     poll();
   })().catch(error => say(failure(error)));
