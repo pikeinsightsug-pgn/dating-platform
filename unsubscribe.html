@@ -25,7 +25,7 @@ a.btn{display:inline-block;margin-top:14px;padding:13px 26px;border-radius:999px
 <script src="assets/vendor/supabase-js-2.117.2.js"></script>
 <script src="assets/member-core.js"></script>
 <script>
-// One-tap unsubscribe from the "you have an unread message" emails. The link carries a private
+// One-tap unsubscribe from the reminder emails (unread messages, add-your-photo). The link carries a private
 // token only; no sign-in is needed and nothing else about the account changes.
 (async function () {
   "use strict";
@@ -41,7 +41,7 @@ a.btn{display:inline-block;margin-top:14px;padding:13px 26px;border-radius:999px
     if (!db) throw new Error("offline");
     const { data, error } = await db.rpc("unsubscribe_unread_emails", { p_token: token });
     if (error) throw error;
-    if (data === true) show("You're unsubscribed ✅", "You will no longer get emails about unread messages. Your account and messages are unchanged, and you can still see new messages when you log in.");
+    if (data === true) show("You're unsubscribed ✅", "You will no longer get reminder emails (unread messages and profile tips). Your account and messages are unchanged, and you can still see new messages when you log in.");
     else show("This link has expired", "Please email pikeinsightsug@gmail.com and we will turn the emails off for you.");
   } catch (error) {
     show("Something went wrong", "Please check your internet connection and open the link again, or email pikeinsightsug@gmail.com.");

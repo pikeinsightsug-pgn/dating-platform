@@ -259,6 +259,33 @@
     const name = profile && profile.first_name ? profile.first_name : "your account";
     node.textContent = "Signed in as " + name + (user && user.email ? " (" + user.email + ")" : "");
     node.classList.remove("hidden");
+    showPhotoNudge(profile, node);
+  }
+
+  // Members without a profile photo see a clear "Add my photo" banner on every member page
+  // (My Profile has its own reminder next to the upload box). It goes away once a photo is saved.
+  const PHOTO_NUDGE_STYLE = `
+.photo-nudge{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;margin:14px 0;padding:14px 16px;border-radius:18px;
+ background:#fff4f8;border:2px solid #f2a3c2;color:#5a1d3c;box-shadow:0 8px 22px #8f1e5114}
+.photo-nudge .pn-icon{flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:26px;
+ background:linear-gradient(135deg,#f3a6c6,#d81b60 50%,#f6c453);box-shadow:inset 0 0 0 4px #fff}
+.photo-nudge .pn-text{flex:1 1 220px;line-height:1.45}.photo-nudge strong{display:block;font-size:17px;color:#8f1e51}
+.photo-nudge a{background:#b32663;color:#fff;text-decoration:none;border-radius:999px;padding:11px 20px;font-weight:900;white-space:nowrap}`;
+  function showPhotoNudge(profile, anchor) {
+    if (typeof document === "undefined" || !profile || profile.approved !== true || profile.is_official === true) return;
+    if (profile.profile_photo_url || document.getElementById("photo-reminder") || document.getElementById("photo-nudge")) return;
+    if (!document.getElementById("photo-nudge-style")) {
+      const style = document.createElement("style"); style.id = "photo-nudge-style"; style.textContent = PHOTO_NUDGE_STYLE;
+      document.head.append(style);
+    }
+    const box = document.createElement("aside"); box.id = "photo-nudge"; box.className = "photo-nudge"; box.setAttribute("role", "note");
+    const icon = document.createElement("span"); icon.className = "pn-icon"; icon.setAttribute("aria-hidden", "true"); icon.textContent = "📸";
+    const text = document.createElement("span"); text.className = "pn-text";
+    const title = document.createElement("strong"); title.textContent = "Add your photo to get more replies";
+    text.append(title, document.createTextNode("Members can't see who you are yet. Profiles with a clear photo are shown first and get many more messages. Photos are private to approved members."));
+    const link = document.createElement("a"); link.href = "dashboard.html#photo-title"; link.textContent = "Add my photo";
+    box.append(icon, text, link);
+    anchor.after(box);
   }
 
   // Unread messages, impossible to miss: a red count on every "Messages" link, a bright banner
