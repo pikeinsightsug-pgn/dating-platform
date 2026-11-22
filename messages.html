@@ -226,6 +226,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
     await refreshList(); say("Member blocked.");
   });
   document.getElementById("signout").addEventListener("click", async () => {
+    if (window.FYP.forgetPhotoUrls) window.FYP.forgetPhotoUrls();
     if (window.FYPPush) await window.FYPPush.stop();
     const { error } = await db.auth.signOut();
     if (error) say("Could not log out right now. Please try again.");

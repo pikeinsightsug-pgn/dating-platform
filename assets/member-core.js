@@ -502,19 +502,46 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
     return { blob, type: "image/jpeg", extension: "jpg" };
   }
 
+  // Photo links are reused for up to a day (kept in this browser only), so a phone that has
+  // already downloaded a photo shows it from its own cache instead of downloading it again on
+  // every visit. New links were the main cause of the Supabase "egress" (download) usage.
+  const PHOTO_URL_TTL_S = 24 * 60 * 60;
+  const PHOTO_URL_KEY = "fyp-photo-urls";
+  function readPhotoUrlCache() {
+    try { return JSON.parse(localStorage.getItem(PHOTO_URL_KEY) || "{}") || {}; } catch (error) { return {}; }
+  }
+  function writePhotoUrlCache(cache) {
+    const now = Date.now();
+    Object.keys(cache).forEach(path => { if (!cache[path] || cache[path].until < now) delete cache[path]; });
+    try { localStorage.setItem(PHOTO_URL_KEY, JSON.stringify(cache)); } catch (error) { /* storage full or blocked */ }
+  }
   async function signedPhotoUrls(db, paths) {
     const unique = [...new Set(paths.filter(Boolean))];
     const urls = new Map();
     if (!unique.length) return urls;
+    const cache = readPhotoUrlCache();
+    // Reuse a link while it still has more than an hour left.
+    const freshUntil = Date.now() + 60 * 60 * 1000;
+    const missing = unique.filter(path => {
+      const hit = cache[path];
+      if (hit && hit.url && hit.until > freshUntil) { urls.set(path, hit.url); return false; }
+      return true;
+    });
+    if (!missing.length) return urls;
     try {
-      const { data, error } = await db.storage.from("profile-photos").createSignedUrls(unique, 600);
+      const { data, error } = await db.storage.from("profile-photos").createSignedUrls(missing, PHOTO_URL_TTL_S);
       if (error || !Array.isArray(data)) return urls;
-      data.forEach(item => { if (item && item.signedUrl && !item.error) urls.set(item.path, item.signedUrl); });
+      const until = Date.now() + PHOTO_URL_TTL_S * 1000;
+      data.forEach(item => {
+        if (item && item.signedUrl && !item.error) { urls.set(item.path, item.signedUrl); cache[item.path] = { url: item.signedUrl, until }; }
+      });
+      writePhotoUrlCache(cache);
     } catch (error) {
       // A missing photo must never break the page; cards fall back to a placeholder.
     }
     return urls;
   }
+  function forgetPhotoUrls() { try { localStorage.removeItem(PHOTO_URL_KEY); } catch (error) { /* ignore */ } }
 
   // True when a database function has not been installed yet (migration not applied).
   function isMissingFunction(error) {
@@ -555,7 +582,7 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
     GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
     saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor, showSignedIn,
     authErrorMessage, photoTypeOf, preparePhoto, decodeImage, randomId, withTimeout, signedPhotoUrls, isMissingFunction, isNotApproved,
-    listOfficialAccounts, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect, countryFromTimeZone, starterBio, startUnreadAlerts, refreshUnread
+    listOfficialAccounts, forgetPhotoUrls, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect, countryFromTimeZone, starterBio, startUnreadAlerts, refreshUnread
   };
   root.FYP = api;
   if (typeof module === "object" && module.exports) module.exports = api;

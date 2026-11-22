@@ -550,6 +550,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
   });
 
   document.getElementById("signout").addEventListener("click", async () => {
+    if (window.FYP.forgetPhotoUrls) window.FYP.forgetPhotoUrls();
     if (window.FYPPush) await window.FYPPush.stop();
     const { error } = await db.auth.signOut();
     if (error) say("Could not log out right now. Please try again.");
