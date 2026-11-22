@@ -180,7 +180,8 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     if (men > 0 && women * 2 < men) return "⚖️ Many more men than women. Aim your next ads at women (Facebook audience: Women, 22–45) until it is closer to even.";
     if (women > 0 && men * 2 < women) return "⚖️ Many more women than men. Aim your next ads at men (Facebook audience: Men, 25–50) until it is closer to even.";
     if (g.founding_spots_left <= 10 && g.founding_spots_left > 0) return "🔥 Only " + g.founding_spots_left + " founding spots left. Decide your price and payment method now, before spot 100.";
-    const adTip = women < men ? " Lean your next ads slightly towards women." : women > men ? " Lean your next ads slightly towards men." : "";
+    // Only suggest a side when the gap is real (one group at least 20% bigger), not 61 vs 59.
+    const adTip = men > women * 1.2 ? " Lean your next ads slightly towards women." : women > men * 1.2 ? " Lean your next ads slightly towards men." : "";
     if (x.reply_rate_percent != null && x.reply_rate_percent < 35 && x.conversations >= 10) return "💬 Most first messages get no reply. Post on Facebook: \"You may have a message waiting — log in, reply, and tap Allow for message alerts.\"" + adTip;
     if (m.new_7_days === 0) return "📣 No new members this week. Check that your Facebook ad is still running and approved.";
     if (g.founding_spots_left === 0) return "✅ All 100 founding spots are taken. The homepage counter is hidden; switch on paid membership when you are ready.";
