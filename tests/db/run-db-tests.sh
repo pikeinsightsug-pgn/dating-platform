@@ -57,6 +57,9 @@ done
 PGOPTIONS="-c client_min_messages=notice" psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f tests/db/question_of_the_day_tests.sql 2>&1 \
   | sed -n 's/^psql:[^ ]* NOTICE:  //p; s/^psql:.*ERROR:  /ERROR: /p'
 [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+PGOPTIONS="-c client_min_messages=notice" psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f tests/db/presence_tests.sql 2>&1 \
+  | sed -n 's/^psql:[^ ]* NOTICE:  //p; s/^psql:.*ERROR:  /ERROR: /p'
+[ "${PIPESTATUS[0]}" -eq 0 ] || status=1
 
 # The read-only diagnostics must run on the fully migrated database and on one where
 # none of the setup files were applied.

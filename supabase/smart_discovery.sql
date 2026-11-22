@@ -7,9 +7,13 @@
 --   * browse_member_profiles keeps the same filters, visibility rules and returned columns,
 --     but lists the best fits first instead of only the newest members:
 --       1. members with a profile photo (always before members without one),
---       2. same city (ignoring capitals and a trailing "city", so "FRANCISTOWN" and
---          "Gulu city" match "Francistown" and "Gulu"), 3. same country,
---       4. recently active members, 5. newest members.
+--       2. members active in the last 3 days (so messages go to people who will see them),
+--       3. same city (ignoring capitals and a trailing "city", so "FRANCISTOWN" and
+--          "Gulu city" match "Francistown" and "Gulu"), 4. same country,
+--       5. most recently active, 6. newest members.
+--   * "Active" counts every visit to a member page (touch_member_presence, at most once every
+--     10 minutes), opening messages and sending messages, not only typing a password: most
+--     members stay signed in on their phone and rarely sign in again.
 --   * member_activity(ids) returns only a coarse label ("Active today" / "Active this week")
 --     for members the caller is already allowed to see. Exact sign-in or message times are
 --     never returned.
@@ -22,6 +26,7 @@ begin
      or to_regprocedure('public.require_approved_member()') is null
      or to_regprocedure('public.members_are_blocked(uuid, uuid)') is null
      or to_regprocedure('public.get_member_profile(uuid)') is null
+     or to_regprocedure('public.current_approved_member_id()') is null
      or to_regclass('public.member_messages') is null then
     raise exception 'Apply the earlier checked-in setup files first; no changes applied';
   end if;
@@ -37,15 +42,42 @@ $$;
 revoke all on function public.normalized_city(text) from public, anon;
 grant execute on function public.normalized_city(text) to authenticated;
 
--- Latest sign-in or sent message. Owner-side helper only; members never call it directly.
+-- When each member last opened a member page. Only the time is kept; nothing about what they did.
+create table if not exists public.member_presence (
+  member_id uuid primary key references public.members(id) on delete cascade,
+  last_seen_at timestamptz not null default now()
+);
+alter table public.member_presence enable row level security;
+revoke all on public.member_presence from public, anon, authenticated;
+
+-- Called by the member pages on each visit; records "seen now" at most every 10 minutes.
+create or replace function public.touch_member_presence()
+returns void language plpgsql security definer set search_path = ''
+as $$
+declare
+  me uuid := public.current_approved_member_id();
+begin
+  if me is null then return; end if;
+  insert into public.member_presence (member_id, last_seen_at) values (me, now())
+  on conflict (member_id) do update set last_seen_at = now()
+    where public.member_presence.last_seen_at < now() - interval '10 minutes';
+end;
+$$;
+revoke all on function public.touch_member_presence() from public, anon;
+grant execute on function public.touch_member_presence() to authenticated;
+
+-- Latest visit, sign-in, sent message or opened message. Owner-side helper only.
 create or replace function public.member_last_active(p_member_id uuid)
 returns timestamptz language sql stable security definer set search_path = ''
 as $$
   select greatest(
     (select u.last_sign_in_at from public.members m join auth.users u on u.id = m.user_id
       where m.id = p_member_id),
+    (select p.last_seen_at from public.member_presence p where p.member_id = p_member_id),
     (select max(mm.created_at) from public.member_messages mm
-      where mm.sender_member_id = p_member_id))
+      where mm.sender_member_id = p_member_id),
+    (select max(mm.read_at) from public.member_messages mm
+      where mm.recipient_member_id = p_member_id))
 $$;
 revoke all on function public.member_last_active(uuid) from public, anon, authenticated;
 
@@ -106,6 +138,7 @@ begin
   from visible v
   order by
     (v.photo_path is not null) desc,
+    (v.last_active > now() - interval '3 days') desc nulls last,
     (my_city is not null and v.location = my_country
       and public.normalized_city(v.city) = my_city) desc,
     (v.location = my_country) desc,
