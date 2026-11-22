@@ -84,7 +84,7 @@
       };
     }
     if (ios) {
-      return { list: ["Tap the <b>Share</b> button <b>⬆️</b> (bottom of Safari, or top right in Chrome)", "Scroll down and tap <b>Add to Home Screen ➕</b>", "Tap <b>Add</b> at the top right"] };
+      return { note: "📩 On iPhone, message alerts only work after you add P.K CONNECT to your Home Screen.", list: ["Tap the <b>Share</b> button <b>⬆️</b> (bottom of Safari, or top right in Chrome)", "Scroll down and tap <b>Add to Home Screen ➕</b>", "Tap <b>Add</b> at the top right"] };
     }
     if (prompt) return { install: true, list: ["Tap <b>Install now</b> below", "Tap <b>Install</b> when your phone asks"] };
     return { list: ["Tap the <b>⋮</b> (3 dots) at the top right of Chrome", "Tap <b>Add to Home screen</b> (or <b>Install app</b>)", "Tap <b>Add</b>"] };
@@ -115,7 +115,7 @@
     sheet.innerHTML =
       '<div class="pkpin-card">' +
         '<div class="pkpin-head"><img src="assets/app/icon-192.png" alt="" width="52" height="52">' +
-          '<div><h2 id="pkpin-title">📲 Pin P.K CONNECT to your phone</h2><p>Open your matches in one tap, like an app. Free, no app store.</p></div>' +
+          '<div><h2 id="pkpin-title">📲 Pin P.K CONNECT to your phone</h2><p>Open it in one tap, like an app, and get an alert when someone messages you. Free, no app store.</p></div>' +
           '<button type="button" class="pkpin-x" aria-label="Close">×</button></div>' +
         '<p class="pkpin-note" hidden></p><ol></ol>' +
         '<div class="pkpin-actions"><button type="button" class="pkpin-main"></button><button type="button" class="pkpin-later">Maybe later</button></div>' +
