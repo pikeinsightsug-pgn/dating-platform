@@ -217,7 +217,7 @@ It is additive and safe to rerun. It adds:
 - **Auto-pause:** a profile reported by 3 different members is hidden until you review it in
   `/admin/` → Open member reports (Restore or Ban).
 - **Contact details:** phone numbers, WhatsApp/Telegram and email can be sent only after both
-  people have each sent 5 messages, or once they have liked each other.
+  people have liked each other AND each sent 10 messages.
 - **Money words:** a warning appears under messages mentioning money; a member who sends
   money words to 2+ people in 7 days appears in the report queue as an automatic alert.
 - **Copy-paste spam:** the same long message (40+ characters) can go to at most 8 people a day.

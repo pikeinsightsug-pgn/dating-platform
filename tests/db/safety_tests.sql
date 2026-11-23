@@ -30,21 +30,32 @@ select t_denied('select send_member_message(''' || current_setting('t.m5') || ''
 select t_assert((select count(*) = 1 from send_member_message(current_setting('t.m5')::uuid, 'Hi! I am 29, I live 5 km from town and love the year 2026')), 'ordinary messages with small numbers are sent');
 commit;
 
--- After 5 messages each, contact details are allowed.
+-- 10 messages each without a like is not enough.
 insert into member_messages (sender_member_id, recipient_member_id, body)
 select current_setting('t.m' || s)::uuid, current_setting('t.m' || r)::uuid, 'chat ' || g
-from (values (2, 5), (5, 2)) p(s, r), generate_series(1, 5) g;
+from (values (2, 5), (5, 2)) p(s, r), generate_series(1, 10) g;
 begin; select set_config('request.jwt.claim.sub', '77777777-0000-4000-8000-000000000002', true); set local role authenticated;
-select t_assert((select count(*) = 1 from send_member_message(current_setting('t.m5')::uuid, 'My WhatsApp is 0712 345 678')), 'contact details are allowed after 5 messages each');
-select t_denied('select send_member_message(''' || current_setting('t.m6') || '''::uuid, ''0712 345 678'')', 'other strangers still cannot receive contact details');
+select t_denied('select send_member_message(''' || current_setting('t.m5') || '''::uuid, ''My WhatsApp is 0712 345 678'')', '10 messages each without a mutual like is not enough');
 commit;
 
--- A mutual like also opens contact sharing.
+-- A mutual like without 10 messages each is not enough.
 insert into member_likes (liker_id, liked_id) values
   (current_setting('t.m2')::uuid, current_setting('t.m6')::uuid),
   (current_setting('t.m6')::uuid, current_setting('t.m2')::uuid);
+insert into member_messages (sender_member_id, recipient_member_id, body)
+select current_setting('t.m' || s)::uuid, current_setting('t.m' || r)::uuid, 'chat ' || g
+from (values (2, 6), (6, 2)) p(s, r), generate_series(1, 9) g;
 begin; select set_config('request.jwt.claim.sub', '77777777-0000-4000-8000-000000000002', true); set local role authenticated;
-select t_assert((select count(*) = 1 from send_member_message(current_setting('t.m6')::uuid, 'Here is my number 0712 345 678')), 'a mutual like allows contact details');
+select t_denied('select send_member_message(''' || current_setting('t.m6') || '''::uuid, ''Here is my number 0712 345 678'')', 'a mutual like with fewer than 10 messages each is not enough');
+commit;
+
+-- A mutual like AND 10 messages each opens contact sharing.
+insert into member_messages (sender_member_id, recipient_member_id, body)
+values (current_setting('t.m6')::uuid, current_setting('t.m2')::uuid, 'chat 10'),
+       (current_setting('t.m2')::uuid, current_setting('t.m6')::uuid, 'chat 10');
+begin; select set_config('request.jwt.claim.sub', '77777777-0000-4000-8000-000000000002', true); set local role authenticated;
+select t_assert((select count(*) = 1 from send_member_message(current_setting('t.m6')::uuid, 'Here is my number 0712 345 678')), 'a mutual like and 10 messages each allow contact details');
+select t_denied('select send_member_message(''' || current_setting('t.m7') || '''::uuid, ''0712 345 678'')', 'other strangers still cannot receive contact details');
 commit;
 
 -- The official account is never held back.

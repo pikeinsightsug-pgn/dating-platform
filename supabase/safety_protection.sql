@@ -7,7 +7,7 @@
 --   * Auto-hide: a profile reported by 3 different members is paused (hidden from everyone and
 --     unable to message) until the owner reviews it. The official account is never paused.
 --   * Contact details: phone numbers, WhatsApp/Telegram and email addresses can be shared only
---     after both people have each sent 5 messages in the chat, or once they have liked each other.
+--     once both people have liked each other AND each sent 10 messages in the chat.
 --   * Money words: messages asking for money still arrive (the receiver sees a warning), but a
 --     member who sends money words to 2 or more different people within 7 days is flagged for the
 --     owner.
@@ -85,17 +85,17 @@ begin
 end;
 $$;
 
--- Contact details are allowed once both people have each sent 5 messages, or they liked each other.
+-- Contact details are allowed once both people have liked each other AND each sent 10 messages.
 create or replace function public.pk_contact_sharing_open(me uuid, other uuid)
 returns boolean language sql stable security definer set search_path = ''
 as $$
   select exists (select 1 from public.members o where o.id in (me, other) and o.is_official)
       or (exists (select 1 from public.member_likes a where a.liker_id = me and a.liked_id = other)
-          and exists (select 1 from public.member_likes b where b.liker_id = other and b.liked_id = me))
-      or ((select count(*) from public.member_messages mm
-           where mm.sender_member_id = me and mm.recipient_member_id = other) >= 5
+          and exists (select 1 from public.member_likes b where b.liker_id = other and b.liked_id = me)
           and (select count(*) from public.member_messages mm
-               where mm.sender_member_id = other and mm.recipient_member_id = me) >= 5)
+               where mm.sender_member_id = me and mm.recipient_member_id = other) >= 10
+          and (select count(*) from public.member_messages mm
+               where mm.sender_member_id = other and mm.recipient_member_id = me) >= 10)
 $$;
 
 create or replace function public.pk_raise_safety_alert(p_member_id uuid, p_kind text, p_hits integer, p_people integer)
@@ -159,7 +159,7 @@ begin
     -- Contact details only after the two people know each other a little.
     if public.pk_has_contact_details(clean_body)
        and not public.pk_contact_sharing_open(me, p_recipient_member_id) then
-      raise exception 'For your safety, phone numbers, WhatsApp and email can be shared after you have each sent 5 messages, or once you have liked each other.'
+      raise exception 'For your safety, phone numbers, WhatsApp and email can be shared once you have liked each other and have each sent 10 messages.'
         using errcode = '22023';
     end if;
 
