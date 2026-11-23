@@ -1,11 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { isMemberPhotoPathOwnedByUser } from "../_shared/member-photo-path.js";
+import { isMemberPhotoPathOwnedByUser, thumbPathFor } from "../_shared/member-photo-path.js";
 import { COUNTRIES } from "../_shared/countries.js";
 import { growthStats } from "../_shared/growth-stats.js";
 
 // Bump when this function changes; the owner console compares it with the version it expects,
 // so the owner can see whether the deployed function is current without opening Supabase.
-const FUNCTION_VERSION = "2026-11-23a";
+const FUNCTION_VERSION = "2026-11-23b";
 
 // Lists are read in pages so the console keeps showing everyone as the community grows
 // (a single request returns at most 1000 rows). `page` builds the query for one range.
@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
   let body: {
     action?: string; member_id?: string; user_id?: string; identity_verified?: boolean;
     status?: string; legacy_id?: string; is_test_account?: boolean; is_official?: boolean; notes?: string; photo_id?: string;
-    email?: string; consent?: boolean; redirect_to?: string; profile?: Record<string, unknown>;
+    email?: string; consent?: boolean; redirect_to?: string; profile?: Record<string, unknown>; data?: string;
   };
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON." }, 400); }
 
@@ -79,6 +79,18 @@ Deno.serve(async (req: Request) => {
         // Leave this batch without previews.
       }
     }
+    return urls;
+  }
+  // Small previews: the thumbnail where it exists (about 10 times smaller), else the photo.
+  async function signSmallPhotos(paths: string[]) {
+    const thumbs = await signPhotos(paths.map((p) => thumbPathFor(p) as string));
+    const urls = new Map<string, string>();
+    const missing: string[] = [];
+    for (const p of paths) {
+      const url = thumbs.get(thumbPathFor(p) as string);
+      if (url) urls.set(p, url); else missing.push(p);
+    }
+    if (missing.length) (await signPhotos(missing)).forEach((url, p) => urls.set(p, url));
     return urls;
   }
 
@@ -123,7 +135,7 @@ Deno.serve(async (req: Request) => {
       }
     }
     // A photo preview failure must not prevent the owner from reviewing member records.
-    const profilePhotoUrls = await signPhotos(rows
+    const profilePhotoUrls = await signSmallPhotos(rows
       .filter((member) => isMemberPhotoPathOwnedByUser(member.user_id, member.profile_photo_url))
       .map((member) => member.profile_photo_url));
     const identifiedRows = rows.map((member) => ({
@@ -240,7 +252,7 @@ Deno.serve(async (req: Request) => {
       .select("id, storage_path").maybeSingle();
     if (error) return json({ error: "Could not remove the photo.", detail: error.message }, 500);
     if (!data) return json({ error: "Photo not found. Refresh the list." }, 404);
-    const { error: fileError } = await db.storage.from("profile-photos").remove([data.storage_path]);
+    const { error: fileError } = await db.storage.from("profile-photos").remove([data.storage_path, thumbPathFor(data.storage_path) as string]);
     return json({ removed: data.id, file_removed: !fileError });
   }
 
@@ -334,6 +346,58 @@ Deno.serve(async (req: Request) => {
     if (error) return json({ error: "Could not update the original registration.", detail: error.message }, 500);
     if (!data) return json({ error: "Original registration not found." }, 404);
     return json({ registration: data });
+  }
+
+  // Members whose profile photo has no small copy yet.
+  if (body.action === "list_thumbnail_jobs") {
+    const { data, error } = await readAllRows((from, to) => db.from("members")
+      .select("id, user_id, profile_photo_url").not("profile_photo_url", "is", null)
+      .order("id").range(from, to));
+    if (error) return json({ error: "Could not load member photos.", detail: error.message }, 500);
+    const owned = (data || []).filter((m) => isMemberPhotoPathOwnedByUser(m.user_id, m.profile_photo_url));
+    const thumbs = await signPhotos(owned.map((m) => thumbPathFor(m.profile_photo_url) as string));
+    const todo = owned.filter((m) => !thumbs.has(thumbPathFor(m.profile_photo_url) as string));
+    return json({ total: owned.length, jobs: todo.map((m) => ({ member_id: m.id })) });
+  }
+
+  // One member's full profile photo (base64), so the owner console can make its small copy.
+  if (body.action === "thumbnail_source") {
+    if (typeof body.member_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.member_id)) {
+      return json({ error: "A valid member ID is required." }, 400);
+    }
+    const { data: member, error: memberError } = await db.from("members")
+      .select("user_id, profile_photo_url").eq("id", body.member_id).maybeSingle();
+    if (memberError) return json({ error: "Could not read the member.", detail: memberError.message }, 500);
+    if (!member || !isMemberPhotoPathOwnedByUser(member.user_id, member.profile_photo_url)) {
+      return json({ error: "This member has no profile photo." }, 404);
+    }
+    const { data: file, error: downloadError } = await db.storage.from("profile-photos").download(member.profile_photo_url);
+    if (downloadError || !file) return json({ error: "Could not read the photo.", detail: downloadError?.message }, 500);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return json({ data: btoa(binary), type: file.type || "image/jpeg" });
+  }
+
+  if (body.action === "store_thumbnail") {
+    if (typeof body.member_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.member_id) || typeof body.data !== "string") {
+      return json({ error: "A valid member ID and thumbnail are required." }, 400);
+    }
+    const bytes = Uint8Array.from(atob(body.data), (c) => c.charCodeAt(0));
+    if (bytes.length < 100 || bytes.length > 300 * 1024 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
+      return json({ error: "The thumbnail must be a JPEG under 300 KB." }, 400);
+    }
+    const { data: member, error: memberError } = await db.from("members")
+      .select("user_id, profile_photo_url").eq("id", body.member_id).maybeSingle();
+    if (memberError) return json({ error: "Could not read the member.", detail: memberError.message }, 500);
+    if (!member || !isMemberPhotoPathOwnedByUser(member.user_id, member.profile_photo_url)) {
+      return json({ error: "This member has no profile photo." }, 404);
+    }
+    const thumb = thumbPathFor(member.profile_photo_url) as string;
+    const { error: uploadError } = await db.storage.from("profile-photos")
+      .upload(thumb, new Blob([bytes], { type: "image/jpeg" }), { upsert: true, contentType: "image/jpeg", cacheControl: "604800" });
+    if (uploadError) return json({ error: "Could not save the thumbnail.", detail: uploadError.message }, 500);
+    return json({ stored: thumb });
   }
 
   if (body.action === "list_reports") {

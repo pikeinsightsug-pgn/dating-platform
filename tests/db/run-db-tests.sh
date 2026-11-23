@@ -75,6 +75,12 @@ PGOPTIONS="-c client_min_messages=notice" psql -v ON_ERROR_STOP=1 -X -q -d "$DB"
 for run in 1 2; do
   PGOPTIONS="-c client_min_messages=warning" psql_q -d "$DB" -f supabase/safety_protection.sql
 done
+for run in 1 2; do
+  PGOPTIONS="-c client_min_messages=warning" psql_q -d "$DB" -f supabase/photo_thumbnails.sql
+done
+PGOPTIONS="-c client_min_messages=notice" psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f tests/db/thumbnail_tests.sql 2>&1 \
+  | sed -n 's/^psql:[^ ]* NOTICE:  //p; s/^psql:.*ERROR:  /ERROR: /p'
+[ "${PIPESTATUS[0]}" -eq 0 ] || status=1
 PGOPTIONS="-c client_min_messages=notice" psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f tests/db/safety_tests.sql 2>&1 \
   | sed -n 's/^psql:[^ ]* NOTICE:  //p; s/^psql:.*ERROR:  /ERROR: /p'
 [ "${PIPESTATUS[0]}" -eq 0 ] || status=1

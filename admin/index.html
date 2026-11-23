@@ -79,6 +79,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <div class="panel"><div class="row"><h2>Original registrations (Google Form)</h2><button id="legacy-toggle" class="secondary" type="button">Show</button></div>
 <p class="muted">The archived original answers. Linking records which member profile belongs to the person; it never changes, merges or approves the profile. Verify the person first (for example on WhatsApp). Contact details here are private — never share this page.</p>
 <div id="legacy-summary" class="muted">Load registrations to see the archive.</div><div id="legacy" class="hidden"></div></div>
+<div class="panel"><div class="row"><h2>Small photos (saves downloads)</h2><button id="make-thumbs" class="secondary" type="button">Make small photos</button></div><p id="thumbs-status" class="muted">Cards, lists and chats show a small copy of each profile photo, about 10 times smaller to download. New photos get one automatically; press the button once to make them for older photos (safe to press again).</p></div>
 <div class="panel"><div class="row"><h2 id="reports-title">Open member reports</h2></div><div id="reports" class="muted">Load registrations to see reports.</div></div>
 <div class="row"><h2>Member profiles</h2><button id="refresh" class="secondary">Refresh records</button></div><div id="members"></div>
 </section></main>
@@ -120,7 +121,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     return data;
   }
   // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
-  const EXPECTED_FUNCTION_VERSION = "2026-11-23a";
+  const EXPECTED_FUNCTION_VERSION = "2026-11-23b";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
@@ -445,6 +446,35 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     });
   }
 
+  // Makes the small copy of every profile photo that does not have one yet, in this browser.
+  $("make-thumbs").onclick = async () => {
+    const button = $("make-thumbs"), status = $("thumbs-status");
+    button.disabled = true;
+    try {
+      status.textContent = "Checking which photos need a small copy…";
+      const { jobs, total } = await invoke("list_thumbnail_jobs");
+      if (!jobs.length) { status.textContent = "All " + total + " profile photos already have a small copy. ✅"; return; }
+      let done = 0, failed = 0;
+      for (const job of jobs) {
+        try {
+          const source = await invoke("thumbnail_source", job.member_id);
+          const raw = Uint8Array.from(atob(source.data), c => c.charCodeAt(0));
+          const small = await window.FYP.makeThumbnail(new Blob([raw], { type: source.type }));
+          const data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result).split(",")[1]);
+            reader.onerror = reject; reader.readAsDataURL(small);
+          });
+          await invoke("store_thumbnail", job.member_id, { data });
+          done++;
+        } catch (error) { failed++; }
+        status.textContent = "Making small photos: " + (done + failed) + " of " + jobs.length + "…";
+      }
+      status.textContent = "Done: made " + done + " small photos" + (failed ? ", " + failed + " could not be made (press again to retry)." : ". ✅");
+    } catch (error) {
+      status.textContent = error.unsupported ? "The owner function needs updating first (merge the latest change)." : (error.message || "Could not make small photos.");
+    } finally { button.disabled = false; }
+  };
   // Reports and automatic scam alerts, grouped by member, with Dismiss / Ban / Restore.
   async function loadReports() {
     const data = await invoke("list_reports");
