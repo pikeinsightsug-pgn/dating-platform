@@ -15,6 +15,8 @@ const IDENT = /^[a-z_][a-z0-9_]*$/;
 export async function startGateway({ database, host, port: pgPort, user = "postgres" }) {
   const pool = new pg.Pool({ database, host, port: pgPort, user, max: 6 });
   const passwords = new Map();
+  // Sign-in bans set by the owner function (auth.admin.updateUserById ban_duration), by user id.
+  const bans = new Map();
   const objects = new Map();
   // Signup confirmation emails: one-time token -> { email, redirect }. Like Supabase, a new
   // signup email or a resend replaces the earlier link for that address.
@@ -97,12 +99,22 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
     }
     return { where: where.length ? " where " + where.join(" and ") : "", values };
   }
-  const columns = url => {
-    const select = url.searchParams.get("select") || "*";
+  // Plain columns, plus PostgREST embeds of a member such as reported:reported_member_id(id,first_name)
+  // (every embed the owner function uses points at public.members).
+  const columns = (url, table) => {
+    const select = (url.searchParams.get("select") || "*").replace(/\s+/g, "");
     if (select === "*") return "*";
-    const cols = select.split(",").map(c => c.trim());
-    if (!cols.every(c => IDENT.test(c))) throw Object.assign(new Error("bad select"), { code: "PGRST100" });
-    return cols.join(", ");
+    const cols = select.match(/[^,(]+(\([^)]*\))?/g) || [];
+    return cols.map(c => {
+      const embed = c.match(/^([a-z_][a-z0-9_]*):([a-z_][a-z0-9_]*)\(([a-z0-9_,]+)\)$/i);
+      if (embed && table && IDENT.test(table)) {
+        const [, alias, fk, inner] = embed;
+        if (!inner.split(",").every(x => IDENT.test(x))) throw Object.assign(new Error("bad select"), { code: "PGRST100" });
+        return `(select to_jsonb(e) from (select ${inner.split(",").join(", ")} from public.members m where m.id = public.${table}.${fk}) e) as ${alias}`;
+      }
+      if (!IDENT.test(c)) throw Object.assign(new Error("bad select"), { code: "PGRST100" });
+      return c;
+    }).join(", ");
   };
   function respondRows(req, res, rows, status = 200) {
     if (String(req.headers.accept || "").includes("vnd.pgrst.object")) {
@@ -147,7 +159,7 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
           if (!IDENT.test(col) || !/^(asc|desc)$/.test(dir)) throw Object.assign(new Error("bad order"), { code: "PGRST100" });
           return col + " " + dir;
         });
-        const rows = await asRole(sub, c => c.query(`select ${columns(url)} from public.${table}${where}${order.length ? " order by " + order.join(", ") : ""}${limit ? " limit " + limit : ""}${offset ? " offset " + offset : ""}`, values).then(r => r.rows));
+        const rows = await asRole(sub, c => c.query(`select ${columns(url, table)} from public.${table}${where}${order.length ? " order by " + order.join(", ") : ""}${limit ? " limit " + limit : ""}${offset ? " offset " + offset : ""}`, values).then(r => r.rows));
         return respondRows(req, res, rows);
       }
       const wantRows = /return=representation/.test(String(req.headers.prefer || ""));
@@ -265,6 +277,7 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
       const email = String(body.email || "").toLowerCase();
       const row = (await pool.query("select * from auth.users where email = $1", [email])).rows[0];
       if (!row || passwords.get(email) !== body.password) return authError(400, "invalid_credentials", "Invalid login credentials");
+      if (bans.has(row.id)) return authError(400, "user_banned", "User is banned");
       if (!row.email_confirmed_at) return authError(400, "email_not_confirmed", "Email not confirmed");
       return send(res, 200, session(row));
     }
@@ -304,6 +317,8 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
     if (route.startsWith("admin/users") && req.method === "PUT") {
       if (sub !== SERVICE) return authError(403, "not_admin", "User not allowed");
       const id = route.split("/")[2];
+      if (body.ban_duration === "none") bans.delete(id);
+      else if (body.ban_duration) bans.set(id, body.ban_duration);
       const row = body.email_confirm === true
         ? (await pool.query("update auth.users set email_confirmed_at = coalesce(email_confirmed_at, now()) where id::text = $1 returning *", [id])).rows[0]
         : (await pool.query("select * from auth.users where id::text = $1", [id])).rows[0];
@@ -381,7 +396,7 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   return {
     url: `http://127.0.0.1:${server.address().port}`,
-    pool, passwords, options,
+    pool, passwords, options, bans,
     // A signed-in session for an existing user, as an email link would provide.
     // The link a member would find in their latest signup confirmation email.
     confirmationEmail(email) {

@@ -79,7 +79,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <div class="panel"><div class="row"><h2>Original registrations (Google Form)</h2><button id="legacy-toggle" class="secondary" type="button">Show</button></div>
 <p class="muted">The archived original answers. Linking records which member profile belongs to the person; it never changes, merges or approves the profile. Verify the person first (for example on WhatsApp). Contact details here are private — never share this page.</p>
 <div id="legacy-summary" class="muted">Load registrations to see the archive.</div><div id="legacy" class="hidden"></div></div>
-<div class="panel"><div class="row"><h2>Open member reports</h2></div><div id="reports" class="muted">Load registrations to see reports.</div></div>
+<div class="panel"><div class="row"><h2 id="reports-title">Open member reports</h2></div><div id="reports" class="muted">Load registrations to see reports.</div></div>
 <div class="row"><h2>Member profiles</h2><button id="refresh" class="secondary">Refresh records</button></div><div id="members"></div>
 </section></main>
 <script src="../assets/vendor/supabase-js-2.117.2.js"></script>
@@ -120,7 +120,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     return data;
   }
   // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
-  const EXPECTED_FUNCTION_VERSION = "2026-11-22a";
+  const EXPECTED_FUNCTION_VERSION = "2026-11-23a";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
@@ -445,22 +445,71 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     });
   }
 
+  // Reports and automatic scam alerts, grouped by member, with Dismiss / Ban / Restore.
   async function loadReports() {
     const data = await invoke("list_reports");
     const root = $("reports"); root.innerHTML = "";
-    if (!data.reports.length) { root.textContent = "No open reports."; return; }
-    data.reports.forEach(r => {
+    const alerts = data.alerts || [];
+    const people = new Map();
+    const entry = member => {
+      const id = (member && member.id) || "unknown";
+      if (!people.has(id)) people.set(id, { member: member || {}, reports: [], alerts: [] });
+      return people.get(id);
+    };
+    data.reports.forEach(r => entry(r.reported).reports.push(r));
+    alerts.forEach(a => entry(a.member).alerts.push(a));
+    const total = data.reports.length + alerts.length;
+    $("reports-title").textContent = "Open member reports" + (total ? " (" + total + ")" : "");
+    if (!people.size) {
+      root.textContent = "No open reports or scam alerts." + (data.safety_ready === false ? " Apply supabase/safety_protection.sql to switch on scam alerts, auto-pause and Ban." : "");
+      return;
+    }
+    const act = async (action, id, extra, question) => {
+      if (question && !confirm(question)) return;
+      try { await invoke(action, id, extra); await loadReports(); if (action !== "resolve_report" && action !== "resolve_alert") await load(); }
+      catch (e) { say(e.message); }
+    };
+    const alertText = a => a.kind === "money_words"
+      ? "⚠️ Automatic alert: sent money-request words (e.g. \"send money\", \"Western Union\", \"gift card\") to " + a.people + " different members (" + a.hits + " messages in 7 days)."
+      : "⚠️ Automatic alert: pasted the same long message to " + a.people + " different members in one day.";
+    people.forEach(({ member, reports, alerts: memberAlerts }) => {
       const card = el("article", null, "member");
-      card.append(el("h3", r.reason + " · reported: " + ((r.reported && r.reported.first_name) || "member")));
-      card.append(el("p", "By " + ((r.reporter && r.reporter.first_name) || "member") + " · " + new Date(r.created_at).toLocaleString() + " · Reported profile ID " + ((r.reported && r.reported.id) || ""), "muted"));
-      card.append(el("p", r.details || "No details given.", "bio"));
-      const act = el("div", null, "actions");
-      [["reviewed", "Mark reviewed"], ["dismissed", "Dismiss"]].forEach(([s, label]) => {
-        const b = el("button", label, "secondary");
-        b.onclick = async () => { try { await invoke("resolve_report", r.id, { status: s }); await loadReports(); } catch (e) { say(e.message); } };
-        act.append(b);
+      const name = member.first_name || "member";
+      const state = member.banned ? " · 🚫 BANNED" : member.safety_hold ? " · ⏸️ PAUSED automatically after 3 reports (hidden until you decide)" : "";
+      card.append(el("h3", name + " — " + reports.length + " report" + (reports.length === 1 ? "" : "s") + (memberAlerts.length ? " + scam alert" : "") + state));
+      card.append(el("p", "Profile ID " + (member.id || ""), "muted"));
+      memberAlerts.forEach(a => {
+        card.append(el("p", alertText(a), "bio"));
+        const row = el("div", null, "actions");
+        const ok = el("button", "Alert is a false alarm", "secondary");
+        ok.onclick = () => act("resolve_alert", a.id, { status: "dismissed" });
+        row.append(ok); card.append(row);
       });
-      card.append(act); root.append(card);
+      reports.forEach(r => {
+        card.append(el("p", "• " + r.reason + " — by " + ((r.reporter && r.reporter.first_name) || "member") + ", " + new Date(r.created_at).toLocaleString() + (r.details ? ": " + r.details : ""), "bio"));
+        const row = el("div", null, "actions");
+        [["reviewed", "Mark reviewed"], ["dismissed", "Dismiss"]].forEach(([status, label]) => {
+          const b = el("button", label, "secondary");
+          b.onclick = () => act("resolve_report", r.id, { status });
+          row.append(b);
+        });
+        card.append(row);
+      });
+      if (member.id && data.safety_ready !== false) {
+        const row = el("div", null, "actions");
+        if (member.safety_hold || member.banned) {
+          const restore = el("button", member.banned ? "Unban and restore profile" : "Restore profile (reports were wrong)", "secondary");
+          restore.onclick = () => act("restore_member", member.id, {}, "Restore " + name + "? Their profile becomes visible again and their open reports are dismissed.");
+          row.append(restore);
+        }
+        if (!member.banned) {
+          const ban = el("button", "🚫 Ban " + name);
+          ban.onclick = () => act("ban_member", member.id, {}, "Ban " + name + "? They will be hidden from everyone, unable to message, and blocked from signing in. You can undo this later.");
+          row.append(ban);
+        }
+        card.append(row);
+      }
+      root.append(card);
     });
   }
   async function change(id, action) {

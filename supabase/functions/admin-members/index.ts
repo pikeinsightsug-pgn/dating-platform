@@ -5,7 +5,7 @@ import { growthStats } from "../_shared/growth-stats.js";
 
 // Bump when this function changes; the owner console compares it with the version it expects,
 // so the owner can see whether the deployed function is current without opening Supabase.
-const FUNCTION_VERSION = "2026-11-22a";
+const FUNCTION_VERSION = "2026-11-23a";
 
 // Lists are read in pages so the console keeps showing everyone as the community grows
 // (a single request returns at most 1000 rows). `page` builds the query for one range.
@@ -337,13 +337,74 @@ Deno.serve(async (req: Request) => {
   }
 
   if (body.action === "list_reports") {
-    const { data, error } = await db.from("member_reports")
-      .select("id, reason, details, status, created_at, reporter:reporter_member_id(id, first_name), reported:reported_member_id(id, first_name, approved)")
+    // Reports, plus (after safety_protection.sql) whether each profile is paused or banned and the
+    // automatic scam alerts. Message text is never read here.
+    const select = (extra: string) => db.from("member_reports")
+      .select("id, reason, details, status, created_at, reporter:reporter_member_id(id, first_name), reported:reported_member_id(id, first_name, approved" + extra + ")")
       .eq("status", "open")
       .order("created_at", { ascending: false })
       .limit(200);
+    let { data, error } = await select(", safety_hold, banned");
+    const safetyReady = !error;
+    if (error) ({ data, error } = await select(""));
     if (error) return json({ error: "Could not load member reports. Apply supabase/discovery_messaging_safety.sql first.", detail: error.message }, 500);
-    return json({ reports: data || [] });
+    let alerts: unknown[] = [];
+    if (safetyReady) {
+      const { data: alertRows } = await db.from("safety_alerts")
+        .select("id, kind, hits, people, created_at, updated_at, member:member_id(id, first_name, approved, safety_hold, banned)")
+        .eq("status", "open")
+        .order("updated_at", { ascending: false })
+        .limit(200);
+      alerts = alertRows || [];
+    }
+    return json({ reports: data || [], alerts, safety_ready: safetyReady });
+  }
+
+  if (body.action === "resolve_alert") {
+    const alertStatus = body.status;
+    if (typeof body.member_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.member_id) ||
+        (alertStatus !== "reviewed" && alertStatus !== "dismissed")) {
+      return json({ error: "A valid alert ID and outcome are required." }, 400);
+    }
+    const { data, error } = await db.from("safety_alerts")
+      .update({ status: alertStatus, updated_at: new Date().toISOString() })
+      .eq("id", body.member_id)
+      .select("id, status")
+      .maybeSingle();
+    if (error) return json({ error: "Could not update the alert. Apply supabase/safety_protection.sql first.", detail: error.message }, 500);
+    if (!data) return json({ error: "Alert not found." }, 404);
+    return json({ alert: data });
+  }
+
+  if (body.action === "ban_member" || body.action === "restore_member") {
+    if (typeof body.member_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.member_id)) {
+      return json({ error: "A valid member ID is required." }, 400);
+    }
+    const ban = body.action === "ban_member";
+    const { data: member, error: memberError } = await db.from("members")
+      .select("id, user_id, first_name, is_official, banned")
+      .eq("id", body.member_id)
+      .maybeSingle();
+    if (memberError) return json({ error: "Could not read the member. Apply supabase/safety_protection.sql first.", detail: memberError.message }, 500);
+    if (!member) return json({ error: "Member not found." }, 404);
+    if (ban && member.is_official) return json({ error: "The official account cannot be banned." }, 409);
+
+    const { error: updateError } = await db.from("members")
+      .update(ban ? { approved: false, safety_hold: false, banned: true } : { approved: true, safety_hold: false, banned: false })
+      .eq("id", member.id);
+    if (updateError) return json({ error: "Could not update the member.", detail: updateError.message }, 500);
+    await db.from("member_reports").update({ status: ban ? "reviewed" : "dismissed" })
+      .eq("reported_member_id", member.id).eq("status", "open");
+    await db.from("safety_alerts").update({ status: ban ? "reviewed" : "dismissed", updated_at: new Date().toISOString() })
+      .eq("member_id", member.id).eq("status", "open");
+
+    // A ban also stops the person signing in; restoring a banned member lifts it.
+    let loginBlocked: boolean | null = null;
+    if (member.user_id && (ban || member.banned)) {
+      const { error: authBanError } = await db.auth.admin.updateUserById(member.user_id, { ban_duration: ban ? "876000h" : "none" });
+      loginBlocked = authBanError ? null : ban;
+    }
+    return json({ member: { id: member.id, first_name: member.first_name, banned: ban }, login_blocked: loginBlocked });
   }
 
   if (body.action === "resolve_report") {
@@ -451,6 +512,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (error) return json({ error: "Could not update member approval.", detail: error.message }, 500);
     if (!data) return json({ error: "Member not found." }, 404);
+    if (approved) await db.from("members").update({ safety_hold: false }).eq("id", data.id);
     return json({ member: data });
   }
 
