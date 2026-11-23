@@ -203,6 +203,15 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
       if (!file) return send(res, 404, { error: "not_found" });
       res.writeHead(200, { "content-type": file.type }); return res.end(file.bytes);
     }
+    // Authenticated download (the owner function reads a photo with the service role).
+    if (req.method === "GET" && /^object\/(authenticated\/)?[^/]+\//.test(path) && !path.startsWith("object/sign/")) {
+      const key = path.replace(/^object\/(authenticated\/)?/, "");
+      const [bucket, ...nameParts] = key.split("/");
+      const visible = await asRole(sub, c => c.query("select 1 from storage.objects where bucket_id = $1 and name = $2", [bucket, nameParts.join("/")]).then(r => r.rowCount > 0));
+      const file = objects.get(key);
+      if (!visible || !file) return send(res, 400, { statusCode: "404", error: "not_found", message: "Object not found" });
+      res.writeHead(200, { "content-type": file.type }); return res.end(file.bytes);
+    }
     if (req.method === "POST" && path.startsWith("object/sign/")) {
       const rest = path.replace(/^object\/sign\//, "");
       const [bucket, ...nameParts] = rest.split("/");
@@ -235,7 +244,10 @@ export async function startGateway({ database, host, port: pgPort, user = "postg
         if (!limits) return send(res, 400, { statusCode: "404", error: "Bucket not found", message: "Bucket not found" });
         if (limits.allowed_mime_types && !limits.allowed_mime_types.includes(type)) return send(res, 400, { statusCode: "415", error: "invalid_mime_type", message: `mime type ${type} is not supported` });
         if (limits.file_size_limit && bytes.length > Number(limits.file_size_limit)) return send(res, 413, { statusCode: "413", error: "Payload too large", message: "The object exceeded the maximum allowed size" });
-        await asRole(sub, c => c.query("insert into storage.objects (bucket_id, name, owner) values ($1, $2, $3)", [bucket, name, sub]));
+        // The service role (owner function) uploads with no owner; upsert replaces an existing file.
+        const upsert = String(req.headers["x-upsert"] || "") === "true";
+        if (upsert) await asRole(sub, c => c.query("delete from storage.objects where bucket_id = $1 and name = $2", [bucket, name]));
+        await asRole(sub, c => c.query("insert into storage.objects (bucket_id, name, owner) values ($1, $2, $3)", [bucket, name, typeof sub === "string" ? sub : null]));
       } catch (error) {
         return send(res, 400, { statusCode: "403", error: "Unauthorized", message: "new row violates row-level security policy" });
       }

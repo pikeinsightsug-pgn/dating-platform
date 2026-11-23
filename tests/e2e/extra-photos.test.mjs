@@ -90,7 +90,7 @@ test("extra profile photos", async (t) => {
     await amina.waitForFunction(() => /removed/.test(document.getElementById("extra-status").textContent));
     await amina.waitForFunction(() => document.querySelectorAll("#extra-grid img").length === 1);
     assert.equal(await extraRows(), 1);
-    assert.equal((await env.sql("select count(*)::int n from storage.objects o join public.members m on (storage.foldername(o.name))[1] = m.user_id::text where m.first_name = 'Amina'")).rows[0].n, 2,
+    assert.equal((await env.sql("select count(*)::int n from storage.objects o join public.members m on (storage.foldername(o.name))[1] = m.user_id::text where m.first_name = 'Amina' and o.name not like '%/thumb\\_%'")).rows[0].n, 2,
       "the removed file is deleted; the profile photo and the other extra photo remain");
 
     const { Amina } = await ids();

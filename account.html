@@ -282,8 +282,9 @@ if (new URLSearchParams(location.search).get("mode") === "login") location.repla
     const path = user.id + "/" + window.FYP.randomId() + "." + prepared.extension;
     const { error } = await db.storage.from("profile-photos").upload(path, prepared.blob, { upsert: false, contentType: prepared.type });
     if (error) throw error;
+    window.FYP.ensureThumbnail(db, path, prepared.blob).catch(() => {});
     const saved = await window.FYP.saveOwnProfile(db, user, { profile_photo_url: path });
-    if (saved.error || !saved.data) { await db.storage.from("profile-photos").remove([path]); throw saved.error || new Error("not linked"); }
+    if (saved.error || !saved.data) { await db.storage.from("profile-photos").remove([path, window.FYP.thumbPathFor(path)]); throw saved.error || new Error("not linked"); }
   }
 
   async function finishSignIn(user, photo, options = {}) {

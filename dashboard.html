@@ -293,6 +293,8 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
     const urls = await window.FYP.signedPhotoUrls(db, [path]);
     if (!urls.get(path)) { image.classList.add("hidden"); empty.classList.remove("hidden"); return; }
     image.src = urls.get(path); image.classList.remove("hidden"); empty.classList.add("hidden");
+    // Members who joined before thumbnails existed get one made from their own photo.
+    window.FYP.ensureOwnThumbnail(db, path).catch(() => {});
   }
   // The member crops the chosen photo first; the upload sends that cropped JPEG.
   let croppedPhoto = null;
@@ -340,11 +342,13 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       const { error: uploadError } = await db.storage.from("profile-photos")
         .upload(path, prepared.blob, { upsert: false, contentType: prepared.type, cacheControl: "604800" });
       if (uploadError) throw uploadError;
+      // A small copy for cards and chats (best effort; the full photo is used until it exists).
+      window.FYP.ensureThumbnail(db, path, prepared.blob).catch(() => {});
       stage = "profile";
       const { data, error: saveError } = await db.from("members")
         .update({ profile_photo_url: path }).eq("user_id", user.id).select("id").maybeSingle();
       if (saveError || !data) {
-        await db.storage.from("profile-photos").remove([path]);
+        await db.storage.from("profile-photos").remove([path, window.FYP.thumbPathFor(path)]);
         throw saveError || new Error("Profile photo reference could not be saved.");
       }
       const oldPath = memberProfile.profile_photo_url;
@@ -354,7 +358,7 @@ button:disabled{opacity:.6;cursor:wait}.secondary{background:#fff;color:#b32663;
       stage = "preview";
       await loadPhotoPreview(path);
       if (oldPath && oldPath !== path && oldPath.startsWith(user.id + "/"))
-        await db.storage.from("profile-photos").remove([oldPath]);
+        await db.storage.from("profile-photos").remove([oldPath, window.FYP.thumbPathFor(oldPath)]);
       photoMessage("Your profile photo has been saved.");
     };
     try {

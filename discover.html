@@ -259,6 +259,16 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     gallery = entry.url ? [entry.url] : [];
     showGalleryPhoto(0);
     loadMorePhotos(current);
+    // Cards show the small photo; the open profile swaps in the full-size one.
+    const opened = current;
+    if (opened.profile_photo_path) {
+      window.FYP.signedPhotoUrls(db, [opened.profile_photo_path]).then(full => {
+        const url = full.get(opened.profile_photo_path);
+        if (!url || current !== opened || !gallery.length) return;
+        gallery[0] = url;
+        if (galleryIndex === 0) showGalleryPhoto(0);
+      }).catch(() => {});
+    }
     document.getElementById("dialog-name").textContent = current.first_name + ", " + current.age;
     document.getElementById("dialog-details").textContent = "📍 " + detailsLine(current);
     const text = document.getElementById("dialog-text"); text.replaceChildren();
@@ -375,7 +385,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     if (liked.error || matches.error) return;
     const likedRows = liked.data || [], matchRows = matches.data || [];
     matchRows.forEach(r => likedByMe.add(r.id));
-    const urls = await window.FYP.signedPhotoUrls(db, likedRows.concat(matchRows).map(r => r.profile_photo_path));
+    const urls = await window.FYP.signedPhotoUrls(db, likedRows.concat(matchRows).map(r => r.profile_photo_path), { small: true });
     const banner = document.getElementById("likes-banner");
     const parts = [];
     if (likedRows.length) parts.push("❤️ " + likedRows.length + (likedRows.length === 1 ? " person likes you" : " people like you"));
@@ -412,7 +422,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     const { data, error } = await db.rpc("daily_matches", { p_limit: 5 });
     const box = document.getElementById("matches-today");
     if (error || !data || !data.length) { box.classList.add("hidden"); return; }
-    const urls = await window.FYP.signedPhotoUrls(db, data.map(r => r.profile_photo_path));
+    const urls = await window.FYP.signedPhotoUrls(db, data.map(r => r.profile_photo_path), { small: true });
     box.replaceChildren();
     addText(box, "h2", "💞 Your matches today").id = "matches-title";
     addText(box, "p", "Picked for you from what you have in common. New picks every day.", "muted");
@@ -626,7 +636,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
       const rows = await fetchPage();
       if (!legacyMode) filters.classList.remove("hidden");
       const [urls, professions, activity] = await Promise.all([
-        window.FYP.signedPhotoUrls(db, rows.map(row => row.profile_photo_path)), professionsFor(rows), activityFor(rows),
+        window.FYP.signedPhotoUrls(db, rows.map(row => row.profile_photo_path), { small: true }), professionsFor(rows), activityFor(rows),
         likeStatusFor(rows)]);
       rows.forEach(row => showCard({ ...row, profession: professions.get(row.id) || row.profession || null,
         activity: activity.get(row.id) || null }, urls.get(row.profile_photo_path) || null));
@@ -671,7 +681,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     const accounts = await window.FYP.listOfficialAccounts(db);
     if (!accounts.length) return;
     const account = accounts[0];
-    const urls = await window.FYP.signedPhotoUrls(db, [account.profile_photo_path]);
+    const urls = await window.FYP.signedPhotoUrls(db, [account.profile_photo_path], { small: true });
     const url = urls.get(account.profile_photo_path);
     let picture;
     if (url) { picture = document.createElement("img"); picture.src = url; picture.alt = ""; }

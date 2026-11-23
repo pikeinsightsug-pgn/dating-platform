@@ -515,16 +515,20 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
     Object.keys(cache).forEach(path => { if (!cache[path] || cache[path].until < now) delete cache[path]; });
     try { localStorage.setItem(PHOTO_URL_KEY, JSON.stringify(cache)); } catch (error) { /* storage full or blocked */ }
   }
-  async function signedPhotoUrls(db, paths) {
+  // Signs photo paths, reusing cached links. A path that does not exist (for example a
+  // thumbnail not made yet) is remembered as missing for 30 minutes.
+  async function signPaths(db, paths) {
     const unique = [...new Set(paths.filter(Boolean))];
     const urls = new Map();
     if (!unique.length) return urls;
     const cache = readPhotoUrlCache();
+    const now = Date.now();
     // Reuse a link while it still has more than an hour left.
-    const freshUntil = Date.now() + 60 * 60 * 1000;
+    const freshUntil = now + 60 * 60 * 1000;
     const missing = unique.filter(path => {
       const hit = cache[path];
       if (hit && hit.url && hit.until > freshUntil) { urls.set(path, hit.url); return false; }
+      if (hit && hit.missing && hit.until > now) return false;
       return true;
     });
     if (!missing.length) return urls;
@@ -532,14 +536,95 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
       const { data, error } = await db.storage.from("profile-photos").createSignedUrls(missing, PHOTO_URL_TTL_S);
       if (error || !Array.isArray(data)) return urls;
       const until = Date.now() + PHOTO_URL_TTL_S * 1000;
+      const found = new Set();
       data.forEach(item => {
-        if (item && item.signedUrl && !item.error) { urls.set(item.path, item.signedUrl); cache[item.path] = { url: item.signedUrl, until }; }
+        if (item && item.signedUrl && !item.error) {
+          urls.set(item.path, item.signedUrl); cache[item.path] = { url: item.signedUrl, until }; found.add(item.path);
+        }
       });
+      missing.forEach(path => { if (!found.has(path)) cache[path] = { missing: true, until: Date.now() + 30 * 60 * 1000 }; });
       writePhotoUrlCache(cache);
     } catch (error) {
       // A missing photo must never break the page; cards fall back to a placeholder.
     }
     return urls;
+  }
+  // Small copy of a photo for cards, lists and chat pictures: same folder, "thumb_" + name, .jpg.
+  // Keep in step with public.pk_thumb_path() in supabase/photo_thumbnails.sql.
+  function thumbPathFor(path) {
+    if (!path) return null;
+    const cut = path.lastIndexOf("/") + 1;
+    const base = path.slice(cut);
+    const dot = base.lastIndexOf(".");
+    return path.slice(0, cut) + "thumb_" + (dot > -1 ? base.slice(0, dot) : base) + ".jpg";
+  }
+  // Returns a Map of original path -> link. With { small: true } the thumbnail is used where it
+  // exists (about 10 times smaller to download), otherwise the full photo.
+  async function signedPhotoUrls(db, paths, options = {}) {
+    if (!options.small) return signPaths(db, paths);
+    const originals = [...new Set(paths.filter(Boolean))];
+    const thumbs = await signPaths(db, originals.map(thumbPathFor));
+    const urls = new Map();
+    const needFull = [];
+    originals.forEach(path => {
+      const url = thumbs.get(thumbPathFor(path));
+      if (url) urls.set(path, url); else needFull.push(path);
+    });
+    if (needFull.length) (await signPaths(db, needFull)).forEach((url, path) => urls.set(path, url));
+    return urls;
+  }
+  // Makes a small JPEG (longest side 480px) from a photo blob.
+  const THUMB_EDGE = 480;
+  async function makeThumbnail(blob) {
+    let image;
+    try { image = await createImageBitmap(blob); }
+    catch (error) {
+      image = await new Promise((resolve, reject) => {
+        const img = new Image(); const url = URL.createObjectURL(blob);
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("decode failed")); };
+        img.src = url;
+      });
+    }
+    const width = image.width || image.naturalWidth, height = image.height || image.naturalHeight;
+    const scale = Math.min(1, THUMB_EDGE / Math.max(width, height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+    if (typeof image.close === "function") image.close();
+    const out = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.72));
+    if (!out) throw new Error("thumbnail failed");
+    return out;
+  }
+  // Uploads the thumbnail for one of the member's own photos (from the photo itself, or by
+  // downloading it once). Safe to call again: an existing thumbnail is left alone.
+  async function ensureThumbnail(db, path, sourceBlob) {
+    const thumb = thumbPathFor(path);
+    if (!thumb || thumb === path) return false;
+    let blob = sourceBlob;
+    if (!blob) {
+      const url = (await signPaths(db, [path])).get(path);
+      if (!url) return false;
+      const response = await fetch(url);
+      if (!response.ok) return false;
+      blob = await response.blob();
+    }
+    const small = await makeThumbnail(blob);
+    const { error } = await db.storage.from("profile-photos")
+      .upload(thumb, small, { upsert: false, contentType: "image/jpeg", cacheControl: "604800" });
+    const cache = readPhotoUrlCache(); delete cache[thumb]; writePhotoUrlCache(cache);
+    return !error || /exist|duplicate/i.test(String(error.message || ""));
+  }
+  // Once per browser: make the thumbnail for my own profile photo if it does not exist yet.
+  async function ensureOwnThumbnail(db, path) {
+    const key = "fyp-thumb-done:" + path;
+    try { if (localStorage.getItem(key)) return; } catch (error) { /* ignore */ }
+    const thumb = thumbPathFor(path);
+    const cache = readPhotoUrlCache(); delete cache[thumb]; writePhotoUrlCache(cache);
+    const exists = (await signPaths(db, [thumb])).has(thumb);
+    const done = exists || await ensureThumbnail(db, path);
+    if (done) { try { localStorage.setItem(key, "1"); } catch (error) { /* ignore */ } }
   }
   function forgetPhotoUrls() { try { localStorage.removeItem(PHOTO_URL_KEY); } catch (error) { /* ignore */ } }
 
@@ -581,7 +666,7 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
     SUPABASE_URL, CONTACT_EMAIL, SUPABASE_PUBLISHABLE_KEY, PHOTO_TYPES, PHOTO_MAX_BYTES, GENDERS, COUNTRIES, GOALS,
     GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
     saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor, showSignedIn,
-    authErrorMessage, photoTypeOf, preparePhoto, decodeImage, randomId, withTimeout, signedPhotoUrls, isMissingFunction, isNotApproved,
+    authErrorMessage, photoTypeOf, preparePhoto, decodeImage, randomId, withTimeout, signedPhotoUrls, thumbPathFor, makeThumbnail, ensureThumbnail, ensureOwnThumbnail, isMissingFunction, isNotApproved,
     listOfficialAccounts, forgetPhotoUrls, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect, countryFromTimeZone, starterBio, startUnreadAlerts, refreshUnread
   };
   root.FYP = api;

@@ -152,7 +152,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
     const { data, error } = await db.rpc("list_my_conversations");
     if (error) throw error;
     conversations = data || [];
-    photoUrls = await window.FYP.signedPhotoUrls(db, conversations.map(c => c.profile_photo_path));
+    photoUrls = await window.FYP.signedPhotoUrls(db, conversations.map(c => c.profile_photo_path), { small: true });
     renderList();
   }
   async function refreshThread(scroll) {
