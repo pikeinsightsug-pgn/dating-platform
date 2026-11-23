@@ -208,3 +208,24 @@ One-time setup (emails go through Brevo, where pkconnectonline.com is already au
 Check it: `select status_code, left(content::text, 120), created from net._http_response order by created desc limit 10;`
 (200 = sent). Switch off: `select cron.unschedule('pk-unread-message-emails');`
 
+
+## Scam protection (November 2026)
+
+Apply `supabase/safety_protection.sql` in the Supabase SQL editor after `likes_and_matches.sql`.
+It is additive and safe to rerun. It adds:
+
+- **Auto-pause:** a profile reported by 3 different members is hidden until you review it in
+  `/admin/` → Open member reports (Restore or Ban).
+- **Contact details:** phone numbers, WhatsApp/Telegram and email can be sent only after both
+  people have each sent 5 messages, or once they have liked each other.
+- **Money words:** a warning appears under messages mentioning money; a member who sends
+  money words to 2+ people in 7 days appears in the report queue as an automatic alert.
+- **Copy-paste spam:** the same long message (40+ characters) can go to at most 8 people a day.
+- **New accounts:** at most 15 new conversations in their first 24 hours.
+- **Ban:** hides the member, stops their messages and blocks their sign-in. "Unban and restore"
+  undoes it.
+
+The owner never sees message text: alerts show only counts.
+
+This file replaces `send_member_message`. If you ever rerun `official_account.sql` or
+`discovery_messaging_safety.sql`, run `safety_protection.sql` again afterwards.
