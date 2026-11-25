@@ -42,6 +42,9 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
 @media(max-width:760px){.layout{grid-template-columns:1fr}.layout.thread-open .list-panel{display:none}.layout:not(.thread-open) .thread-panel{display:none}.back{display:inline-flex}.wrap{padding:16px 12px 30px}.messages{max-height:none}}
 .signed-in{margin:10px 0 0;font-size:14px;color:#75666e;font-weight:600}
 .official-badge{display:inline-block;background:#e7f6ec;color:#1d6b3a;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:800;margin-left:6px;white-space:nowrap;vertical-align:middle}
+.reply-helpers{padding:0 12px 10px}.reply-helpers p{margin:0 0 8px;font-size:13px;font-weight:700;color:#75666e}
+.reply-chips{display:flex;flex-wrap:wrap;gap:8px}.reply-chips button{background:#fff0f6;color:#8f1e51;border:1px solid #f3c6da;border-radius:16px;padding:9px 13px;font-size:14px;font-weight:700;text-align:left;line-height:1.35;max-width:100%}
+.reply-chips button:hover,.reply-chips button:focus-visible{background:#fde3ee}
 .install-in-message{margin-top:10px;width:100%;border-radius:999px;padding:11px 16px;font-weight:900;background:#b32663;color:#fff;border:0;cursor:pointer}
 </style>
 </head>
@@ -72,6 +75,10 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
       </form>
       <div id="thread" class="messages" aria-live="polite"></div>
       <p class="safety">🛡️ <strong>Never send money, airtime or gifts to anyone you meet here.</strong> P.K Connect will never ask you for money in chat. Phone numbers and WhatsApp can be shared once you have liked each other and each sent 10 messages. Report anyone who asks for money.</p>
+      <div id="reply-helpers" class="reply-helpers hidden" aria-label="Message ideas">
+        <p>💡 Not sure what to say? Tap one, change it if you like, then press Send.</p>
+        <div id="reply-chips" class="reply-chips"></div>
+      </div>
       <form id="compose" class="compose hidden">
         <label class="hidden" for="body">Message</label>
         <textarea id="body" name="body" rows="2" maxlength="2000" required placeholder="Write a message…"></textarea>
@@ -85,6 +92,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
 <script src="assets/push-notifications.js"></script>
 <script src="assets/invite.js"></script>
 <script src="assets/member-core.js"></script>
+<script src="assets/reply-helpers.js"></script>
 <script>
 (() => {
   const POLL_MS = 15000;
@@ -104,6 +112,45 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
   let pollTimer = null;
   let photoUrls = new Map();
   let officialIds = new Set(); // the official P.K Connect account(s), shown with a ✅ badge
+  // Message ideas (assets/reply-helpers.js): built from the other member's profile, shown only
+  // while their message waits for an answer or before the first message, and only when the box
+  // is empty. Tapping one fills the box; nothing is sent until the member presses Send.
+  const helpers = document.getElementById("reply-helpers");
+  const chips = document.getElementById("reply-chips");
+  const profileCache = new Map();
+  let threadContext = null, shownIdeas = "";
+  async function loadProfileForIdeas(memberId) {
+    if (profileCache.has(memberId)) return;
+    profileCache.set(memberId, null);
+    try {
+      const [profile, jobs] = await Promise.all([
+        db.rpc("get_member_profile", { p_member_id: memberId }),
+        db.rpc("member_professions", { p_member_ids: [memberId] })
+      ]);
+      const row = profile && !profile.error && profile.data && profile.data[0];
+      if (!row) return;
+      const job = jobs && !jobs.error && jobs.data && jobs.data[0];
+      profileCache.set(memberId, { first_name: row.first_name, city: row.city, interests: row.interests, profession: job ? job.profession : "" });
+      renderIdeas();
+    } catch (error) { /* ideas still work with just the first name */ }
+  }
+  function renderIdeas() {
+    const ideas = active && threadContext && !officialIds.has(active.id) && !body.value.trim() && window.FYPReplies
+      ? window.FYPReplies.suggestReplies(profileCache.get(active.id) || { first_name: active.first_name }, threadContext) : [];
+    const key = ideas.join("\n");
+    if (key === shownIdeas) return;
+    shownIdeas = key;
+    chips.replaceChildren();
+    ideas.forEach(text => {
+      const chip = document.createElement("button"); chip.type = "button"; chip.textContent = text;
+      chip.addEventListener("click", () => {
+        body.value = text; renderIdeas(); body.focus();
+        body.setSelectionRange(text.length, text.length);
+      });
+      chips.append(chip);
+    });
+    helpers.classList.toggle("hidden", !ideas.length);
+  }
 
   function avatar(entry) {
     const url = entry.profile_photo_path && photoUrls.get(entry.profile_photo_path);
@@ -195,6 +242,9 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
       time.textContent = when(message.created_at) + (message.from_me && message.read_at ? " · Seen" : "");
       bubble.append(time); thread.append(bubble);
     });
+    const last = data && data.length ? data[data.length - 1] : null;
+    threadContext = { started: Boolean(last), lastFromThem: Boolean(last && !last.from_me), lastBody: last && !last.from_me ? last.body : "" };
+    renderIdeas();
     if (scroll || nearBottom) thread.scrollTop = thread.scrollHeight;
     if ((data || []).some(m => !m.from_me && !m.read_at)) {
       await db.rpc("mark_conversation_read", { p_other_member_id: active.id });
@@ -202,7 +252,8 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
     }
   }
   async function openThread(member) {
-    active = member;
+    active = member; threadContext = null; renderIdeas();
+    if (!officialIds.has(member.id)) loadProfileForIdeas(member.id);
     layout.classList.add("thread-open");
     document.getElementById("thread-name").textContent = member.first_name;
     if (officialIds.has(member.id)) document.getElementById("thread-name").append(window.FYP.officialBadge());
@@ -228,15 +279,16 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
     } catch (error) { say(failure(error)); }
     finally { button.disabled = false; button.textContent = "Send"; }
   });
+  body.addEventListener("input", renderIdeas);
   body.addEventListener("keydown", event => {
     if (event.key === "Enter" && !event.shiftKey && window.matchMedia("(pointer:fine)").matches) { event.preventDefault(); compose.requestSubmit(); }
   });
-  document.getElementById("back").addEventListener("click", () => { layout.classList.remove("thread-open"); active = null; renderList(); });
+  document.getElementById("back").addEventListener("click", () => { layout.classList.remove("thread-open"); active = null; renderIdeas(); renderList(); });
   document.getElementById("block").addEventListener("click", async () => {
     if (!active || !confirm("Block " + active.first_name + "? You will no longer see each other or be able to exchange messages.")) return;
     const { error } = await db.rpc("block_member", { p_member_id: active.id });
     if (error) { say(failure(error)); return; }
-    active = null; layout.classList.remove("thread-open");
+    active = null; layout.classList.remove("thread-open"); renderIdeas();
     thread.replaceChildren(); compose.classList.add("hidden"); document.getElementById("block").classList.add("hidden");
     document.getElementById("report").classList.add("hidden"); reportForm.classList.add("hidden");
     document.getElementById("thread-name").textContent = "Choose a conversation";
@@ -294,7 +346,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
       if (name) await openThread({ id: requested, first_name: name });
       // A ready-made first message (from "Ask about it" on a profile), which the member can edit.
       const draft = new URLSearchParams(location.search).get("draft");
-      if (name && draft && !body.value) { body.value = draft.slice(0, 500); body.focus(); }
+      if (name && draft && !body.value) { body.value = draft.slice(0, 500); renderIdeas(); body.focus(); }
       if (draft) history.replaceState(null, "", "messages.html?member=" + encodeURIComponent(requested));
     }
     poll();

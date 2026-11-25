@@ -607,3 +607,21 @@ test("invite links: remembered from the link, claimed once, members see only the
   assert.match(sql, /grant execute on function public\.claim_invite\(text\) to authenticated;/);
   assert.doesNotMatch(sql, /grant execute on function public\.(my_invite|claim_invite)[^;]*anon/, "visitors who are not signed in cannot call them");
 });
+
+test("message ideas: friendly, personal, never contact details, never auto-sent", async () => {
+  const { suggestReplies } = (await import("../assets/reply-helpers.js")).default;
+  const opener = suggestReplies({ first_name: "Naledi", city: "Gaborone", interests: "Cooking, music and travel" }, { started: false });
+  assert.equal(opener.length, 3);
+  assert.equal(opener[1], "Hi Naledi! I see you enjoy cooking. What got you into it?");
+  assert.equal(suggestReplies({ first_name: "Kabo", profession: "Engineer" }, { started: true, lastFromThem: true })[2],
+    "What do you enjoy most about being an engineer?");
+  assert.equal(suggestReplies({ first_name: "Kabo" }, { started: true, lastFromThem: true, lastBody: "Where are you from?" })[0], "Good question, Kabo! ");
+  assert.deepEqual(suggestReplies({ first_name: "Kabo" }, { started: true, lastFromThem: false }), [], "nothing once they have answered");
+  const risky = suggestReplies({ first_name: "Amina", city: "call 0772 123456", interests: "WhatsApp me, telegram", profession: "www.x.com" },
+    { started: true, lastFromThem: true }).join(" ");
+  assert.doesNotMatch(risky, /\d|whatsapp|telegram|www/i, "profile text that looks like contact details is never suggested");
+  assert.match(suggestReplies({}, { started: false })[0], /^Hi there 👋/);
+  const page = await read("messages.html");
+  assert.match(page, /<script src="assets\/reply-helpers\.js"><\/script>/);
+  assert.doesNotMatch(page.match(/function renderIdeas[\s\S]*?\n  }\n/)[0], /send_member_message|requestSubmit/, "tapping an idea never sends it");
+});
