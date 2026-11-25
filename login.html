@@ -108,6 +108,8 @@
     // details). Never guesses a legacy registration, never sends an existing member back
     // to the registration form.
     const profile = await window.FYP.ensureOwnProfile(db, user);
+    // A fresh login shows the unread-messages banner again, even if it was closed before.
+    if (window.FYP.resetUnreadBanner) window.FYP.resetUnreadBanner();
     window.location.replace(window.FYP.destinationFor(profile));
   }
 

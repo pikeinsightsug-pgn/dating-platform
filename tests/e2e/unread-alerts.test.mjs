@@ -1,5 +1,6 @@
 // A member with unread messages sees it everywhere: a red count on every Messages link, a
-// banner on Discover and My Profile, and the count in the browser tab. It clears once read.
+// banner on Discover and My Profile (which the member can close), and the count in the browser
+// tab. It clears once read.
 // Every person here is invented.
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -23,7 +24,8 @@ test("unread messages are impossible to miss", async (t) => {
   await t.test("Discover: red count on Messages, banner, and the tab title", async () => {
     await kabo.waitForSelector("a[data-messages-link].has-unread .unread-badge");
     assert.equal(await kabo.textContent("a[data-messages-link] .unread-badge"), "2");
-    assert.match(await kabo.textContent("#unread-banner"), /You have 2 unread messages/);
+    assert.match(await kabo.textContent("#unread-banner-text"), /^💌 You have 2 unread messages! Someone is waiting to hear from you — reply now\.$/);
+    assert.equal(await kabo.getAttribute("#unread-banner a", "href"), "messages.html", "the banner links to the inbox");
     assert.match(await kabo.title(), /^\(2\) /);
     await kabo.goto(env.base + "dashboard.html");
     await kabo.waitForSelector("#unread-banner");
@@ -33,6 +35,19 @@ test("unread messages are impossible to miss", async (t) => {
   await t.test("a new message arriving while the page is open updates the count", async () => {
     await env.sql("insert into public.member_messages (sender_member_id, recipient_member_id, body) values ($1, $2, 'One more')", [ids.Amina, ids.Kabo]);
     await kabo.waitForFunction(() => document.querySelector("#messages-nav .unread-badge")?.textContent === "3");
+  });
+
+  await t.test("members can close the banner; it comes back only when more messages arrive", async () => {
+    await kabo.click("#unread-banner button.unread-close");
+    assert.equal(await kabo.locator("#unread-banner").count(), 0);
+    assert.equal(await kabo.textContent("#messages-nav .unread-badge"), "3", "the red count stays");
+    await kabo.reload();
+    await kabo.waitForSelector("#messages-nav .unread-badge");
+    await kabo.waitForTimeout(800);
+    assert.equal(await kabo.locator("#unread-banner").count(), 0, "stays closed on the next page");
+    await env.sql("insert into public.member_messages (sender_member_id, recipient_member_id, body) values ($1, $2, 'And another')", [ids.Amina, ids.Kabo]);
+    await kabo.waitForSelector("#unread-banner");
+    assert.match(await kabo.textContent("#unread-banner-text"), /You have 4 unread messages!/);
   });
 
   await t.test("opening the conversation clears every alert", async () => {

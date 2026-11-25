@@ -131,3 +131,47 @@ export function growthStats(members, messages, now = Date.now(), lastSeen = {}) 
     founding_spots_left: Math.max(0, FOUNDING_SPOTS - genuine.length),
   };
 }
+
+// Unread-message nudges (reminder emails and the login banner) over the last `days` days, and
+// how many of the nudged members replied afterwards: after their first nudge in that window they
+// sent a message to someone who had written to them before. Counts only, no names or text.
+// nudges: [{ member_id, kind: "email" | "banner", sent_at }]
+// messages: [{ sender_member_id, recipient_member_id, created_at }]
+export function nudgeStats(nudges, messages, now = Date.now(), days = 7) {
+  const from = now - days * DAY;
+  const recent = (nudges || []).filter((n) => {
+    const t = Date.parse(n.sent_at);
+    return n.member_id && !Number.isNaN(t) && t > from && t <= now;
+  });
+  const firstNudge = new Map();
+  for (const n of recent) {
+    const t = Date.parse(n.sent_at);
+    if (!firstNudge.has(n.member_id) || t < firstNudge.get(n.member_id)) firstNudge.set(n.member_id, t);
+  }
+  // Earliest time each member received a message from each sender.
+  const firstWrote = new Map();
+  for (const x of messages || []) {
+    const t = Date.parse(x.created_at);
+    if (Number.isNaN(t)) continue;
+    const key = x.recipient_member_id + "|" + x.sender_member_id;
+    if (!firstWrote.has(key) || t < firstWrote.get(key)) firstWrote.set(key, t);
+  }
+  const replied = new Set();
+  for (const x of messages || []) {
+    const nudgedAt = firstNudge.get(x.sender_member_id);
+    const t = Date.parse(x.created_at);
+    if (nudgedAt == null || Number.isNaN(t) || t < nudgedAt) continue;
+    const wroteAt = firstWrote.get(x.sender_member_id + "|" + x.recipient_member_id);
+    if (wroteAt != null && wroteAt < t) replied.add(x.sender_member_id);
+  }
+  const members = firstNudge.size;
+  return {
+    days,
+    sent: recent.length,
+    emails: recent.filter((n) => n.kind === "email").length,
+    banners: recent.filter((n) => n.kind === "banner").length,
+    members_nudged: members,
+    members_replied: replied.size,
+    replied_percent: members ? Math.round((replied.size / members) * 100) : null,
+  };
+}

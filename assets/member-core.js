@@ -298,8 +298,28 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
 .unread-banner{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin:14px 0;padding:16px 18px;
  border-radius:16px;background:linear-gradient(135deg,#d81b60,#8f1e51);color:#fff;font-weight:800;font-size:18px;box-shadow:0 10px 26px #8f1e5140}
 .unread-banner a{background:#fff;color:#a0124b;text-decoration:none;border-radius:999px;padding:11px 20px;font-weight:900;font-size:16px;white-space:nowrap}
+.unread-banner span{flex:1 1 220px}.unread-banner .unread-actions{display:flex;gap:8px;align-items:center}
+.unread-banner button.unread-close{min-width:44px;min-height:44px;padding:0;border:2px solid #ffffff99;border-radius:999px;background:transparent;color:#fff;font-size:22px;line-height:1;cursor:pointer}
 @media (prefers-reduced-motion:reduce){a.has-unread{animation:none}}`;
   let unreadDb = null, unreadTimer = null, unreadBanner = false, baseTitle = null;
+  // Closing the banner hides it until more messages arrive or the member logs in again
+  // (login.html clears this). Storage can be blocked; the banner then simply shows.
+  const BANNER_CLOSED_KEY = "fyp-unread-banner-closed", BANNER_LOGGED_KEY = "fyp-unread-banner-logged";
+  function sessionValue(key, value) {
+    try {
+      if (value === undefined) return root.sessionStorage.getItem(key);
+      if (value === null) root.sessionStorage.removeItem(key); else root.sessionStorage.setItem(key, String(value));
+    } catch (error) {}
+    return null;
+  }
+  function resetUnreadBanner() { sessionValue(BANNER_CLOSED_KEY, null); sessionValue(BANNER_LOGGED_KEY, null); }
+  // Counts the banner as a nudge for the owner console (at most once a day, checked by the
+  // database). Older databases without record_unread_banner just ignore it.
+  function logBannerNudge() {
+    if (!unreadDb || sessionValue(BANNER_LOGGED_KEY)) return;
+    sessionValue(BANNER_LOGGED_KEY, "1");
+    try { Promise.resolve(unreadDb.rpc("record_unread_banner")).then(() => {}, () => {}); } catch (error) {}
+  }
   function renderUnread(count) {
     document.querySelectorAll("a[data-messages-link]").forEach(link => {
       let badge = link.querySelector(".unread-badge");
@@ -314,19 +334,32 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
       }
     });
     let banner = document.getElementById("unread-banner");
-    if (unreadBanner && count > 0) {
+    const closedAt = Number(sessionValue(BANNER_CLOSED_KEY)) || 0;
+    if (unreadBanner && count > 0 && count > closedAt) {
       if (!banner) {
         banner = document.createElement("div"); banner.id = "unread-banner"; banner.className = "unread-banner"; banner.setAttribute("role", "status");
         const text = document.createElement("span"); text.id = "unread-banner-text";
-        const go = document.createElement("a"); go.href = "messages.html"; go.textContent = "Read now →";
-        banner.append(text, go);
+        const actions = document.createElement("div"); actions.className = "unread-actions";
+        const go = document.createElement("a"); go.href = "messages.html"; go.textContent = "Reply now →";
+        const close = document.createElement("button"); close.type = "button"; close.className = "unread-close";
+        close.setAttribute("aria-label", "Close"); close.textContent = "×";
+        close.addEventListener("click", () => {
+          sessionValue(BANNER_CLOSED_KEY, Number(banner.dataset.count) || 0);
+          banner.remove();
+        });
+        actions.append(go, close);
+        banner.append(text, actions);
         const anchor = document.getElementById("signed-in");
         if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(banner, anchor.nextSibling);
         else document.body.prepend(banner);
+        logBannerNudge();
       }
+      banner.dataset.count = String(count);
       document.getElementById("unread-banner-text").textContent =
-        "💬 You have " + count + " unread message" + (count === 1 ? "" : "s") + ". Someone is waiting for your reply!";
+        "💌 You have " + count + " unread message" + (count === 1 ? "" : "s") + "! Someone is waiting to hear from you — reply now.";
     } else if (banner) banner.remove();
+    // Once everything is read, a later message brings the banner back even if it was closed.
+    if (count === 0 && closedAt) sessionValue(BANNER_CLOSED_KEY, null);
     if (baseTitle === null) baseTitle = document.title;
     document.title = (count > 0 ? "(" + count + ") " : "") + baseTitle;
   }
@@ -582,7 +615,7 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
     GOAL_LABELS, SEEKING, boundedFetch, createClient, profileFromMetadata, readOwnProfile, ensureOwnProfile,
     saveOwnProfile, isMissingColumn, canUseMemberFeatures, destinationFor, showSignedIn,
     authErrorMessage, photoTypeOf, preparePhoto, decodeImage, randomId, withTimeout, signedPhotoUrls, isMissingFunction, isNotApproved,
-    listOfficialAccounts, forgetPhotoUrls, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect, countryFromTimeZone, starterBio, startUnreadAlerts, refreshUnread
+    listOfficialAccounts, forgetPhotoUrls, isReservedName, officialBadge, OFFICIAL_LABEL, fillCountrySelect, countryFromTimeZone, starterBio, startUnreadAlerts, refreshUnread, resetUnreadBanner
   };
   root.FYP = api;
   if (typeof module === "object" && module.exports) module.exports = api;
