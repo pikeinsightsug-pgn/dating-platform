@@ -49,6 +49,7 @@ input{font:inherit;padding:12px;border:1px solid #e5cbd7;border-radius:10px;widt
 <div class="metric">Messages (7 days)<div class="num" id="g-msgs">—</div><div class="muted" id="g-senders"></div></div>
 <div class="metric">Reply rate<div class="num" id="g-reply">—</div><div class="muted" id="g-convs"></div></div>
 </div>
+<div class="tip" id="g-nudges" style="background:#fff8fb"><b>💌 Unread nudges (last 7 days)</b><div id="g-nudges-text" class="muted" style="margin-top:4px">—</div></div>
 <p class="muted" style="margin:14px 0 0">New members per day (last 14 days)</p><div class="bars" id="g-daily"></div>
 <div class="lists"><div><b>Gender</b><ol id="g-gender"></ol></div><div><b>Countries</b><ol id="g-countries"></ol></div><div><b>Cities</b><ol id="g-cities"></ol></div></div>
 <div class="tip" id="g-tip"></div>
@@ -120,7 +121,7 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
     return data;
   }
   // The admin-members version this console was written for (FUNCTION_VERSION in its index.ts).
-  const EXPECTED_FUNCTION_VERSION = "2026-11-23a";
+  const EXPECTED_FUNCTION_VERSION = "2026-11-25a";
   // A feature whose Edge Function code is not deployed yet must not break the console.
   const notDeployed = error => error && error.unsupported
     ? "This feature needs the latest admin-members Edge Function. Redeploy it (see supabase/ADMIN_APPROVAL_SETUP.md)."
@@ -230,11 +231,21 @@ if (window.top !== window.self) { try { window.top.location.replace(window.self.
       fillList("g-gender", m.gender); fillList("g-countries", m.countries); fillList("g-cities", mergeCities(m.cities));
       $("g-tip").textContent = growthTip(g);
       fillCountries(g.by_country);
+      fillNudges(g.nudges);
       $("growth-updated").textContent = "Updated " + new Date().toLocaleString();
       $("growth-status").classList.add("hidden"); $("growth-body").classList.remove("hidden");
     } catch (e) {
       $("growth-status").textContent = notDeployed(e);
     }
+  }
+  // Reminder emails and login banners about unread messages, and who replied after one.
+  function fillNudges(n) {
+    const el = $("g-nudges-text");
+    if (!n) { el.textContent = "Not counting yet: rerun supabase/unread_message_emails.sql in the Supabase SQL Editor."; return; }
+    if (!n.sent) { el.textContent = "No nudges sent in the last 7 days."; return; }
+    el.textContent = n.sent + " nudge" + (n.sent === 1 ? "" : "s") + " sent (" + n.emails + " email" + (n.emails === 1 ? "" : "s") + " · "
+      + n.banners + " login banner" + (n.banners === 1 ? "" : "s") + ") to " + n.members_nudged + " member" + (n.members_nudged === 1 ? "" : "s")
+      + ". " + n.members_replied + " of them replied afterwards (" + n.replied_percent + "%).";
   }
   // One row per country. Green/red marks show strong or weak numbers at a glance.
   function fillCountries(rows) {

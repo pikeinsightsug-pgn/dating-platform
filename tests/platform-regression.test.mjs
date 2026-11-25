@@ -516,6 +516,58 @@ test("owner growth dashboard counts genuine members and real conversations only"
   assert.match(await read("admin/index.html"), new RegExp('EXPECTED_FUNCTION_VERSION = "' + version + '"'), "console and function versions match");
 });
 
+test("unread nudges: one reminder email a day, a closable login banner, and owner counts", async () => {
+  const { nudgeStats } = await import("../supabase/functions/_shared/growth-stats.js");
+  const now = Date.parse("2026-11-25T12:00:00Z");
+  const ago = (h) => new Date(now - h * 3600e3).toISOString();
+  const nudges = [
+    { member_id: "kabo", kind: "email", sent_at: ago(30) },
+    { member_id: "kabo", kind: "banner", sent_at: ago(20) },
+    { member_id: "thandi", kind: "banner", sent_at: ago(10) },
+    { member_id: "lesedi", kind: "email", sent_at: ago(5) },
+    { member_id: "old", kind: "email", sent_at: ago(24 * 8) },
+  ];
+  const messages = [
+    { sender_member_id: "amina", recipient_member_id: "kabo", created_at: ago(40) },
+    { sender_member_id: "kabo", recipient_member_id: "amina", created_at: ago(25) },     // reply after the email
+    { sender_member_id: "amina", recipient_member_id: "thandi", created_at: ago(50) },
+    { sender_member_id: "thandi", recipient_member_id: "amina", created_at: ago(12) },   // before her nudge: not counted
+    { sender_member_id: "lesedi", recipient_member_id: "neo", created_at: ago(2) },       // new chat, not a reply
+    { sender_member_id: "old", recipient_member_id: "amina", created_at: ago(1) },
+  ];
+  const n = nudgeStats(nudges, messages, now);
+  assert.equal(n.sent, 4, "only the last 7 days");
+  assert.equal(n.emails, 2);
+  assert.equal(n.banners, 2);
+  assert.equal(n.members_nudged, 3);
+  assert.equal(n.members_replied, 1, "a reply counts only after the nudge, and only to someone who wrote first");
+  assert.equal(n.replied_percent, 33);
+  assert.equal(nudgeStats([], messages, now).replied_percent, null);
+
+  const sql = await read("supabase/unread_message_emails.sql");
+  assert.match(sql, /'You have ' \|\| r\.unread \|\| ' unread ' \|\| messages_word \|\| ' on P\.K Connect 💌'/, "subject has the real count");
+  assert.match(sql, /Someone took the time to reach out to you\. /);
+  assert.match(sql, /Pike – Founder, P\.K Connect/);
+  assert.match(sql, /last_emailed_at <= now\(\) - interval '24 hours'/, "at most one email a day");
+  assert.match(sql, /select 140 - count\(\*\) into budget/, "daily cap keeps Brevo's free 300 a day with the photo reminders");
+  assert.match(sql, /budget := least\(80, budget\)/);
+  assert.equal((sql.match(/create or replace function public\.send_unread_message_emails\(\)/g) || []).length, 1, "one unread email, not two");
+  assert.doesNotMatch(sql, /sender_member_id[^\n]*first_name|s\.first_name/, "sender names are never put in the email");
+  assert.match(sql, /grant execute on function public\.record_unread_banner\(\) to authenticated;/);
+  for (const other of ["photo_reminder_emails.sql", "founder_broadcast.sql", "safety_protection.sql", "likes_and_matches.sql"])
+    assert.doesNotMatch(await read("supabase/" + other), /function public\.send_unread_message_emails/, other + " does not redefine the email");
+
+  const core = await read("assets/member-core.js");
+  assert.match(core, /"💌 You have " \+ count \+ " unread message" \+ \(count === 1 \? "" : "s"\) \+ "! Someone is waiting to hear from you — reply now\."/);
+  assert.match(core, /go\.href = "messages\.html"/);
+  assert.match(core, /unread-close/);
+  assert.match(core, /rpc\("record_unread_banner"\)/);
+  assert.match(await read("login.html"), /resetUnreadBanner\(\)/, "each login shows the banner again");
+  const admin = await read("admin/index.html");
+  assert.match(admin, /id="g-nudges-text"/);
+  assert.match(await read("supabase/functions/admin-members/index.ts"), /from\("unread_nudge_log"\)\s*\.select\("member_id, kind, sent_at"\)/);
+});
+
 test("founding-spots counter shows one number only and hides itself when unsure", async () => {
   const js = await read("assets/founding-spots.js");
   assert.match(js, /rpc\/founding_spots_left/);

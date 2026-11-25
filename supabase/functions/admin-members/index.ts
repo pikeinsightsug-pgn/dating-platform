@@ -1,11 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isMemberPhotoPathOwnedByUser } from "../_shared/member-photo-path.js";
 import { COUNTRIES } from "../_shared/countries.js";
-import { growthStats } from "../_shared/growth-stats.js";
+import { growthStats, nudgeStats } from "../_shared/growth-stats.js";
 
 // Bump when this function changes; the owner console compares it with the version it expects,
 // so the owner can see whether the deployed function is current without opening Supabase.
-const FUNCTION_VERSION = "2026-11-23a";
+const FUNCTION_VERSION = "2026-11-25a";
 
 // Lists are read in pages so the console keeps showing everyone as the community grows
 // (a single request returns at most 1000 rows). `page` builds the query for one range.
@@ -169,7 +169,14 @@ Deno.serve(async (req: Request) => {
       approved: m.approved === true, is_test_account: m.is_test_account === true, is_official: m.is_official === true,
       profile_photo_url: m.profile_photo_url,
     }));
-    return json({ function_version: FUNCTION_VERSION, growth: growthStats(members, messageRows || [], Date.now(), lastSeen) });
+    // Unread nudges of the last 7 days (unread_nudge_log, from unread_message_emails.sql).
+    // Optional: null until that file is rerun, and the console says so.
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: nudgeRows, error: nudgeError } = await readAllRows((from, to) => db.from("unread_nudge_log")
+      .select("member_id, kind, sent_at").gte("sent_at", weekAgo).order("id").range(from, to));
+    const growth = growthStats(members, messageRows || [], Date.now(), lastSeen);
+    const nudges = nudgeError ? null : nudgeStats(nudgeRows || [], messageRows || [], Date.now());
+    return json({ function_version: FUNCTION_VERSION, growth: { ...growth, nudges } });
   }
 
   const uuid = /^[0-9a-f-]{36}$/i;

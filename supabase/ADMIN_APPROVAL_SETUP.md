@@ -191,10 +191,22 @@ Until the SQL is applied, the site keeps working with the old newest-first order
 
 ## Unread-message emails (November 2026)
 
-Members who have a message waiting unread for over an hour get one email, "Naledi sent you a
-message 💬", with a button to their messages. The message text is never in the email. At most one
-email per member every 20 hours, at most 80 an hour, and every email has a one-tap unsubscribe link
-(`unsubscribe.html`). The official account, unconfirmed emails and blocked senders are skipped.
+Members who have a message waiting unread for over an hour get an email from Pike, "You have 3
+unread messages on P.K Connect 💌", with their real unread count and a button to their messages.
+Message text and sender names are never in the email. At most one email per member a day, only when
+something new arrived since the last one, at most 80 an hour and 140 in any 24 hours (Brevo's free
+plan is 300 a day, shared with the photo reminders' 150). When the daily limit is reached, women are
+emailed first. Every email has a one-tap unsubscribe link (`unsubscribe.html`). The official account,
+banned members, unconfirmed emails and blocked senders are skipped. These go through Brevo, never
+through Supabase's own email, so sign-up and password emails keep Supabase's sending limit to
+themselves.
+
+After logging in, members with unread messages also see a banner at the top of Discover and My
+Profile: "💌 You have 3 unread messages! Someone is waiting to hear from you — reply now.", with a
+button to Messages and a × to close it (it stays closed until more messages arrive or they log in
+again). Each email, and the first banner a member sees each day, is counted in `unread_nudge_log`;
+the owner console's Growth dashboard shows how many nudges went out in the last 7 days and how many
+of those members replied afterwards (sent a message to someone who had written to them).
 
 One-time setup (emails go through Brevo, where pkconnectonline.com is already authenticated):
 
@@ -203,7 +215,8 @@ One-time setup (emails go through Brevo, where pkconnectonline.com is already au
 2. In Brevo, open **SMTP & API → API keys → Generate a new API key**. In the Supabase SQL Editor run
    `select vault.create_secret('PASTE-BREVO-API-KEY', 'brevo_api_key');` and close that tab
    without saving it.
-3. Run `supabase/unread_message_emails.sql` in the SQL Editor. Safe to rerun.
+3. Run `supabase/unread_message_emails.sql` in the SQL Editor. Safe to rerun; if you ran an older
+   version before, run it again once to switch on the new email text, daily limit and nudge counts.
 
 Check it: `select status_code, left(content::text, 120), created from net._http_response order by created desc limit 10;`
 (200 = sent). Switch off: `select cron.unschedule('pk-unread-message-emails');`
