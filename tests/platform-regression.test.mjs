@@ -446,6 +446,8 @@ test("message pop-up notifications: members only, unlinked on sign-out, never th
   assert.match(push, /profile\.approved !== true/, "only approved members are asked");
   assert.match(push, /OneSignal\.login\(String\(profile\.id\)\)/, "the browser is linked to the member id");
   assert.match(push, /OneSignal\.logout\(\)/, "signing out unlinks the browser");
+  assert.doesNotMatch(push, /Slidedown\.promptPush/, "the on-page card asks instead of OneSignal's automatic pop-up");
+  assert.match(push, /Notifications\.requestPermission\(\)/, "'Turn on alerts' asks the phone directly");
   const core = await read("assets/member-core.js");
   assert.match(core, /root\.FYPPush\.start\(profile\)/, "starts from the signed-in member pages");
   for (const path of ["dashboard.html", "discover.html", "messages.html"]) {
