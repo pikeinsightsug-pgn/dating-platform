@@ -28,6 +28,10 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
 .avatar{width:46px;height:46px;border-radius:50%;object-fit:cover;background:#fde8f0;display:grid;place-items:center;flex:none;color:#a21f59}
 .who{min-width:0;flex:1}.who strong{display:block}.who span{display:block;color:#75666e;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .badge{background:#b32663;color:#fff;border-radius:999px;font-size:12px;font-weight:800;padding:3px 8px}
+.who span.waiting{color:#7b1fa2;font-weight:700;font-size:13px}
+.quick-replies{display:flex;gap:8px;overflow-x:auto;padding:10px 12px 0;align-items:center;border-top:1px solid #f6e9ef}
+.quick-replies span{flex:none;font-size:13px;font-weight:700;color:#75666e}
+.quick-replies button{flex:none;padding:8px 13px;border-radius:999px;border:1px solid #e9a9c4;background:#fff7fb;color:#a0124b;font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
 .thread-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #f6e9ef;flex-wrap:wrap}
 .thread-head h2{margin:0;font-size:20px}.back{display:none}
 .messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:8px;min-height:260px;max-height:60vh}
@@ -72,6 +76,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
       </form>
       <div id="thread" class="messages" aria-live="polite"></div>
       <p class="safety">🛡️ <strong>Never send money, airtime or gifts to anyone you meet here.</strong> P.K Connect will never ask you for money in chat. Phone numbers and WhatsApp can be shared once you have liked each other and each sent 10 messages. Report anyone who asks for money.</p>
+      <div id="quick-replies" class="quick-replies hidden" aria-label="Quick replies"></div>
       <form id="compose" class="compose hidden">
         <label class="hidden" for="body">Message</label>
         <textarea id="body" name="body" rows="2" maxlength="2000" required placeholder="Write a message…"></textarea>
@@ -142,6 +147,10 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
       else name.textContent = entry.first_name + (entry.age ? ", " + entry.age : "");
       const last = document.createElement("span"); last.textContent = (entry.last_from_me ? "You: " : "") + String(entry.last_body || "").split("[INSTALL-APP]").join("📲").trim() + " · " + when(entry.last_at);
       who.append(name, last);
+      if (entry.last_from_me === false && !officialIds.has(entry.other_member_id) && !(Number(entry.unread_count) > 0)) {
+        const waiting = document.createElement("span"); waiting.className = "waiting"; waiting.textContent = "💬 Waiting for your reply";
+        who.append(waiting);
+      }
       button.append(avatar(entry), who);
       if (Number(entry.unread_count) > 0) { const badge = document.createElement("span"); badge.className = "badge"; badge.textContent = entry.unread_count; badge.setAttribute("aria-label", entry.unread_count + " unread"); button.append(badge); }
       button.addEventListener("click", () => openThread({ id: entry.other_member_id, first_name: entry.first_name }));
@@ -154,6 +163,36 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
     conversations = data || [];
     photoUrls = await window.FYP.signedPhotoUrls(db, conversations.map(c => c.profile_photo_path));
     renderList();
+  }
+  // 💡 Quick replies: one tap fills the message box with a friendly answer that names the other
+  // person (so replies to different people never look like copy-paste spam). It can be edited
+  // before sending; nothing is sent until the member presses Send.
+  function quickReplies(name) {
+    return [
+      ["😊 Say hi back", "Hi " + name + "! 😊 Thanks for your message. How is your day going?"],
+      ["👋 Ask about them", "Hello " + name + " 👋 Nice to hear from you! Tell me a little about yourself?"],
+      ["⏳ Busy, write later", "Hi " + name + "! I'm a bit busy right now, but I'll write more soon 😊"],
+      ["🙏 Polite no", "Thank you for your message, " + name + " 🙏 I don't think we're a match, but I wish you all the best."]
+    ];
+  }
+  function renderQuickReplies(show) {
+    const box = document.getElementById("quick-replies");
+    if (!show || !active || officialIds.has(active.id)) { box.classList.add("hidden"); return; }
+    const options = quickReplies(String(active.first_name || "").split(/\s/)[0]);
+    box.replaceChildren();
+    const label = document.createElement("span"); label.textContent = "💡 Quick reply:"; box.append(label);
+    options.forEach(([short, full]) => {
+      const chip = document.createElement("button"); chip.type = "button"; chip.textContent = short;
+      chip.addEventListener("click", () => {
+        // Never throw away something the member typed: a suggestion replaces only an empty box
+        // or another suggestion, otherwise it is added after their words.
+        const typed = body.value.trim();
+        body.value = !typed || options.some(o => o[1] === typed) ? full : typed + " " + full;
+        body.focus(); body.setSelectionRange(body.value.length, body.value.length);
+      });
+      box.append(chip);
+    });
+    box.classList.remove("hidden");
   }
   async function refreshThread(scroll) {
     if (!active) return;
@@ -196,6 +235,7 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
       bubble.append(time); thread.append(bubble);
     });
     if (scroll || nearBottom) thread.scrollTop = thread.scrollHeight;
+    renderQuickReplies(Boolean(data && data.length && !data[data.length - 1].from_me));
     if ((data || []).some(m => !m.from_me && !m.read_at)) {
       await db.rpc("mark_conversation_read", { p_other_member_id: active.id });
       window.FYP.refreshUnread();
@@ -231,13 +271,13 @@ h1{font-size:clamp(30px,6vw,44px);letter-spacing:-1.5px;margin:22px 0 8px}p{line
   body.addEventListener("keydown", event => {
     if (event.key === "Enter" && !event.shiftKey && window.matchMedia("(pointer:fine)").matches) { event.preventDefault(); compose.requestSubmit(); }
   });
-  document.getElementById("back").addEventListener("click", () => { layout.classList.remove("thread-open"); active = null; renderList(); });
+  document.getElementById("back").addEventListener("click", () => { layout.classList.remove("thread-open"); active = null; renderQuickReplies(false); renderList(); });
   document.getElementById("block").addEventListener("click", async () => {
     if (!active || !confirm("Block " + active.first_name + "? You will no longer see each other or be able to exchange messages.")) return;
     const { error } = await db.rpc("block_member", { p_member_id: active.id });
     if (error) { say(failure(error)); return; }
     active = null; layout.classList.remove("thread-open");
-    thread.replaceChildren(); compose.classList.add("hidden"); document.getElementById("block").classList.add("hidden");
+    thread.replaceChildren(); compose.classList.add("hidden"); renderQuickReplies(false); document.getElementById("block").classList.add("hidden");
     document.getElementById("report").classList.add("hidden"); reportForm.classList.add("hidden");
     document.getElementById("thread-name").textContent = "Choose a conversation";
     await refreshList(); say("Member blocked.");

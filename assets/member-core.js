@@ -300,11 +300,14 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
 .unread-banner a{background:#fff;color:#a0124b;text-decoration:none;border-radius:999px;padding:11px 20px;font-weight:900;font-size:16px;white-space:nowrap}
 .unread-banner span{flex:1 1 220px}.unread-banner .unread-actions{display:flex;gap:8px;align-items:center}
 .unread-banner button.unread-close{min-width:44px;min-height:44px;padding:0;border:2px solid #ffffff99;border-radius:999px;background:transparent;color:#fff;font-size:22px;line-height:1;cursor:pointer}
+.unread-banner.waiting-banner{background:linear-gradient(135deg,#7b1fa2,#4a148c);box-shadow:0 10px 26px #4a148c40}
+.unread-banner.waiting-banner a{color:#5b1590}
 @media (prefers-reduced-motion:reduce){a.has-unread{animation:none}}`;
   let unreadDb = null, unreadTimer = null, unreadBanner = false, baseTitle = null;
   // Closing the banner hides it until more messages arrive or the member logs in again
   // (login.html clears this). Storage can be blocked; the banner then simply shows.
   const BANNER_CLOSED_KEY = "fyp-unread-banner-closed", BANNER_LOGGED_KEY = "fyp-unread-banner-logged";
+  const WAITING_CLOSED_KEY = "fyp-waiting-banner-closed";
   function sessionValue(key, value) {
     try {
       if (value === undefined) return root.sessionStorage.getItem(key);
@@ -312,7 +315,7 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
     } catch (error) {}
     return null;
   }
-  function resetUnreadBanner() { sessionValue(BANNER_CLOSED_KEY, null); sessionValue(BANNER_LOGGED_KEY, null); }
+  function resetUnreadBanner() { sessionValue(BANNER_CLOSED_KEY, null); sessionValue(BANNER_LOGGED_KEY, null); sessionValue(WAITING_CLOSED_KEY, null); }
   // Counts the banner as a nudge for the owner console (at most once a day, checked by the
   // database). Older databases without record_unread_banner just ignore it.
   function logBannerNudge() {
@@ -363,12 +366,56 @@ a.has-unread{background:#d81b60!important;color:#fff!important;border-color:#d81
     if (baseTitle === null) baseTitle = document.title;
     document.title = (count > 0 ? "(" + count + ") " : "") + baseTitle;
   }
+  // Waiting for a reply: chats (last 30 days) where the other person wrote last, read or not.
+  // Opening a message clears "unread", but many people then forget to answer; this banner
+  // shows only when nothing is unread. The official account's messages never count.
+  let officialIdsPromise = null;
+  async function waitingFor(rows) {
+    if (!officialIdsPromise) officialIdsPromise = listOfficialAccounts(unreadDb).then(list => new Set(list.map(a => a.id)));
+    const official = await officialIdsPromise;
+    const since = Date.now() - 30 * 86400000;
+    return rows.filter(row => row.last_from_me === false && !official.has(row.other_member_id) &&
+      new Date(row.last_at).getTime() > since);
+  }
+  function renderWaiting(waiting) {
+    let banner = document.getElementById("waiting-banner");
+    const closedAt = Number(sessionValue(WAITING_CLOSED_KEY)) || 0;
+    if (!waiting.length && closedAt) sessionValue(WAITING_CLOSED_KEY, null);
+    if (!unreadBanner || !waiting.length || waiting.length <= closedAt) { if (banner) banner.remove(); return; }
+    if (!banner) {
+      banner = document.createElement("div"); banner.id = "waiting-banner"; banner.className = "unread-banner waiting-banner"; banner.setAttribute("role", "status");
+      const text = document.createElement("span"); text.id = "waiting-banner-text";
+      const actions = document.createElement("div"); actions.className = "unread-actions";
+      const go = document.createElement("a"); go.id = "waiting-banner-link"; go.textContent = "Reply now →";
+      const close = document.createElement("button"); close.type = "button"; close.className = "unread-close";
+      close.setAttribute("aria-label", "Close"); close.textContent = "×";
+      close.addEventListener("click", () => {
+        sessionValue(WAITING_CLOSED_KEY, Number(banner.dataset.count) || 0);
+        banner.remove();
+      });
+      actions.append(go, close);
+      banner.append(text, actions);
+      const anchor = document.getElementById("signed-in");
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(banner, anchor.nextSibling);
+      else document.body.prepend(banner);
+    }
+    const others = waiting.length - 1;
+    const first = String(waiting[0].first_name || "Someone").split(/\s/)[0];
+    banner.dataset.count = String(waiting.length);
+    document.getElementById("waiting-banner-text").textContent = "💬 " + first +
+      (others ? " and " + others + (others === 1 ? " other person are" : " others are") : " is") +
+      " waiting for your reply. A short, friendly answer makes their day!";
+    document.getElementById("waiting-banner-link").href = others
+      ? "messages.html" : "messages.html?member=" + encodeURIComponent(waiting[0].other_member_id);
+  }
   async function refreshUnread() {
     if (!unreadDb) return 0;
     try {
       const { data, error } = await unreadDb.rpc("list_my_conversations");
-      const count = error ? 0 : (data || []).reduce((sum, row) => sum + (Number(row.unread_count) || 0), 0);
+      const rows = error ? [] : (data || []);
+      const count = rows.reduce((sum, row) => sum + (Number(row.unread_count) || 0), 0);
       renderUnread(count);
+      renderWaiting(count ? [] : await waitingFor(rows));
       return count;
     } catch (error) { return 0; }
   }
