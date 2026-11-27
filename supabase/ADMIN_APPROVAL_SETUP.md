@@ -242,3 +242,17 @@ The owner never sees message text: alerts show only counts.
 
 This file replaces `send_member_message`. If you ever rerun `official_account.sql` or
 `discovery_messaging_safety.sql`, run `safety_protection.sql` again afterwards.
+
+
+## "🆕 Just joined" on Discover (November 2026)
+
+Apply `supabase/just_joined.sql` in the Supabase SQL editor (any time after
+`official_account.sql`). It is additive and safe to rerun: one read-only function, no member
+data is changed. Until it is applied, the Discover page simply does not show the card.
+
+- Members see up to 6 people who joined in the last 7 days, e.g. "🆕 James has just joined!
+  View his profile, you may like him." (her/them for women and other genders).
+- It works both ways from "I would like to meet": James (a man looking for women) is shown only
+  to members who want to meet men or everyone, and only if he wants to meet them too.
+- Newcomers with a photo come first. Blocked pairs, the official account, test accounts, paused
+  and banned members never appear.

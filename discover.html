@@ -113,6 +113,8 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
 .mini h3{margin:2px 0 0;font-size:15px}.mini ul{margin:0;padding:0;list-style:none;font-size:12px;color:#8f1e51;line-height:1.35}
 .mini .mini-actions{display:flex;gap:6px;margin-top:auto}.mini .mini-actions button{flex:1;padding:8px 6px;font-size:13px;border-radius:999px}
 .mini .like-small{background:#b32663;color:#fff;border:0}.mini .like-small[aria-pressed="true"]{background:#1d6b3a}
+.just-joined{border-color:#d81b60;background:linear-gradient(180deg,#fff0f6 0,#fff 120px)}.just-joined h2{color:#a0124b}
+.mini .view-profile{width:100%;padding:8px 6px;font-size:13px;border-radius:999px;background:#fff;color:#a0124b;border:1px solid #e9a9c4;font-weight:700}
 .likes-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;margin:14px 0;padding:12px 16px;border-radius:16px;background:#fde8f0;border:1px solid #f2a3c2;font-weight:800;color:#8f1e51}
 .match-pop{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px;background:#3b0a24cc}
 .match-card{max-width:380px;width:100%;text-align:center;background:#fff;border-radius:26px;padding:26px 22px;box-shadow:0 20px 60px #0006}
@@ -154,6 +156,7 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
   <section id="official" class="official hidden" aria-label="Official P.K Connect account"></section>
   <div id="likes-banner" class="likes-banner hidden" role="status"></div>
   <section id="liked-you" class="likes-box hidden" aria-labelledby="liked-you-title"></section>
+  <section id="just-joined" class="likes-box just-joined hidden" aria-labelledby="just-joined-title"></section>
   <section id="matches-today" class="likes-box hidden" aria-labelledby="matches-title"></section>
   <section id="qotd" class="qotd hidden" aria-labelledby="qotd-q"></section>
   <p id="status" role="status" aria-live="polite">Checking your account…</p>
@@ -418,6 +421,46 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     addText(box, "p", "Picked for you from what you have in common. New picks every day.", "muted");
     const row = document.createElement("div"); row.className = "mini-row";
     data.forEach(r => row.append(miniCard(r, urls.get(r.profile_photo_path) || null, r.reasons)));
+    box.append(row); box.classList.remove("hidden");
+  }
+  // 🆕 Just joined: members who joined in the last 7 days and fit this member both ways (each is
+  // someone the other said they would like to meet), newcomers with a photo first. Needs
+  // just_joined.sql; until it is applied, or on any problem, the box simply stays hidden.
+  function pronouns(profile) {
+    const g = String(profile.gender || "").toLowerCase();
+    if (/^(man|male)$/.test(g)) return { his: "his", him: "him" };
+    if (/^(woman|female)$/.test(g)) return { his: "her", him: "her" };
+    return { his: "their", him: "them" };
+  }
+  function joinedWhen(at) {
+    const days = Math.floor((Date.now() - new Date(at).getTime()) / 86400000);
+    return days < 1 ? "Joined today" : days === 1 ? "Joined yesterday" : "Joined " + days + " days ago";
+  }
+  async function loadJustJoined() {
+    const box = document.getElementById("just-joined");
+    const { data, error } = await db.rpc("just_joined_members", { p_limit: 6 });
+    if (error || !data || !data.length) { box.classList.add("hidden"); return; }
+    const urls = await window.FYP.signedPhotoUrls(db, data.map(r => r.profile_photo_path));
+    const names = data.map(r => r.first_name.split(/\s/)[0]);
+    const words = pronouns(data[0]);
+    box.replaceChildren();
+    addText(box, "h2", "🆕 " + (data.length === 1 ? names[0] + " has just joined!"
+      : data.length === 2 ? names[0] + " and " + names[1] + " have just joined!"
+      : names[0] + ", " + names[1] + " and " + (data.length - 2) + " more have just joined!")).id = "just-joined-title";
+    addText(box, "p", data.length === 1
+      ? "View " + words.his + " profile, you may like " + words.him + ". Say hello before anyone else does 👋"
+      : "View their profiles, you may like them. Say hello before anyone else does 👋", "muted");
+    const row = document.createElement("div"); row.className = "mini-row";
+    data.forEach(r => {
+      const card = miniCard(r, urls.get(r.profile_photo_path) || null, [joinedWhen(r.joined_at), r.city].filter(Boolean));
+      const view = document.createElement("button"); view.type = "button"; view.className = "view-profile";
+      view.textContent = "👀 View " + pronouns(r).his + " profile";
+      view.addEventListener("click", () => openProfile(r.id));
+      const actions = card.querySelector(".mini-actions");
+      if (!likesReady) actions.replaceChildren();
+      card.insertBefore(view, actions);
+      row.append(card);
+    });
     box.append(row); box.classList.remove("hidden");
   }
   async function startLikes() {
@@ -745,6 +788,9 @@ dialog{border-radius:28px;background:#fff8fb;width:min(520px,calc(100vw - 20px))
     if (profile.approved === true && profile.is_official !== true) showOfficial();
     if (profile.approved === true && profile.is_official !== true) showHelloNudge(profile).catch(() => {});
     if (profile.approved === true && !legacyMode) await startLikes().catch(() => {});
+    if (profile.approved === true && profile.is_official !== true && !legacyMode) {
+      loadJustJoined().catch(() => document.getElementById("just-joined").classList.add("hidden"));
+    }
     if (profile.approved === true) loadQuestion().catch(() => document.getElementById("qotd").classList.add("hidden"));
     // Members start with every approved member of the gender they said they are looking for
     // (shown openly in the Gender filter, with a note), any age, all countries and any goal.
